@@ -1,3 +1,7 @@
 .godot/
 *.tmp
 plan/
+
+# Local example files. See README > Credits.
+examples/character/
+tests/expected/

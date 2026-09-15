@@ -20,22 +20,48 @@ const DEFAULT_OPTIONS := {
 	"output_folder": "assets/{tag}",
 	"filename": "{title}_{layer}_{tag}",
 }
+const ASSET_HELP := (
+	"Place the example character.aseprite at "
+	+ "examples/character/character.aseprite and export the reference strips to "
+	+ "tests/expected/idle_loop/ (see README > Credits)."
+)
 
 var _failures := 0
 var _tmp_dir := OS.get_cache_dir().path_join("aseprite_topdown_layers_tests")
 
 
 func _initialize() -> void:
-	var cli := AsepriteCli.new(OS.get_environment("ASEPRITE_PATH"))
-	_check(cli.is_available(), "Aseprite executable available", cli.get_executable())
-	if _failures == 0:
-		var layers := _test_listing(cli)
-		var jobs := _test_planner(layers)
-		_test_idle_loop_matches_expected(cli, jobs)
-		_test_other_tags_strip_size(cli, jobs)
+	var missing := _missing_example_files()
+	if missing.is_empty():
+		_test_with_example_asset()
+	else:
+		print("SKIP: Aseprite checks, example asset not found: %s" % ", ".join(missing))
+		print("SKIP: " + ASSET_HELP)
 	_test_planner_edge_cases()
 	print("%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(0 if _failures == 0 else 1)
+
+
+func _missing_example_files() -> PackedStringArray:
+	var missing := PackedStringArray()
+	if not FileAccess.file_exists(SOURCE):
+		missing.append(SOURCE)
+	for layer: String in EXPECTED_LAYERS:
+		var expected := EXPECTED_DIR.path_join("character_%s_idle_loop.png" % layer)
+		if not FileAccess.file_exists(expected):
+			missing.append(expected)
+	return missing
+
+
+func _test_with_example_asset() -> void:
+	var cli := AsepriteCli.new(OS.get_environment("ASEPRITE_PATH"))
+	_check(cli.is_available(), "Aseprite executable available", cli.get_executable())
+	if not cli.is_available():
+		return
+	var layers := _test_listing(cli)
+	var jobs := _test_planner(layers)
+	_test_idle_loop_matches_expected(cli, jobs)
+	_test_other_tags_strip_size(cli, jobs)
 
 
 func _test_listing(cli: AsepriteCli) -> PackedStringArray:
