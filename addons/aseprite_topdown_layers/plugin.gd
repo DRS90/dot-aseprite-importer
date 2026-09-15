@@ -2,7 +2,6 @@
 extends EditorPlugin
 ## Registers the Aseprite Top-Down Layers importer, its settings and the Project > Tools item.
 
-const FsScanScheduler := preload("fs_scan_scheduler.gd")
 const Importer := preload("importer.gd")
 const Settings := preload("settings.gd")
 
@@ -10,16 +9,13 @@ const REIMPORT_ALL_MENU := "Aseprite Top-Down Layers: Reimport all"
 const SOURCE_EXTENSIONS: Array[String] = ["aseprite", "ase"]
 
 var _settings: Settings
-var _scheduler: FsScanScheduler
 var _importer: Importer
 
 
 func _enter_tree() -> void:
 	_settings = Settings.new()
 	_settings.register()
-	_scheduler = FsScanScheduler.new()
-	add_child(_scheduler)
-	_importer = Importer.new(_scheduler, _settings)
+	_importer = Importer.new(_settings)
 	add_import_plugin(_importer)
 	add_tool_menu_item(REIMPORT_ALL_MENU, _reimport_all)
 
@@ -29,9 +25,6 @@ func _exit_tree() -> void:
 	if _importer != null:
 		remove_import_plugin(_importer)
 		_importer = null
-	if is_instance_valid(_scheduler):
-		_scheduler.queue_free()
-	_scheduler = null
 
 
 ## Forces a reimport of every .aseprite/.ase file assigned to this importer, e.g. after the

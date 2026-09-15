@@ -10,11 +10,15 @@
 --
 -- mode=list    params: file
 --              Prints "size<TAB>width<TAB>height", then "layer<TAB>name<TAB>visible" ("true" or
---              "false") per top-level layer or group, then "tag<TAB>name" per tag.
--- mode=export  params: file, jobs, cell_width, cell_height, sheet_type ("horizontal"/"vertical")
+--              "false") per top-level layer or group, then
+--              "tag<TAB>name<TAB>from<TAB>to<TAB>direction" per tag (0-based frames; direction is
+--              forward, reverse, pingpong or pingpong_reverse), then
+--              "frame<TAB>index<TAB>duration_ms" per frame.
+-- mode=export  params: file, jobs, cell_width, cell_height
 --              jobs is a text file with "layer<TAB>name" lines (the layers composed into every
---              strip) and "strip<TAB>output_png<TAB>tag<TAB>direction" lines. An empty tag exports
---              the whole timeline. Prints "written<TAB>output_png" per strip, or
+--              strip) and "strip<TAB>output_png<TAB>tag<TAB>direction" lines. Each strip is the
+--              direction cell of every frame of the tag, left to right in timeline order; an empty
+--              tag exports the whole timeline. Prints "written<TAB>output_png" per strip, or
 --              "empty<TAB>output_png" when the cell has no pixels in any frame of the tag (nothing
 --              is saved then).
 --
@@ -34,6 +38,15 @@ local DIRECTIONS = {
   down = { 1, 2 },
   right_down = { 2, 2 },
 }
+
+local TAG_DIRECTIONS = {
+  [AniDir.FORWARD] = "forward",
+  [AniDir.REVERSE] = "reverse",
+  [AniDir.PING_PONG] = "pingpong",
+}
+if AniDir.PING_PONG_REVERSE ~= nil then
+  TAG_DIRECTIONS[AniDir.PING_PONG_REVERSE] = "pingpong_reverse"
+end
 
 local sprite = app.open(params.file)
 if sprite == nil then
@@ -65,7 +78,13 @@ local function list()
     count = count + 1
   end
   for _, tag in ipairs(sprite.tags) do
-    print("tag\t" .. tag.name)
+    local direction = TAG_DIRECTIONS[tag.aniDir] or "forward"
+    print("tag\t" .. tag.name .. "\t" .. (tag.fromFrame.frameNumber - 1) .. "\t"
+      .. (tag.toFrame.frameNumber - 1) .. "\t" .. direction)
+    count = count + 1
+  end
+  for index, frame in ipairs(sprite.frames) do
+    print("frame\t" .. (index - 1) .. "\t" .. math.floor(frame.duration * 1000 + 0.5))
     count = count + 1
   end
   print("done\t" .. count)
@@ -159,12 +178,11 @@ end
 local function export_tag(tag_name, strips, cell_width, cell_height)
   local first, last = frame_range(tag_name)
   local frame_count = last - first + 1
-  local vertical = params.sheet_type == "vertical"
   -- A copy of the sprite spec keeps its color space: without it the PNG has no sRGB chunk and
   -- differs from what Export Sprite Sheet writes.
   local spec = sprite.spec
-  spec.width = vertical and cell_width or cell_width * frame_count
-  spec.height = vertical and cell_height * frame_count or cell_height
+  spec.width = cell_width * frame_count
+  spec.height = cell_height
   for _, strip in ipairs(strips) do
     strip.image = Image(spec)
     strip.filled = false
@@ -173,7 +191,7 @@ local function export_tag(tag_name, strips, cell_width, cell_height)
   for index = 0, frame_count - 1 do
     local rendered = Image(sprite.spec)
     rendered:drawSprite(sprite, first + index)
-    local position = vertical and Point(0, index * cell_height) or Point(index * cell_width, 0)
+    local position = Point(index * cell_width, 0)
     for _, strip in ipairs(strips) do
       local cell = DIRECTIONS[strip.direction]
       local bounds = Rectangle(cell[1] * cell_width, cell[2] * cell_height, cell_width, cell_height)

@@ -1,0 +1,125 @@
+@tool
+extends RefCounted
+## Builds the SpriteFrames of an import from the strips Aseprite exported.
+##
+## Has no editor dependency, so headless tests can use it. Each strip holds its tag's frames left to
+## right in timeline order, one cell per frame. The strips become lossless textures embedded in the
+## SpriteFrames and every frame is an AtlasTexture region of its strip. Timing follows Aseprite:
+## the animation speed is 1 / the shortest frame duration, and each frame keeps its duration
+## relative to it. Reverse and ping-pong tags reorder the frames.
+
+const DEFAULT_DURATION_MS := 100
+
+## Problems found by the last [method build] call.
+var errors := PackedStringArray()
+
+
+## Timeline frames (0-based) that a tag spanning [param first] to [param last] plays, in order.
+## [param direction] is forward, reverse, pingpong or pingpong_reverse; ping-pong does not repeat
+## the frames at both ends, so the sequence loops smoothly.
+static func frame_sequence(first: int, last: int, direction: String) -> PackedInt32Array:
+	var forward := PackedInt32Array()
+	for frame: int in range(first, last + 1):
+		forward.append(frame)
+	var backward := forward.duplicate()
+	backward.reverse()
+	match direction:
+		"reverse":
+			return backward
+		"pingpong":
+			return forward + _without_ends(backward)
+		"pingpong_reverse":
+			return backward + _without_ends(forward)
+	return forward
+
+
+## {"speed": float (frames per second), "durations": PackedFloat32Array (relative)} for frames that
+## last [param durations_ms] milliseconds each.
+static func timing(durations_ms: PackedInt32Array) -> Dictionary:
+	var shortest := 0
+	for duration: int in durations_ms:
+		if duration > 0 and (shortest == 0 or duration < shortest):
+			shortest = duration
+	if shortest == 0:
+		shortest = DEFAULT_DURATION_MS
+	var relative := PackedFloat32Array()
+	for duration: int in durations_ms:
+		relative.append(maxi(duration, 1) / float(shortest))
+	return {"speed": 1000.0 / shortest, "durations": relative}
+
+
+## [param jobs] come from ExportPlanner.build_jobs() and [param written] lists the strips the export
+## wrote (relative to [param strips_dir]); jobs without a strip get no animation. [param contents]
+## comes from AsepriteCli.list_contents() and gives the tag ranges and frame durations.
+func build(
+	jobs: Array[Dictionary],
+	written: PackedStringArray,
+	strips_dir: String,
+	contents: Dictionary,
+	cell_size: Vector2i
+) -> SpriteFrames:
+	errors = PackedStringArray()
+	var frames := SpriteFrames.new()
+	frames.remove_animation(&"default")
+	var durations: PackedInt32Array = contents.get("frame_durations", PackedInt32Array())
+	var ranges: Dictionary = contents.get("tag_ranges", {})
+	for job: Dictionary in jobs:
+		var relative_path: String = job["relative_path"]
+		if not written.has(relative_path):
+			continue
+		var image := Image.load_from_file(strips_dir.path_join(relative_path))
+		if image == null:
+			errors.append("Cannot read the exported strip '%s'." % relative_path)
+			continue
+		var texture := PortableCompressedTexture2D.new()
+		texture.create_from_image(image, PortableCompressedTexture2D.COMPRESSION_MODE_LOSSLESS)
+		var tag: String = job["tag"]
+		var whole_timeline := {"from": 0, "to": durations.size() - 1, "direction": "forward"}
+		var tag_range: Dictionary = ranges.get(tag, whole_timeline)
+		_add_animation(frames, job, texture, tag_range, durations, cell_size)
+	return frames
+
+
+## [param frames] without its first and last entries; empty when nothing is left between them.
+static func _without_ends(frames: PackedInt32Array) -> PackedInt32Array:
+	if frames.size() < 3:
+		return PackedInt32Array()
+	return frames.slice(1, frames.size() - 1)
+
+
+static func _add_animation(
+	frames: SpriteFrames,
+	job: Dictionary,
+	texture: Texture2D,
+	tag_range: Dictionary,
+	durations: PackedInt32Array,
+	cell_size: Vector2i
+) -> void:
+	var first: int = tag_range["from"]
+	var last: int = tag_range["to"]
+	var direction: String = tag_range["direction"]
+	var sequence := frame_sequence(first, last, direction)
+	var sequence_durations := PackedInt32Array()
+	for frame: int in sequence:
+		sequence_durations.append(
+			durations[frame] if frame < durations.size() else DEFAULT_DURATION_MS
+		)
+	var frame_timing := timing(sequence_durations)
+	var relative: PackedFloat32Array = frame_timing["durations"]
+	var speed: float = frame_timing["speed"]
+	var loop: bool = job["loop"]
+	var animation := StringName(str(job["animation"]))
+	frames.add_animation(animation)
+	frames.set_animation_speed(animation, speed)
+	frames.set_animation_loop(animation, loop)
+	# Ping-pong plays some cells twice: they share one region.
+	var regions := {}
+	for index: int in sequence.size():
+		var frame := sequence[index]
+		if not regions.has(frame):
+			var region := AtlasTexture.new()
+			region.atlas = texture
+			region.region = Rect2((frame - first) * cell_size.x, 0, cell_size.x, cell_size.y)
+			regions[frame] = region
+		var atlas: AtlasTexture = regions[frame]
+		frames.add_frame(animation, atlas, relative[index])

@@ -13,6 +13,7 @@ const JOBS_FILE := "jobs.txt"
 const SIZE_PREFIX := "size\t"
 const LAYER_PREFIX := "layer\t"
 const TAG_PREFIX := "tag\t"
+const FRAME_PREFIX := "frame\t"
 const STRIP_PREFIX := "strip\t"
 const WRITTEN_PREFIX := "written\t"
 const DONE_PREFIX := "done\t"
@@ -50,41 +51,48 @@ func get_executable() -> String:
 	return _executable
 
 
-## Sprite size and the names of the top-level layers and groups (all of them, and the visible
-## ones) and of the tags, in file order: {"size": Vector2i, "layers": PackedStringArray,
-## "visible_layers": PackedStringArray, "tags": PackedStringArray}. Empty when Aseprite failed.
+## What the file holds, in file order:
+## {"size": Vector2i, "layers": PackedStringArray (top-level layers and groups),
+## "visible_layers": PackedStringArray, "tags": PackedStringArray,
+## "tag_ranges": {name: {"from": int, "to": int, "direction": String}} (0-based frames, first tag
+## of a repeated name), "frame_durations": PackedInt32Array (milliseconds)}.
+## Empty when Aseprite failed.
 func list_contents(aseprite_file: String) -> Dictionary:
 	var lines := _run_batch(PackedStringArray(["mode=list", "file=" + aseprite_file]))
 	if lines.is_empty():
 		return {}
-	var size := Vector2i.ZERO
-	var layers := PackedStringArray()
-	var visible_layers := PackedStringArray()
-	var tags := PackedStringArray()
+	var contents := {
+		"size": Vector2i.ZERO,
+		"layers": PackedStringArray(),
+		"visible_layers": PackedStringArray(),
+		"tags": PackedStringArray(),
+		"tag_ranges": {},
+		"frame_durations": PackedInt32Array(),
+	}
 	for line: String in lines:
-		if line.begins_with(SIZE_PREFIX):
-			size = Vector2i(line.get_slice("\t", 1).to_int(), line.get_slice("\t", 2).to_int())
-		elif line.begins_with(LAYER_PREFIX):
-			var layer := line.get_slice("\t", 1)
-			layers.append(layer)
-			if line.get_slice("\t", 2) == "true":
-				visible_layers.append(layer)
-		elif line.begins_with(TAG_PREFIX):
-			tags.append(line.trim_prefix(TAG_PREFIX))
-	return {"size": size, "layers": layers, "visible_layers": visible_layers, "tags": tags}
+		var fields := line.split("\t")
+		if line.begins_with(SIZE_PREFIX) and fields.size() == 3:
+			contents["size"] = Vector2i(fields[1].to_int(), fields[2].to_int())
+		elif line.begins_with(LAYER_PREFIX) and fields.size() == 3:
+			_add_layer(contents, fields[1], fields[2] == "true")
+		elif line.begins_with(TAG_PREFIX) and fields.size() == 5:
+			_add_tag(contents, fields[1], fields[2].to_int(), fields[3].to_int(), fields[4])
+		elif line.begins_with(FRAME_PREFIX) and fields.size() == 3:
+			var durations: PackedInt32Array = contents["frame_durations"]
+			durations.append(fields[2].to_int())
+			contents["frame_durations"] = durations
+	return contents
 
 
 ## Exports every job built by ExportPlanner.build_jobs() in one Aseprite process. [param layers] are
 ## composed, and the job's direction cell ([param cell_size]) is cropped from every frame of its tag
-## into [param output_dir]/relative_path as a [param sheet_type] ("horizontal" or "vertical")
-## strip. The strips written end up in [member last_written]; the job list is written to
-## [param output_dir] as well.
+## into [param output_dir]/relative_path as a horizontal strip. The strips written end up in
+## [member last_written]; the job list is written to [param output_dir] as well.
 func export_strips(
 	aseprite_file: String,
 	jobs: Array[Dictionary],
 	layers: PackedStringArray,
 	cell_size: Vector2i,
-	sheet_type: String,
 	output_dir: String
 ) -> Error:
 	last_error = ""
@@ -105,7 +113,6 @@ func export_strips(
 			"jobs=" + jobs_path,
 			"cell_width=%d" % cell_size.x,
 			"cell_height=%d" % cell_size.y,
-			"sheet_type=" + sheet_type,
 		]
 	)
 	var output := _run_batch(params)
@@ -123,6 +130,27 @@ func export_strips(
 		written.append(relative_path)
 	last_written = written
 	return OK
+
+
+static func _add_layer(contents: Dictionary, layer: String, visible: bool) -> void:
+	var layers: PackedStringArray = contents["layers"]
+	layers.append(layer)
+	contents["layers"] = layers
+	if visible:
+		var visible_layers: PackedStringArray = contents["visible_layers"]
+		visible_layers.append(layer)
+		contents["visible_layers"] = visible_layers
+
+
+static func _add_tag(
+	contents: Dictionary, tag: String, from: int, to: int, direction: String
+) -> void:
+	var tags: PackedStringArray = contents["tags"]
+	tags.append(tag)
+	contents["tags"] = tags
+	var ranges: Dictionary = contents["tag_ranges"]
+	if not ranges.has(tag):
+		ranges[tag] = {"from": from, "to": to, "direction": direction}
 
 
 ## Lines of the jobs file: the composed layers, then one strip per job. Empty, with

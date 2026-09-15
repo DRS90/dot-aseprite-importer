@@ -3,20 +3,22 @@ extends RefCounted
 ## Turns the size, layer and tag names of one .aseprite file into export jobs.
 ##
 ## Every frame is a 3x3 grid of cells named after the direction they face; the center cell is not
-## exported. Pure: no filesystem, no CLI, no editor. One job is one strip:
-## {"direction": String, "tag": String, "relative_path": String}
+## exported. Pure: no filesystem, no CLI, no editor. One job is one animation, exported as one
+## strip: {"direction": String, "tag": String, "animation": String, "loop": bool,
+## "relative_path": String}, where relative_path names the strip file inside the export folder.
 ## Problems are collected in [member errors] instead of being printed, so the caller decides how
 ## to report them and tests can assert on them.
 
-const PNG_EXTENSION := ".png"
-const DEFAULT_FILENAME := "{title}_{direction}_{tag}"
+const DEFAULT_ANIMATION_NAME := "{tag}_{direction}"
+const DEFAULT_LOOP_SUFFIX := "_loop"
 ## Grid cells in reading order, center excluded. aseprite_batch.lua maps each name to its cell.
 const DIRECTIONS: Array[String] = [
 	"left_up", "up", "right_up", "left", "right", "left_down", "down", "right_down"
 ]
-const REMOVED_PLACEHOLDER := "{layer}"
 ## Layer choice that composes every layer not matched by the exclude pattern.
 const ALL_LAYERS := "[all]"
+## Characters an AnimationLibrary does not accept in animation names.
+const INVALID_NAME_CHARACTERS: Array[String] = ["/", ":", ",", "["]
 
 ## Problems found by the last [method build_jobs] call.
 var errors := PackedStringArray()
@@ -33,9 +35,9 @@ var cell_size := Vector2i.ZERO
 ## against them. [param options] keys: cell_size (Vector2i; 0 on an axis is a third of the sprite),
 ## layer (the top-level layer or group composed into every strip, or [constant ALL_LAYERS] for
 ## every layer not matched by layer_exclude_pattern), layer_exclude_pattern, tag_exclude_pattern,
-## output_folder and filename.
+## animation_name ({tag} and {direction}) and loop_suffix (a tag ending with it loops and loses it
+## in {tag}; empty means no animation loops).
 func build_jobs(
-	title: String,
 	sprite_size: Vector2i,
 	layer_names: PackedStringArray,
 	tags: PackedStringArray,
@@ -52,73 +54,61 @@ func build_jobs(
 	var layer_choice := str(options.get("layer", ALL_LAYERS))
 	composed_layers = _select_layers(layer_choice, layer_names, layer_filter)
 	var tag_filter := _compile_filter(str(options.get("tag_exclude_pattern", "")), "tag")
-	var folder_template := str(options.get("output_folder", ""))
-	var filename_template := str(options.get("filename", DEFAULT_FILENAME))
+	var name_template := str(options.get("animation_name", DEFAULT_ANIMATION_NAME))
+	var loop_suffix := str(options.get("loop_suffix", DEFAULT_LOOP_SUFFIX))
 
 	failed = cell_size == Vector2i.ZERO or composed_layers.is_empty()
-	if (folder_template + filename_template).contains(REMOVED_PLACEHOLDER):
-		errors.append("'{layer}' is no longer a template placeholder: use '{direction}'.")
-		failed = true
 	if failed:
 		return jobs
 
 	var export_tags := _without_excluded(tags, tag_filter)
 	if tags.is_empty():
-		# No tags at all: the whole timeline becomes one strip per direction.
+		# No tags at all: the whole timeline becomes one animation per direction.
 		export_tags.append("")
 
-	var seen_paths := {}
+	var seen_names := {}
 	for direction: String in DIRECTIONS:
 		for tag: String in export_tags:
-			var relative_path := build_relative_path(
-				folder_template, filename_template, title, direction, tag
-			)
-			if seen_paths.has(relative_path):
-				errors.append(
-					(
-						"Two outputs resolve to '%s'; skipped the one for '%s' '%s'."
-						% [relative_path, direction, tag]
-					)
-				)
+			var animation := animation_name(name_template, tag, direction, loop_suffix)
+			if animation == "" or seen_names.has(animation):
+				var problem := "Tag '%s' (%s) gives the animation name '%s', empty or already used."
+				errors.append(problem % [tag, direction, animation])
 				continue
-			seen_paths[relative_path] = true
-			jobs.append({"direction": direction, "tag": tag, "relative_path": relative_path})
+			seen_names[animation] = true
+			var job := {
+				"direction": direction,
+				"tag": tag,
+				"animation": animation,
+				"loop": is_loop(tag, loop_suffix),
+				"relative_path": "strip_%03d.png" % jobs.size(),
+			}
+			jobs.append(job)
 	return jobs
 
 
-## Relative output path (with extension) for one strip. Folder and filename templates accept
-## {title}, {direction} and {tag}. An empty tag collapses the separators left around it.
-static func build_relative_path(
-	folder_template: String,
-	filename_template: String,
-	title: String,
-	direction: String,
-	tag: String
+## Animation name for one tag and direction. [param template] accepts {tag} and {direction}; the
+## loop suffix is removed from the tag, and an empty tag collapses the separators left around it.
+static func animation_name(
+	template: String, tag: String, direction: String, loop_suffix: String
 ) -> String:
-	var folder := apply_template(folder_template, title, direction, tag)
-	var file_name := apply_template(filename_template, title, direction, tag)
-	if tag == "":
-		folder = _collapse_separators(folder)
-		file_name = _collapse_separators(file_name)
-	var path := file_name + PNG_EXTENSION
-	if folder != "":
-		path = folder.path_join(path)
-	return path.simplify_path()
+	var tag_name := tag.trim_suffix(loop_suffix) if is_loop(tag, loop_suffix) else tag
+	var name := template.replace("{tag}", tag_name).replace("{direction}", direction)
+	if tag_name == "":
+		name = _collapse_separators(name)
+	return sanitize_animation_name(name)
 
 
-static func apply_template(
-	template: String, title: String, direction: String, tag: String
-) -> String:
-	return template.replace("{title}", title).replace("{direction}", direction).replace(
-		"{tag}", sanitize(tag)
-	)
+## True when [param tag] ends with a non-empty [param loop_suffix].
+static func is_loop(tag: String, loop_suffix: String) -> bool:
+	return loop_suffix != "" and tag.ends_with(loop_suffix)
 
 
-## Makes a tag name safe to use as part of a file name.
-static func sanitize(name: String) -> String:
-	if name == "":
-		return ""
-	return name.replace("/", "_").replace(" ", "_").validate_filename()
+## Replaces the characters an AnimationLibrary does not accept in animation names with "_".
+static func sanitize_animation_name(text: String) -> String:
+	var result := text
+	for character: String in INVALID_NAME_CHARACTERS:
+		result = result.replace(character, "_")
+	return result
 
 
 static func _collapse_separators(text: String) -> String:
@@ -126,15 +116,8 @@ static func _collapse_separators(text: String) -> String:
 	var previous := ""
 	while previous != result:
 		previous = result
-		result = (
-			result
-			. replace("__", "_")
-			. replace("//", "/")
-			. replace("_/", "/")
-			. replace("/_", "/")
-			. replace("_.", ".")
-		)
-	return result.lstrip("_").rstrip("_/")
+		result = result.replace("__", "_")
+	return result.lstrip("_").rstrip("_")
 
 
 ## [param requested] with each 0 axis replaced by a third of [param sprite_size], or

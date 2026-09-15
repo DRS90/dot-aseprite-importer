@@ -2,20 +2,20 @@
 extends RefCounted
 ## Editor and project settings of the addon.
 ##
-## The executable path is per machine (EditorSettings); output defaults are per project
+## The executable path is per machine (EditorSettings); import defaults are per project
 ## (ProjectSettings) and can still be overridden per file in the Import dock.
 
 const EXECUTABLE_KEY := "aseprite_topdown_layers/general/executable_path"
 const EXECUTABLE_ENV := "ASEPRITE_PATH"
-const DEFAULT_OUTPUT_FOLDER_KEY := "aseprite_topdown_layers/defaults/output_folder"
-const DEFAULT_FILENAME_KEY := "aseprite_topdown_layers/defaults/filename"
 const DEFAULT_LAYER_EXCLUDE_KEY := "aseprite_topdown_layers/defaults/layer_exclude_pattern"
 const DEFAULT_TAG_EXCLUDE_KEY := "aseprite_topdown_layers/defaults/tag_exclude_pattern"
+const DEFAULT_ANIMATION_NAME_KEY := "aseprite_topdown_layers/defaults/animation_name"
+const DEFAULT_LOOP_SUFFIX_KEY := "aseprite_topdown_layers/defaults/loop_suffix"
 const PROJECT_DEFAULTS := {
-	DEFAULT_OUTPUT_FOLDER_KEY: "assets/{tag}",
-	DEFAULT_FILENAME_KEY: "{title}_{direction}_{tag}",
 	DEFAULT_LAYER_EXCLUDE_KEY: "^_",
 	DEFAULT_TAG_EXCLUDE_KEY: "^_",
+	DEFAULT_ANIMATION_NAME_KEY: "{tag}_{direction}",
+	DEFAULT_LOOP_SUFFIX_KEY: "_loop",
 }
 
 
