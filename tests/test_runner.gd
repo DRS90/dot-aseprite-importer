@@ -10,17 +10,31 @@ const SpriteFramesBuilder := preload(
 	"res://addons/aseprite_topdown_grid_animations/sprite_frames_builder.gd"
 )
 
-const SOURCE := "res://examples/character/character-matrix/character-matrix.aseprite"
-const SPRITE_SIZE := Vector2i(144, 192)
-const CELL_SIZE := Vector2i(48, 64)
-const FRAME_COUNT := 40
-const EXPECTED_DIR := "res://tests/expected/idle_loop"
-const EXPECTED_LAYERS: Array[String] = ["default"]
-const EXPECTED_TAGS: Array[String] = ["idle_loop", "walk", "death", "dash", "jump"]
-## Directions drawn in the example; its left and right cells are empty.
-const DRAWN_DIRECTIONS: Array[String] = [
-	"left_up", "up", "right_up", "left_down", "down", "right_down"
+const SOURCE := "res://examples/retro-top-down-character.aseprite"
+const SHEETS_DIR := "res://examples/rpg-type-retro-top-down-playable-character-spritesheett"
+const SHEET := SHEETS_DIR + "/16x16-rpg-topdown-playable-character-template.png"
+const ATTACK_SHEET := SHEETS_DIR + "/48x48-attack.png"
+const SPRITE_SIZE := Vector2i(144, 144)
+const CELL_SIZE := Vector2i(48, 48)
+const CHARACTER_SIZE := 16
+const FRAME_COUNT := 44
+## First sheet column of the slash tag, the only one with a sword effect.
+const SLASH_FIRST := 32
+const EXPECTED_LAYERS: Array[String] = ["character", "weapon"]
+const EXPECTED_TAGS: Array[String] = [
+	"walk_loop",
+	"push_loop",
+	"pull_loop",
+	"carry_loop",
+	"pickup",
+	"throw",
+	"use",
+	"slash",
+	"swim_loop",
+	"climb_loop",
 ]
+## Sheet row of every direction drawn in the example; its diagonal cells are empty.
+const SHEET_ROWS := {"down": 0, "up": 1, "left": 2, "right": 3}
 const DEFAULT_OPTIONS := {
 	"cell_size": Vector2i.ZERO,
 	"layer": "[all]",
@@ -30,9 +44,8 @@ const DEFAULT_OPTIONS := {
 	"loop_suffix": "_loop",
 }
 const ASSET_HELP := (
-	"See README > Credits to build "
-	+ "examples/character/character-matrix/character-matrix.aseprite and the reference strips in "
-	+ "tests/expected/idle_loop/."
+	"The example is built from the CC0 sheets of 5yvalia with "
+	+ "tests/tools/build_retro_example.lua; see README > Credits."
 )
 
 var _failures := 0
@@ -44,7 +57,7 @@ func _initialize() -> void:
 	if missing.is_empty():
 		_test_with_example_asset()
 	else:
-		print("SKIP: Aseprite checks, example asset not found: %s" % ", ".join(missing))
+		print("SKIP: Aseprite checks, example files not found: %s" % ", ".join(missing))
 		print("SKIP: " + ASSET_HELP)
 	_test_planner_edge_cases()
 	_test_builder()
@@ -55,12 +68,9 @@ func _initialize() -> void:
 
 func _missing_example_files() -> PackedStringArray:
 	var missing := PackedStringArray()
-	if not FileAccess.file_exists(SOURCE):
-		missing.append(SOURCE)
-	for direction: String in DRAWN_DIRECTIONS:
-		var expected := _expected_strip(direction)
-		if not FileAccess.file_exists(expected):
-			missing.append(expected)
+	for path: String in [SOURCE, SHEET, ATTACK_SHEET]:
+		if not FileAccess.file_exists(path):
+			missing.append(path)
 	return missing
 
 
@@ -91,17 +101,17 @@ func _test_listing(cli: AsepriteCli) -> Dictionary:
 		str(visible)
 	)
 	var tags: PackedStringArray = contents.get("tags", PackedStringArray())
-	_check(tags == PackedStringArray(EXPECTED_TAGS), "list_contents returns 5 tags", str(tags))
+	_check(tags == PackedStringArray(EXPECTED_TAGS), "list_contents returns 10 tags", str(tags))
 	var ranges: Dictionary = contents.get("tag_ranges", {})
 	_check(
-		ranges.get("walk", {}) == {"from": 8, "to": 15, "direction": "forward"},
+		ranges.get("walk_loop", {}) == {"from": 0, "to": 3, "direction": "forward"},
 		"list_contents returns tag ranges and directions",
 		str(ranges)
 	)
 	var durations: PackedInt32Array = contents.get("frame_durations", PackedInt32Array())
 	_check(
 		durations.size() == FRAME_COUNT and durations.count(100) == FRAME_COUNT,
-		"list_contents returns 40 frame durations of 100 ms",
+		"list_contents returns 44 frame durations of 100 ms",
 		str(durations)
 	)
 	return contents
@@ -112,7 +122,7 @@ func _test_planner(planner: ExportPlanner, contents: Dictionary) -> Array[Dictio
 	var layers: PackedStringArray = contents.get("layers", PackedStringArray())
 	var tags: PackedStringArray = contents.get("tags", PackedStringArray())
 	var jobs := planner.build_jobs(size, layers, tags, DEFAULT_OPTIONS)
-	_check(jobs.size() == 40, "planner builds 8 directions x 5 tags", str(jobs.size()))
+	_check(jobs.size() == 80, "planner builds 8 directions x 10 tags", str(jobs.size()))
 	_check(
 		not planner.failed and planner.errors.is_empty(),
 		"planner reports no errors",
@@ -124,27 +134,23 @@ func _test_planner(planner: ExportPlanner, contents: Dictionary) -> Array[Dictio
 		"every layer is composed",
 		str(planner.composed_layers)
 	)
-	var walk := _find_job(jobs, "walk_right_down")
+	var walk := _find_job(jobs, "walk_down")
 	_check(
-		(
-			walk.get("tag") == "walk"
-			and walk.get("direction") == "right_down"
-			and walk.get("loop") == false
-		),
-		"walk right_down becomes the animation walk_right_down, not looping",
+		walk.get("tag") == "walk_loop" and walk.get("loop") == true,
+		"walk_loop becomes the looping animation walk_down",
 		str(walk)
 	)
-	var idle := _find_job(jobs, "idle_up")
+	var slash := _find_job(jobs, "slash_left")
 	_check(
-		idle.get("tag") == "idle_loop" and idle.get("loop") == true,
-		"idle_loop becomes the looping animation idle_up",
-		str(idle)
+		slash.get("tag") == "slash" and slash.get("loop") == false,
+		"slash keeps its name and does not loop",
+		str(slash)
 	)
 	return jobs
 
 
-## All 40 jobs in one Aseprite process, then the SpriteFrames: the empty left and right cells give
-## no animation, and every idle frame matches the layer-per-direction reference strips.
+## All 80 jobs in one Aseprite process, then the SpriteFrames: the diagonals and the sides of climb
+## give no animation, and every frame matches the CC0 sheets the example was built from.
 func _test_sprite_frames(
 	cli: AsepriteCli, planner: ExportPlanner, jobs: Array[Dictionary], contents: Dictionary
 ) -> void:
@@ -157,58 +163,104 @@ func _test_sprite_frames(
 		strips_dir
 	)
 	_check(
-		code == OK and cli.last_written.size() == 30,
-		"export_strips writes 30 of 40 strips",
+		code == OK and cli.last_written.size() == 38,
+		"export_strips writes 38 of 80 strips",
 		"%d written, %s" % [cli.last_written.size(), cli.last_error]
 	)
 	var builder := SpriteFramesBuilder.new()
 	var frames := builder.build(jobs, cli.last_written, strips_dir, contents, planner.cell_size)
 	var names := frames.get_animation_names()
 	_check(
-		builder.errors.is_empty() and names.size() == 30 and not frames.has_animation(&"idle_left"),
-		"SpriteFrames has 30 animations and none for the empty cells",
+		(
+			builder.errors.is_empty()
+			and names.size() == 38
+			and not frames.has_animation(&"walk_left_up")
+			and not frames.has_animation(&"climb_left")
+		),
+		"SpriteFrames has 38 animations, none for the empty cells",
 		"%s %s" % [names, builder.errors]
 	)
-	if not frames.has_animation(&"idle_down") or not frames.has_animation(&"walk_down"):
-		_check(false, "SpriteFrames has idle_down and walk_down", str(names))
+	if not frames.has_animation(&"walk_down"):
+		_check(false, "SpriteFrames has walk_down", str(names))
 		return
 	_check(
 		(
-			frames.get_frame_count(&"idle_down") == 8
-			and is_equal_approx(frames.get_animation_speed(&"idle_down"), 10.0)
-			and frames.get_frame_duration(&"idle_down", 7) == 1.0
-			and frames.get_animation_loop(&"idle_down")
-			and not frames.get_animation_loop(&"walk_down")
+			frames.get_frame_count(&"walk_down") == 4
+			and is_equal_approx(frames.get_animation_speed(&"walk_down"), 10.0)
+			and frames.get_frame_duration(&"walk_down", 3) == 1.0
+			and frames.get_animation_loop(&"walk_down")
+			and frames.get_frame_count(&"use_left") == 8
+			and not frames.get_animation_loop(&"slash_right")
 		),
-		"idle_down has 8 frames at 10 fps and loops; walk_down does not loop"
+		"walk_down loops with 4 frames at 10 fps, use_left has 8, slash_right does not loop"
 	)
+	_test_frames_match_sheets(frames, jobs, contents)
+
+
+func _test_frames_match_sheets(
+	frames: SpriteFrames, jobs: Array[Dictionary], contents: Dictionary
+) -> void:
+	var sheet := Image.load_from_file(ProjectSettings.globalize_path(SHEET))
+	var attack := Image.load_from_file(ProjectSettings.globalize_path(ATTACK_SHEET))
+	sheet.convert(Image.FORMAT_RGBA8)
+	attack.convert(Image.FORMAT_RGBA8)
+	var ranges: Dictionary = contents.get("tag_ranges", {})
+	var checked := 0
 	var matching := 0
-	for direction: String in DRAWN_DIRECTIONS:
-		var reference := Image.load_from_file(
-			ProjectSettings.globalize_path(_expected_strip(direction))
-		)
-		reference.convert(Image.FORMAT_RGBA8)
-		var animation := StringName("idle_" + direction)
+	for job: Dictionary in jobs:
+		var animation := StringName(str(job["animation"]))
+		var direction: String = job["direction"]
+		if not frames.has_animation(animation) or not SHEET_ROWS.has(direction):
+			continue
+		var tag_range: Dictionary = ranges[job["tag"]]
+		var first: int = tag_range["from"]
+		var row: int = SHEET_ROWS[direction]
 		for index: int in frames.get_frame_count(animation):
 			var frame := frames.get_frame_texture(animation, index).get_image()
 			frame.convert(Image.FORMAT_RGBA8)
-			var cell := Rect2i(index * CELL_SIZE.x, 0, CELL_SIZE.x, CELL_SIZE.y)
-			if frame.get_data() == reference.get_region(cell).get_data():
+			checked += 1
+			if frame.get_data() == _expected_frame(sheet, attack, first + index, row).get_data():
 				matching += 1
-	_check(matching == 48, "idle frames match the reference strips", "%d of 48" % matching)
+	_check(
+		checked == 168 and matching == checked,
+		"every frame matches the sheets the example was built from",
+		"%d of %d" % [matching, checked]
+	)
+
+
+## The cell the example should hold for one sheet column and row: the character centered, plus the
+## sword effect of the slash columns.
+func _expected_frame(sheet: Image, attack: Image, column: int, row: int) -> Image:
+	var expected := Image.create_empty(CELL_SIZE.x, CELL_SIZE.y, false, Image.FORMAT_RGBA8)
+	var character := sheet.get_region(
+		Rect2i(column * CHARACTER_SIZE, row * CHARACTER_SIZE, CHARACTER_SIZE, CHARACTER_SIZE)
+	)
+	var offset := (CELL_SIZE.x - CHARACTER_SIZE) / 2
+	expected.blit_rect(
+		character, Rect2i(0, 0, CHARACTER_SIZE, CHARACTER_SIZE), Vector2i(offset, offset)
+	)
+	var effect_column := column - SLASH_FIRST
+	if effect_column >= 0 and (effect_column + 1) * CELL_SIZE.x <= attack.get_width():
+		var effect := attack.get_region(
+			Rect2i(effect_column * CELL_SIZE.x, row * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y)
+		)
+		expected.blend_rect(effect, Rect2i(Vector2i.ZERO, CELL_SIZE), Vector2i.ZERO)
+	return expected
 
 
 func _test_export_rejects_bad_input(cli: AsepriteCli) -> void:
-	var layers := PackedStringArray(EXPECTED_LAYERS)
+	var layers := PackedStringArray(["character"])
 	var ghost := PackedStringArray(["ghost"])
 	_expect_rejected(
-		cli, "an unknown layer", ghost, CELL_SIZE, "walk", "up", "unknown layer 'ghost'"
+		cli, "an unknown layer", ghost, CELL_SIZE, "walk_loop", "up", "unknown layer 'ghost'"
 	)
 	_expect_rejected(cli, "an unknown tag", layers, CELL_SIZE, "nope", "up", "unknown tag 'nope'")
 	_expect_rejected(
-		cli, "an unknown direction", layers, CELL_SIZE, "walk", "center", "unknown direction"
+		cli, "an unknown direction", layers, CELL_SIZE, "walk_loop", "center", "unknown direction"
 	)
-	_expect_rejected(cli, "a cell too big", layers, Vector2i(50, 64), "walk", "up", "does not fit")
+	_expect_rejected(
+		cli, "a cell too big", layers, Vector2i(50, 48), "walk_loop", "up", "does not fit"
+	)
 
 
 func _expect_rejected(
@@ -246,15 +298,15 @@ func _test_planner_edge_cases() -> void:
 
 	var jobs := planner.build_jobs(SPRITE_SIZE, layers, tags, DEFAULT_OPTIONS)
 	_check(
-		jobs.size() == 40 and planner.composed_layers == PackedStringArray(["body", "fx"]),
+		jobs.size() == 80 and planner.composed_layers == PackedStringArray(["body", "fx"]),
 		"[all] composes every layer not excluded",
 		str(planner.composed_layers)
 	)
 
 	var options := DEFAULT_OPTIONS.duplicate()
-	options["tag_exclude_pattern"] = "^(walk|jump)$"
+	options["tag_exclude_pattern"] = "^(push_loop|pull_loop)$"
 	jobs = planner.build_jobs(SPRITE_SIZE, layers, tags, options)
-	_check(jobs.size() == 24, "tag exclude pattern removes 2 tags", str(jobs.size()))
+	_check(jobs.size() == 64, "tag exclude pattern removes 2 tags", str(jobs.size()))
 
 	jobs = planner.build_jobs(SPRITE_SIZE, layers, PackedStringArray(), DEFAULT_OPTIONS)
 	_check(
@@ -267,14 +319,13 @@ func _test_planner_edge_cases() -> void:
 	options["animation_name"] = "{direction}"
 	jobs = planner.build_jobs(SPRITE_SIZE, layers, tags, options)
 	_check(
-		jobs.size() == 8 and planner.errors.size() == 32,
+		jobs.size() == 8 and planner.errors.size() == 72,
 		"animation names used twice are skipped and reported",
 		"%d jobs, %d errors" % [jobs.size(), planner.errors.size()]
 	)
 
-	jobs = planner.build_jobs(
-		SPRITE_SIZE, layers, PackedStringArray(["idle", "idle_loop"]), DEFAULT_OPTIONS
-	)
+	var same_names := PackedStringArray(["idle", "idle_loop"])
+	jobs = planner.build_jobs(SPRITE_SIZE, layers, same_names, DEFAULT_OPTIONS)
 	_check(
 		jobs.size() == 8 and planner.errors.size() == 8,
 		"idle and idle_loop give the same names: the second is reported",
@@ -324,7 +375,7 @@ func _test_layer_choice(
 	options["layer"] = ""
 	var jobs := planner.build_jobs(SPRITE_SIZE, layers, tags, options)
 	_check(
-		jobs.size() == 40 and planner.composed_layers == PackedStringArray(["body", "fx"]),
+		jobs.size() == 80 and planner.composed_layers == PackedStringArray(["body", "fx"]),
 		"an empty layer choice means [all]",
 		str(planner.composed_layers)
 	)
@@ -333,7 +384,7 @@ func _test_layer_choice(
 	jobs = planner.build_jobs(SPRITE_SIZE, layers, tags, options)
 	_check(
 		(
-			jobs.size() == 40
+			jobs.size() == 80
 			and planner.errors.is_empty()
 			and planner.composed_layers == PackedStringArray(["fx"])
 		),
@@ -344,7 +395,7 @@ func _test_layer_choice(
 	options["layer"] = "_guide"
 	jobs = planner.build_jobs(SPRITE_SIZE, layers, tags, options)
 	_check(
-		jobs.size() == 40 and planner.composed_layers == PackedStringArray(["_guide"]),
+		jobs.size() == 80 and planner.composed_layers == PackedStringArray(["_guide"]),
 		"an excluded layer can still be chosen",
 		str(planner.composed_layers)
 	)
@@ -370,7 +421,7 @@ func _test_cell_size(
 	options["cell_size"] = CELL_SIZE
 	var jobs := planner.build_jobs(SPRITE_SIZE, layers, tags, options)
 	_check(
-		jobs.size() == 40 and planner.cell_size == CELL_SIZE,
+		jobs.size() == 80 and planner.cell_size == CELL_SIZE,
 		"explicit cell size equal to the default",
 		str(planner.cell_size)
 	)
@@ -378,12 +429,12 @@ func _test_cell_size(
 	options["cell_size"] = Vector2i(40, 0)
 	jobs = planner.build_jobs(SPRITE_SIZE, layers, tags, options)
 	_check(
-		jobs.size() == 40 and planner.cell_size == Vector2i(40, 64),
+		jobs.size() == 80 and planner.cell_size == Vector2i(40, 48),
 		"smaller cell width, 0 height is a third",
 		str(planner.cell_size)
 	)
 
-	for cell: Vector2i in [Vector2i(50, 64), Vector2i(-1, 64), Vector2i(48, 65)]:
+	for cell: Vector2i in [Vector2i(50, 48), Vector2i(-1, 48), Vector2i(48, 49)]:
 		options["cell_size"] = cell
 		jobs = planner.build_jobs(SPRITE_SIZE, layers, tags, options)
 		_check(
@@ -392,7 +443,7 @@ func _test_cell_size(
 			str(planner.errors)
 		)
 
-	jobs = planner.build_jobs(Vector2i(145, 192), layers, tags, DEFAULT_OPTIONS)
+	jobs = planner.build_jobs(Vector2i(145, 144), layers, tags, DEFAULT_OPTIONS)
 	_check(
 		jobs.is_empty() and planner.failed,
 		"default cell needs a size multiple of 3",
@@ -589,10 +640,6 @@ func _test_sync_linked(
 		str(library.get_animation(&"idle_down").get_track_count())
 	)
 	_check(sync.sync_linked(sprite, true), "force syncs even when nothing changed")
-
-
-func _expected_strip(direction: String) -> String:
-	return EXPECTED_DIR.path_join("character_%s_idle_loop.png" % direction)
 
 
 func _find_job(jobs: Array[Dictionary], animation: String) -> Dictionary:

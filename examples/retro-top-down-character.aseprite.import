@@ -1,0 +1,22 @@
+[remap]
+
+importer="aseprite_topdown_grid_animations.importer"
+importer_version=1
+type="SpriteFrames"
+uid="uid://lwuejbnc1ubr"
+path="res://.godot/imported/retro-top-down-character.aseprite-c00f126d57f9b6e7c42710ad58b6f89d.res"
+
+[deps]
+
+source_file="res://examples/retro-top-down-character.aseprite"
+dest_files=["res://.godot/imported/retro-top-down-character.aseprite-c00f126d57f9b6e7c42710ad58b6f89d.res"]
+
+[params]
+
+grid/cell_size=Vector2i(0, 0)
+layers/layer="[all]"
+layers/exclude_pattern="^_"
+layers/only_visible=false
+tags/exclude_pattern="^_"
+sprite_frames/animation_name="{tag}_{direction}"
+sprite_frames/loop_suffix="_loop"

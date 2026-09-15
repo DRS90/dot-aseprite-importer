@@ -82,8 +82,13 @@ changed, and can be forced with a button.
 - Metadata names starting with `_` are editor-only and not saved: the sprite's link and sync key use
   `aseprite_topdown_grid_animations_*` names.
 
-## Publishing
+## Example asset
 
+- The example is `examples/retro-top-down-character.aseprite`, built by
+  `tests/tools/build_retro_example.lua` from the CC0 sheets in
+  `examples/rpg-type-retro-top-down-playable-character-spritesheett/` (5yvalia, `LICENSE.png`
+  included). Everything is tracked in git and the tests compare the imported frames with the sheets,
+  so there is no `tests/expected/` folder any more.
 - **No `git push`, GitHub repo creation or Asset Library submission without explicit user
   confirmation**.
 

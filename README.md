@@ -190,6 +190,26 @@ the script lists what each one covers:
 <aseprite> -b --script-param src=<grid.aseprite> --script-param out=<folder> --script tests/tools/build_cases.lua
 ```
 
+## Credits
+
+The example character, `examples/retro-top-down-character.aseprite`, is built from the
+["RPG Type Retro Top-Down Playable Character Template" by 5yvalia](https://5yvalia.itch.io/rpg-type-retro-top-down-playable-character-template),
+released as **CC0** (public domain). Its sheets are in
+`examples/rpg-type-retro-top-down-playable-character-spritesheett/`, with the `LICENSE.png` of the
+download.
+
+The example has 48x48 cells (the size of the sword effect) with the 16x16 character centered in
+each one, two layers (`character` and `weapon`) and one tag per animation of the sheets. The cells
+of the diagonals are empty, and climbing is only drawn facing up and down.
+`tests/tools/build_retro_example.lua` rebuilds it:
+
+```
+<aseprite> -b --script-param file=examples/retro-top-down-character.aseprite --script-param sheet=examples/rpg-type-retro-top-down-playable-character-spritesheett/16x16-rpg-topdown-playable-character-template.png --script-param attack=examples/rpg-type-retro-top-down-playable-character-spritesheett/48x48-attack.png --script tests/tools/build_retro_example.lua
+```
+
+The test runner compares every imported frame with those sheets, so the repository needs no
+reference strips.
+
 ## License
 
 [MIT](LICENSE)

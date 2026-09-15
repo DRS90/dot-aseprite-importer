@@ -28,6 +28,10 @@
 - [ ] Screenshots in `screenshots/`
 - [ ] Square PNG icon (≥128 px) for the Asset Library listing
 - [ ] Confirm the license holder in `LICENSE`
+- [x] Replace the example asset with 5yvalia's CC0
+      [RPG Type Retro Top-Down Playable Character Template](https://5yvalia.itch.io/rpg-type-retro-top-down-playable-character-template):
+      `tests/tools/build_retro_example.lua` builds `examples/retro-top-down-character.aseprite` from
+      its sheets, both are tracked in git, and the tests compare the imported frames with the sheets
 - [ ] Push to GitHub, tag `v0.1.0`
 - [ ] Submit to the Godot Asset Library (category Addon, Godot 4.7, MIT, commit hash of the tag)
 
