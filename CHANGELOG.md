@@ -15,7 +15,8 @@ All notable changes to this project are documented here. The format follows
 - Layer and tag exclusion patterns, `only_visible`, horizontal or vertical strips.
 - `always_include` layers and named layer `combinations`, validated against the file's layers.
 - Anti-churn export: strips are copied into the project only when their content changed.
-- Manifest-based deletion of strips that are no longer produced.
+- Manifest-based deletion of strips that are no longer produced, and of the folders they leave
+  empty. Strips kept with `output/delete_stale` off are still removed once it is turned on.
 - Executable path from Editor Settings, the `ASEPRITE_PATH` variable or the OS default.
 - Project-wide defaults in Project Settings.
 - *Project > Tools > Aseprite Top-Down Layers: Reimport all*.

@@ -58,8 +58,9 @@ usual loop is: save in Aseprite, switch back to Godot, and the strips are update
 - Strips are exported to a cache folder first and copied into the project **only when their content
   changed**, so saving an unrelated layer does not reimport every texture.
 - The imported resource is a small manifest listing the PNGs written. On the next import, strips
-  that are no longer produced (renamed layer, removed tag, new exclusion) are deleted together with
-  their `.import` file. Empty folders are left in place.
+  that are no longer produced (renamed layer or tag, removed tag, new exclusion) are deleted together
+  with their `.import` file, and folders left empty are removed. With `output/delete_stale` off they
+  are kept but stay listed, so turning the option on later still removes them.
 - After an import, a debounced file system scan makes Godot import the new PNGs as textures.
 
 *Project > Tools > Aseprite Top-Down Layers: Reimport all* forces a reimport of every file that uses

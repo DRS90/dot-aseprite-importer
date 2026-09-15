@@ -2,10 +2,10 @@
 extends EditorImportPlugin
 ## Imports .aseprite/.ase files as one PNG strip per top-level layer (or group) and tag.
 ##
-## The imported resource is only a manifest (PackedDataContainer) with the PNGs written, so the next
-## import can delete strips that are no longer produced. Strips are exported to a cache folder first
-## and copied into the project only when their MD5 differs: re-importing an unchanged source does
-## not cascade into texture reimports.
+## The imported resource is only a manifest (PackedDataContainer) with the PNGs this importer
+## owns, so the next import can delete strips that are no longer produced. Strips are exported to a
+## cache folder first and copied into the project only when their MD5 differs: re-importing an
+## unchanged source does not cascade into texture reimports.
 
 const AsepriteCli := preload("aseprite_cli.gd")
 const ExportPlanner := preload("export_planner.gd")
@@ -183,10 +183,15 @@ func _import(
 		if copy_error != OK:
 			return copy_error
 
+	var previous_files := _load_previous_files(save_path)
+	var manifest_files := written
 	var delete_stale: bool = options.get(OPTION_DELETE_STALE, true)
 	if delete_stale:
-		_delete_stale(_load_previous_files(save_path), written)
-	var save_error := _save_manifest(save_path, absolute_source, written)
+		_delete_stale(previous_files, written, source_file.get_base_dir())
+	else:
+		# Stale strips stay listed, so turning delete_stale on later still removes them.
+		manifest_files = _with_kept_files(previous_files, written)
+	var save_error := _save_manifest(save_path, absolute_source, manifest_files)
 	# Never scan from inside _import(): the scheduler runs it deferred, after the import ends.
 	if is_instance_valid(_scheduler):
 		_scheduler.schedule()
@@ -236,14 +241,45 @@ func _copy_if_changed(exported: String, target: String) -> Error:
 	return copy_error
 
 
-func _delete_stale(previous: PackedStringArray, written: PackedStringArray) -> void:
+## Deletes the strips of a previous import that are no longer produced, then the folders they leave
+## empty, up to (not including) [param keep_dir].
+func _delete_stale(
+	previous: PackedStringArray, written: PackedStringArray, keep_dir: String
+) -> void:
+	var folders := PackedStringArray()
 	for path: String in previous:
-		# Only PNGs this importer wrote inside the project are ever deleted.
-		if written.has(path) or not path.begins_with(RES_PREFIX) or path.get_extension() != "png":
+		if written.has(path) or not _is_own_output(path):
 			continue
 		for doomed: String in [path, path + ".import"]:
 			if FileAccess.file_exists(doomed):
 				DirAccess.remove_absolute(ProjectSettings.globalize_path(doomed))
+		if not folders.has(path.get_base_dir()):
+			folders.append(path.get_base_dir())
+	for folder: String in folders:
+		_remove_empty_folders(folder, keep_dir)
+
+
+## Removes [param folder] and then its parents while they are empty, stopping at [param keep_dir]
+## and at res://. Removing a folder that still holds anything fails, so nothing else is deleted.
+func _remove_empty_folders(folder: String, keep_dir: String) -> void:
+	var current := folder
+	while current.begins_with(RES_PREFIX) and current != RES_PREFIX and current != keep_dir:
+		if DirAccess.remove_absolute(ProjectSettings.globalize_path(current)) != OK:
+			return
+		current = current.get_base_dir()
+
+
+func _with_kept_files(previous: PackedStringArray, written: PackedStringArray) -> PackedStringArray:
+	var files := written.duplicate()
+	for path: String in previous:
+		if _is_own_output(path) and not files.has(path) and FileAccess.file_exists(path):
+			files.append(path)
+	return files
+
+
+## Only PNGs inside the project are ever listed or deleted.
+static func _is_own_output(path: String) -> bool:
+	return path.begins_with(RES_PREFIX) and path.get_extension() == "png"
 
 
 func _load_previous_files(save_path: String) -> PackedStringArray:
