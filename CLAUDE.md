@@ -45,9 +45,13 @@ changed (prevents cascading reimports).
   export matches them byte for byte (and a combination against `--layer a --layer b`).
 - `godot --headless --import`: the first run writes the PNGs, but their `.import` files only
   appear on a second run (the deferred scan does not run before exit).
+- Hot reload of `@tool` scripts does not re-run `plugin.gd`'s `_enter_tree()`: new menu items or
+  registrations only appear after disabling and re-enabling the plugin (or restarting the editor).
+  Tell the user to do that before a manual test of such changes.
 - Touching the `.aseprite` mtime does not reimport (Godot compares MD5). A parameter change in a
   `.import` file only applies on the next run. To force a reimport in tests, delete the matching
-  `.md5`/`.res` in `.godot/imported/`.
+  `.md5` in `.godot/imported/`. Keep the `.res` next to it: it *is* the manifest, and without it
+  stale strips can no longer be found.
 
 ## Publishing
 

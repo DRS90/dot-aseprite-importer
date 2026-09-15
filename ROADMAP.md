@@ -13,7 +13,7 @@
 
 ## Before publishing
 
-- [ ] Manual test in the editor: save in Aseprite, focus Godot, strips update with no cascading reimports
+- [x] Manual test in the editor: save in Aseprite, focus Godot, strips update with no cascading reimports
 - [ ] Screenshots in `screenshots/`
 - [ ] Square PNG icon (≥128 px) for the Asset Library listing
 - [ ] Confirm the license holder in `LICENSE`
