@@ -3,6 +3,7 @@ extends SceneTree
 ##   ASEPRITE_PATH=<aseprite> godot --headless --path . -s tests/test_runner.gd
 ## Prints one PASS/FAIL line per check and exits with 1 when any check fails.
 
+const AnimationSync := preload("res://addons/aseprite_topdown_layers/animation_sync.gd")
 const AsepriteCli := preload("res://addons/aseprite_topdown_layers/aseprite_cli.gd")
 const ExportPlanner := preload("res://addons/aseprite_topdown_layers/export_planner.gd")
 const SpriteFramesBuilder := preload(
@@ -47,6 +48,7 @@ func _initialize() -> void:
 		print("SKIP: " + ASSET_HELP)
 	_test_planner_edge_cases()
 	_test_builder()
+	_test_animation_sync()
 	print("%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(0 if _failures == 0 else 1)
 
@@ -463,6 +465,130 @@ func _test_builder_ping_pong() -> void:
 		"ping-pong animation reuses cells with Aseprite durations",
 		"%s %s %s" % [regions, durations, builder.errors]
 	)
+
+
+## A sprite and an AnimationPlayer side by side under one root in the scene tree. The player's
+## "idle_down" already has a user track on the sprite's modulate, and "old_down" only this sprite's
+## tracks from an earlier sync.
+func _test_animation_sync() -> void:
+	var root := Node2D.new()
+	var sprite := AnimatedSprite2D.new()
+	sprite.name = "Body"
+	root.add_child(sprite)
+	var player := AnimationPlayer.new()
+	root.add_child(player)
+	get_root().add_child(root)
+
+	var frames := SpriteFrames.new()
+	frames.remove_animation(&"default")
+	for animation: StringName in [&"idle_down", &"hit_down"]:
+		frames.add_animation(animation)
+		frames.set_animation_speed(animation, 10.0)
+		frames.set_animation_loop(animation, animation == &"idle_down")
+	var texture := PlaceholderTexture2D.new()
+	for duration: float in [1.0, 2.0, 1.0]:
+		frames.add_frame(&"idle_down", texture, duration)
+	for duration: float in [1.0, 1.0]:
+		frames.add_frame(&"hit_down", texture, duration)
+	sprite.sprite_frames = frames
+
+	var library := AnimationLibrary.new()
+	var user_animation := Animation.new()
+	var user_track := user_animation.add_track(Animation.TYPE_VALUE)
+	user_animation.track_set_path(user_track, "Body:modulate")
+	user_animation.track_insert_key(user_track, 0.0, Color.WHITE)
+	library.add_animation(&"idle_down", user_animation)
+	var old_animation := Animation.new()
+	var old_track := old_animation.add_track(Animation.TYPE_VALUE)
+	old_animation.track_set_path(old_track, "Body:frame")
+	library.add_animation(&"old_down", old_animation)
+	player.add_animation_library(&"", library)
+
+	var sync := AnimationSync.new()
+	var written := sync.sync(sprite, player)
+	written.sort()
+	_check(
+		sync.errors.is_empty() and written == PackedStringArray(["hit_down", "idle_down"]),
+		"sync writes one animation per SpriteFrames animation",
+		"%s %s" % [written, sync.errors]
+	)
+	_check_synced_idle(library)
+	_check(
+		not library.has_animation(&"old_down"),
+		"an animation left with only this sprite's old tracks is removed",
+		str(library.get_animation_list())
+	)
+	var hit := library.get_animation(&"hit_down")
+	_check(
+		hit.loop_mode == Animation.LOOP_NONE and is_equal_approx(hit.length, 0.2),
+		"a non-looping animation does not loop and lasts its frames",
+		"%s %s" % [hit.loop_mode, hit.length]
+	)
+
+	player.play(&"idle_down")
+	player.seek(0.15, true)
+	_check(
+		sprite.animation == &"idle_down" and sprite.frame == 1,
+		"the AnimationPlayer drives the sprite's animation and frame",
+		"%s %d" % [sprite.animation, sprite.frame]
+	)
+	player.stop()
+	_test_sync_linked(sync, sprite, player, library)
+	root.queue_free()
+
+
+func _check_synced_idle(library: AnimationLibrary) -> void:
+	var idle := library.get_animation(&"idle_down")
+	var frame_track := idle.find_track("Body:frame", Animation.TYPE_VALUE)
+	var times: Array[float] = []
+	var values: Array[int] = []
+	for key: int in idle.track_get_key_count(frame_track):
+		times.append(snappedf(idle.track_get_key_time(frame_track, key), 0.0001))
+		values.append(idle.track_get_key_value(frame_track, key))
+	var animation_track := idle.find_track("Body:animation", Animation.TYPE_VALUE)
+	_check(
+		(
+			idle.get_track_count() == 3
+			and idle.track_get_path(0) == NodePath("Body:modulate")
+			and animation_track == 1
+			and idle.track_get_key_value(animation_track, 0) == &"idle_down"
+			and times == [0.0, 0.1, 0.3]
+			and values == [0, 1, 2]
+			and is_equal_approx(idle.length, 0.4)
+			and idle.loop_mode == Animation.LOOP_LINEAR
+		),
+		"idle_down keeps the user track and gets frame keys at the Aseprite times",
+		(
+			"%d tracks, times %s, values %s, length %s"
+			% [idle.get_track_count(), times, values, idle.length]
+		)
+	)
+
+
+func _test_sync_linked(
+	sync: AnimationSync,
+	sprite: AnimatedSprite2D,
+	player: AnimationPlayer,
+	library: AnimationLibrary
+) -> void:
+	_check(not sync.sync_linked(sprite, false), "sync_linked does nothing without a linked player")
+	AnimationSync.link(sprite, player)
+	_check(
+		AnimationSync.linked_player(sprite) == player and sync.sync_linked(sprite, false),
+		"a linked player is synced the first time"
+	)
+	_check(not sync.sync_linked(sprite, false), "sync_linked skips an unchanged SpriteFrames")
+	sprite.sprite_frames.set_frame(&"idle_down", 1, PlaceholderTexture2D.new(), 3.0)
+	_check(sync.sync_linked(sprite, false), "sync_linked syncs again when a duration changes")
+	_check(
+		(
+			is_equal_approx(library.get_animation(&"idle_down").length, 0.5)
+			and library.get_animation(&"idle_down").get_track_count() == 3
+		),
+		"a second sync replaces its tracks instead of adding more",
+		str(library.get_animation(&"idle_down").get_track_count())
+	)
+	_check(sync.sync_linked(sprite, true), "force syncs even when nothing changed")
 
 
 func _expected_strip(direction: String) -> String:

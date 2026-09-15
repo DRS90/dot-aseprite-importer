@@ -1,7 +1,11 @@
 @tool
 extends EditorPlugin
-## Registers the Aseprite Top-Down Layers importer, its settings and the Project > Tools item.
+## Registers the Aseprite Top-Down Layers importer, its settings, the AnimationPlayer section of the
+## AnimatedSprite2D inspector and the Project > Tools item, and keeps linked AnimationPlayers in
+## sync with their sprites.
 
+const AnimatedSpriteInspector := preload("animated_sprite_inspector.gd")
+const AnimationSync := preload("animation_sync.gd")
 const Importer := preload("importer.gd")
 const Settings := preload("settings.gd")
 
@@ -10,6 +14,8 @@ const SOURCE_EXTENSIONS: Array[String] = ["aseprite", "ase"]
 
 var _settings: Settings
 var _importer: Importer
+var _inspector: AnimatedSpriteInspector
+var _sync := AnimationSync.new()
 
 
 func _enter_tree() -> void:
@@ -17,14 +23,58 @@ func _enter_tree() -> void:
 	_settings.register()
 	_importer = Importer.new(_settings)
 	add_import_plugin(_importer)
+	_inspector = AnimatedSpriteInspector.new()
+	add_inspector_plugin(_inspector)
 	add_tool_menu_item(REIMPORT_ALL_MENU, _reimport_all)
+	EditorInterface.get_resource_filesystem().resources_reimported.connect(_on_resources_reimported)
+	scene_changed.connect(_on_scene_changed)
 
 
 func _exit_tree() -> void:
+	scene_changed.disconnect(_on_scene_changed)
+	var file_system := EditorInterface.get_resource_filesystem()
+	if file_system.resources_reimported.is_connected(_on_resources_reimported):
+		file_system.resources_reimported.disconnect(_on_resources_reimported)
 	remove_tool_menu_item(REIMPORT_ALL_MENU)
+	if _inspector != null:
+		remove_inspector_plugin(_inspector)
+		_inspector = null
 	if _importer != null:
 		remove_import_plugin(_importer)
 		_importer = null
+
+
+func _on_resources_reimported(resources: PackedStringArray) -> void:
+	for path: String in resources:
+		if SOURCE_EXTENSIONS.has(path.get_extension().to_lower()):
+			# The editor reloads the reimported SpriteFrames after this signal: sync a frame later.
+			_sync_edited_scene.call_deferred()
+			return
+
+
+func _on_scene_changed(_scene_root: Node) -> void:
+	_sync_edited_scene()
+
+
+## Syncs every AnimatedSprite2D of the edited scene whose linked AnimationPlayer is out of date.
+func _sync_edited_scene() -> void:
+	var root := EditorInterface.get_edited_scene_root()
+	if root == null:
+		return
+	var nodes := root.find_children("*", "AnimatedSprite2D", true, false)
+	nodes.append(root)
+	var changed := false
+	for node: Node in nodes:
+		var sprite := node as AnimatedSprite2D
+		# Nodes of instanced scenes belong to their own scene: changes made here would be lost.
+		if sprite == null or (sprite != root and sprite.owner != root):
+			continue
+		if _sync.sync_linked(sprite, false):
+			changed = true
+			for message: String in _sync.errors:
+				push_warning(Importer.LOG_PREFIX + message)
+	if changed:
+		EditorInterface.mark_scene_as_unsaved()
 
 
 ## Forces a reimport of every .aseprite/.ase file assigned to this importer, e.g. after the
