@@ -1,17 +1,24 @@
 # Aseprite Top-Down Layers
 
-A Godot 4.7 editor addon that imports `.aseprite` / `.ase` files as **one horizontal PNG strip per
-layer and tag**, re-exported automatically whenever the source file changes.
+A Godot 4.7 editor addon that imports `.aseprite` / `.ase` sprites drawn as a **3x3 grid of facing
+directions** as **one horizontal PNG strip per direction and tag**, re-exported automatically
+whenever the source file changes.
 
-It is built for top-down characters drawn with one layer per facing direction
-(`up`, `down`, `left_up`, ...) and one tag per animation (`idle_loop`, `walk`, ...):
+Every frame is split into 3x3 cells. The position of a cell names its direction, the center cell
+is ignored, and each tag is an animation (`idle_loop`, `walk`, ...):
 
 ```
-character.aseprite                      assets/idle_loop/character_up_idle_loop.png
-  layers: up, down, left_up, ...   ->   assets/idle_loop/character_down_idle_loop.png
-  tags:   idle_loop, walk, ...          assets/walk/character_up_walk.png
-                                        ...
+character.aseprite (144x192)              assets/idle_loop/character_left_up_idle_loop.png
+  +-----------+------+------------+       assets/idle_loop/character_up_idle_loop.png
+  | left_up   | up   | right_up   |       ...
+  | left      |      | right      |  ->   assets/walk/character_down_walk.png
+  | left_down | down | right_down |       ...
+  +-----------+------+------------+       (48x64 per frame)
+  tags: idle_loop, walk, ...
 ```
+
+A cell with no pixels in any frame of a tag produces no strip: a character drawn in six directions
+(without plain `left` and `right`) just leaves those cells empty.
 
 Only PNG files are produced. How you turn the strips into `SpriteFrames`, `AnimationPlayer` tracks
 or shaders is up to you.
@@ -47,20 +54,31 @@ The path is resolved in this order:
 Steam installs live elsewhere, e.g. `C:\Program Files (x86)\Steam\steamapps\common\Aseprite\Aseprite.exe`
 or `~/.steam/steam/steamapps/common/Aseprite/aseprite`.
 
+## Drawing the sprite
+
+- Make the canvas three cells wide and three cells tall, e.g. **144x192** for 48x64 characters, and
+  draw each direction in its cell. Setting Aseprite's grid (*View > Grid Settings*) to the cell size
+  helps to keep every pose inside its cell.
+- Pixels that cross a cell border end up in the neighboring direction's strip.
+- Every layer is composed into the strips by default. Prefix helper layers (guides, references)
+  with `_` to leave them out, or list the layers to export in `layers/include`.
+- Use one tag per animation. Frames outside any tag are not exported unless the file has no tags.
+
 ## How the automatic export works
 
 The addon is a regular `EditorImportPlugin`. Godot reimports a source file when its content changes,
 which it notices **when the Godot editor window regains focus** (or on a manual *Reimport*). The
 usual loop is: save in Aseprite, switch back to Godot, and the strips are updated.
 
-- Each import starts Aseprite twice, however many layers and tags the file has: once to list them and
-  once to export every strip. Starting Aseprite is what costs time (about 200 ms), not the strips.
+- Each import starts Aseprite twice, however many directions and tags the file has: once to read its
+  size, layers and tags, and once to export every strip. Starting Aseprite is what costs time (about
+  200 ms), not the strips.
 - Strips are exported to a cache folder first and copied into the project **only when their content
-  changed**, so saving an unrelated layer does not reimport every texture.
+  changed**, so editing one animation does not reimport every texture.
 - The imported resource is a small manifest listing the PNGs written. On the next import, strips
-  that are no longer produced (renamed layer or tag, removed tag, new exclusion) are deleted together
-  with their `.import` file, and folders left empty are removed. With `output/delete_stale` off they
-  are kept but stay listed, so turning the option on later still removes them.
+  that are no longer produced (renamed or removed tag, a cell left empty, new exclusion) are deleted
+  together with their `.import` file, and folders left empty are removed. With `output/delete_stale`
+  off they are kept but stay listed, so turning the option on later still removes them.
 - After an import, a debounced file system scan makes Godot import the new PNGs as textures.
 
 *Project > Tools > Aseprite Top-Down Layers: Reimport all* forces a reimport of every file that uses
@@ -68,29 +86,30 @@ this importer, e.g. after changing the executable path or a project default.
 
 ## Import options
 
-All options can be changed per file in the Import dock. The defaults of the first four come from
+All options can be changed per file in the Import dock. The defaults of `output/folder`,
+`output/filename`, `layers/exclude_pattern` and `tags/exclude_pattern` come from
 *Project Settings > Aseprite Top-Down Layers > Defaults*.
 
 | Option | Default | Description |
 |---|---|---|
 | `output/folder` | `assets/{tag}` | Output folder, relative to the `.aseprite` file, or an absolute `res://` path. |
-| `output/filename` | `{title}_{layer}_{tag}` | File name without extension. |
-| `layers/exclude_pattern` | `^_` | Regular expression; matching layers are not exported alone. |
-| `tags/exclude_pattern` | `^_` | Regular expression; matching tags are not exported. |
+| `output/filename` | `{title}_{direction}_{tag}` | File name without extension. |
 | `output/delete_stale` | `true` | Delete strips written by a previous import that are no longer produced. |
-| `layers/only_visible` | `false` | Export only layers visible in Aseprite. By default hidden layers are exported too. |
-| `layers/always_include` | *(empty)* | Comma-separated layers composed into **every** strip and never exported alone, e.g. `shadow`. |
-| `layers/combinations` | *(empty)* | `name=layerA+layerB;other=layerC+layerD`. Each combination becomes one strip named after it; its layers are not exported alone. |
+| `grid/cell_size` | `(0, 0)` | Size of one cell in pixels. `0` on an axis means a third of the sprite on that axis, which must then be a multiple of 3. A cell smaller than a third ignores the pixels left over at the right or bottom. |
+| `layers/include` | *(empty)* | Comma-separated top-level layers or groups composed into every strip, e.g. `body, shadow`. Empty means every layer not matched by `layers/exclude_pattern`. |
+| `layers/exclude_pattern` | `^_` | Regular expression; matching layers are left out when `layers/include` is empty. |
+| `layers/only_visible` | `false` | Use only layers visible in Aseprite. By default hidden layers are exported too. |
+| `tags/exclude_pattern` | `^_` | Regular expression; matching tags are not exported. |
 | `sheet/type` | `horizontal` | `horizontal` strip or `vertical` strip. |
 
-Templates accept `{title}` (the source file name without extension), `{layer}` (layer, group or
-combination name) and `{tag}`. Layer and tag names are sanitized for file names (`/` and spaces
-become `_`).
+Templates accept `{title}` (the source file name without extension), `{direction}` (`left_up`, `up`,
+`right_up`, `left`, `right`, `left_down`, `down` or `right_down`) and `{tag}`. Tag names are
+sanitized for file names (`/` and spaces become `_`).
 
-Names typed in `always_include` and `combinations` are checked against the layers Aseprite reports;
-an unknown name is reported as an error and the entry is skipped. This matters because the Aseprite
-CLI silently exports the wrong image for unknown layer names. These two options may reference layers
-matched by `layers/exclude_pattern`, so `_shadow` can be excluded on its own and still composed in.
+Names typed in `layers/include` are checked against the layers Aseprite reports: an unknown name is
+reported as an error and skipped, and the import fails when no layer is left. They may reference
+layers matched by `layers/exclude_pattern`, so a `_shadow` layer stays out by default and can still
+be included.
 
 ## Naming conventions
 
@@ -106,14 +125,14 @@ Import dock. Switching importers keeps the source file untouched.
 
 ## Known limitations
 
-- Only top-level layers and groups become strips. A group is exported as the composite of its
+- The grid is always 3x3, with fixed direction names and the center cell ignored.
+- Only top-level layers and groups can be included. A group is exported as the composite of its
   children; hidden children inside a group may be included, because hidden layers are made visible
   for export.
 - Tags with *reverse* or *ping-pong* direction are exported in timeline (forward) order.
-- A file without tags exports one strip per layer with the whole timeline; `{tag}` is empty and the
-  separators around it are collapsed (`assets/character_up.png`).
-- Empty strips (a layer with no pixels in a tag) are exported anyway.
-- Layer names containing `,`, `;`, `+` or `=` cannot be used in `always_include` / `combinations`.
+- A file without tags exports one strip per direction with the whole timeline; `{tag}` is empty and
+  the separators around it are collapsed (`assets/character_up.png`).
+- Layer names containing `,` cannot be used in `layers/include`.
 - Aseprite is required to import. Without it the import fails and previously generated PNGs stay as
   they are, so committing the generated PNGs lets teammates without Aseprite use them.
 - Only tested on Windows with Godot 4.7.1 and Aseprite 1.3.18.
@@ -126,6 +145,13 @@ The repository root is a demo project (`examples/character`). Checks used during
 gdformat --check addons tests && gdlint addons tests
 ASEPRITE_PATH=<aseprite> godot --headless --path . -s tests/test_runner.gd
 ASEPRITE_PATH=<aseprite> godot --headless --path . --import
+```
+
+`tests/tools/build_grid.lua` turns a sprite drawn with one top-level layer per direction (layers
+named like the grid cells) into the grid format:
+
+```
+<aseprite> -b --script-param src=<layers.aseprite> --script-param out=<grid.aseprite> --script tests/tools/build_grid.lua
 ```
 
 ## License

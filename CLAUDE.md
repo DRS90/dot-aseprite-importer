@@ -1,14 +1,17 @@
 # Aseprite Top-Down Layers — notes for Claude
 
-Godot 4 `EditorImportPlugin` for `.aseprite`/`.ase`. On import it exports one horizontal
-PNG strip per layer (or layer group / combination) × tag to
-`assets/{tag}/{title}_{layer}_{tag}.png`, relative to the source file. A `PackedDataContainer`
+Godot 4 `EditorImportPlugin` for `.aseprite`/`.ase`. Every frame of the source is a 3x3 grid of
+facing directions (`left_up`, `up`, `right_up`, `left`, `right`, `left_down`, `down`, `right_down`;
+center ignored). On import it exports one horizontal PNG strip per direction × tag to
+`assets/{tag}/{title}_{direction}_{tag}.png`, relative to the source file, skipping cells with no
+pixels in the tag. The layers composed come from `layers/include` (default: all but `^_`). A `PackedDataContainer`
 manifest lets it delete stale outputs, and PNGs are copied into `res://` only when their MD5
 changed (prevents cascading reimports).
 
 - Code: `addons/aseprite_topdown_layers/{plugin,importer,aseprite_cli,export_planner,settings,fs_scan_scheduler}.gd`
   and `aseprite_batch.lua` (runs inside Aseprite: `mode=list` and `mode=export`).
-- Tests: `tests/test_runner.gd`. Demo: `examples/`.
+- Tests: `tests/test_runner.gd`. Demo: `examples/`. `tests/tools/build_grid.lua` turns a
+  layer-per-direction sprite into the grid format.
 - Pending work: `ROADMAP.md`. Read it before proposing anything.
 - Full plan and decision history: `plan/plan-aseprite-topdown-layers.md`. Section 9 ("Emendas")
   overrides the earlier sections. `plan/` is gitignored and local only.
@@ -35,14 +38,20 @@ changed (prevents cascading reimports).
 - Performance: each Aseprite process costs ~200 ms to start (even `--version`); a strip costs a few
   ms. Never add per-strip or per-layer processes: an import is one `list` + one `export` run of
   `aseprite_batch.lua` (30 strips: ~0.3 s vs ~6 s with one CLI call per strip).
-- The plain Aseprite CLI exits 0 for a nonexistent layer or tag and produces a wrong image, and
-  `--split-tags` does not work with `--sheet`. The Lua script raises an error on unknown names;
+- The plain Aseprite CLI exits 0 for a nonexistent layer or tag and produces a wrong image,
+  `--split-tags` does not work with `--sheet`, and `--crop` is silently ignored with `--sheet`. The
+  Lua script raises an error on unknown layers, tags or directions and on cells that do not fit;
   names still come from the listing and are validated by the planner.
-- `app.command.ExportSpriteSheet` without `ui` reuses the last Export Sprite Sheet dialog settings
-  for unset parameters: pass every parameter that affects the image. An empty `dataFilename`
-  dumps the JSON to stdout, so the script writes it to a cache file.
-- The reference strips in `tests/expected/` come from the plain CLI; the tests check that the Lua
-  export matches them byte for byte (and a combination against `--layer a --layer b`).
+- Strips are built in Lua (`drawSprite` once per frame, crop each cell with
+  `Image(image, Rectangle)`, `saveAs`), not with `ExportSpriteSheet`. Create the strip `Image` from
+  a copy of `sprite.spec`: `Image(w, h, colorMode)` has no color space, so the PNG loses its `sRGB`
+  chunk and its MD5 changes although the pixels are equal. A crop outside the sprite raises no
+  error, so cell sizes are validated in the planner and again in Lua.
+- The reference strips in `tests/expected/` come from the plain CLI on the layer-per-direction
+  `character.aseprite`; the tests check that the grid export of
+  `examples/character/character-matrix/character-matrix.aseprite` matches them byte for byte.
+- `.import` files written before the grid format still hold `output/filename="{title}_{layer}_{tag}"`;
+  the planner rejects `{layer}`, so such a file fails to import until the parameter is changed.
 - `godot --headless --import`: the first run writes the PNGs, but their `.import` files only
   appear on a second run (the deferred scan does not run before exit).
 - Hot reload of `@tool` scripts does not re-run `plugin.gd`'s `_enter_tree()`: new menu items or
