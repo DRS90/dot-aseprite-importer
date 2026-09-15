@@ -137,6 +137,70 @@ func _test_planner_edge_cases() -> void:
 	_check(
 		ExportPlanner.sanitize("body/arm left") == "body_arm_left", "sanitize replaces / and space"
 	)
+	_test_combinations(planner, layers, tags)
+
+
+func _test_combinations(
+	planner: ExportPlanner, layers: PackedStringArray, tags: PackedStringArray
+) -> void:
+	var options := DEFAULT_OPTIONS.duplicate()
+	options["combinations"] = "test=down+up"
+	var jobs := planner.build_jobs(TITLE, layers, tags, options)
+	var combined := _find_job(jobs, "assets/idle_loop/character_test_idle_loop.png")
+	_check(jobs.size() == 25, "combination replaces its layers: 25 jobs", str(jobs.size()))
+	_check(
+		not combined.is_empty() and combined["layers"] == PackedStringArray(["down", "up"]),
+		"combination job composes down+up"
+	)
+	_check(
+		_find_job(jobs, "assets/idle_loop/character_down_idle_loop.png").is_empty(),
+		"combined layers are not exported alone"
+	)
+
+	options["combinations"] = "bad=down+nope"
+	jobs = planner.build_jobs(TITLE, layers, tags, options)
+	_check(
+		jobs.size() == 30 and planner.errors.size() == 1,
+		"unknown layer skips the combination",
+		str(planner.errors)
+	)
+
+	options["combinations"] = "oops; =up; empty="
+	jobs = planner.build_jobs(TITLE, layers, tags, options)
+	_check(
+		jobs.size() == 30 and planner.errors.size() == 3,
+		"malformed combinations are reported",
+		str(planner.errors)
+	)
+
+	options = DEFAULT_OPTIONS.duplicate()
+	options["always_include"] = "down"
+	jobs = planner.build_jobs(TITLE, layers, tags, options)
+	var with_base := _find_job(jobs, "assets/walk/character_up_walk.png")
+	_check(
+		(
+			jobs.size() == 25
+			and not with_base.is_empty()
+			and with_base["layers"] == PackedStringArray(["down", "up"])
+		),
+		"always_include composes into every strip",
+		str(jobs.size())
+	)
+
+	options["always_include"] = "down, ghost"
+	options["combinations"] = "test=left_up+right_up"
+	jobs = planner.build_jobs(TITLE, layers, tags, options)
+	var mixed := _find_job(jobs, "assets/dash/character_test_dash.png")
+	_check(
+		(
+			jobs.size() == 20
+			and planner.errors.size() == 1
+			and not mixed.is_empty()
+			and mixed["layers"] == PackedStringArray(["down", "left_up", "right_up"])
+		),
+		"always_include + combination, unknown always_include reported",
+		"%d jobs, %s" % [jobs.size(), planner.errors]
+	)
 
 
 func _find_job(jobs: Array[Dictionary], relative_path: String) -> Dictionary:

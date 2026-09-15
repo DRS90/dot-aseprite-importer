@@ -7,9 +7,9 @@
       (reproduces the reference `idle_loop` strips byte for byte)
 - [x] Import plugin: one horizontal PNG strip per layer × tag, manifest,
       copy-only-if-changed, stale output cleanup
-- [ ] Layer combinations (`layers/always_include`, `layers/combinations`)
-- [ ] *Project > Tools* menu item to reimport every `.aseprite` file
-- [ ] README (install, settings, naming templates, AsepriteWizard coexistence), CHANGELOG
+- [x] Layer combinations (`layers/always_include`, `layers/combinations`)
+- [x] *Project > Tools* menu item to reimport every `.aseprite` file
+- [x] README (install, settings, naming templates, AsepriteWizard coexistence), CHANGELOG
 
 ## Before publishing
 

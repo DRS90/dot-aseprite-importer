@@ -14,7 +14,11 @@ const DEFAULT_FILENAME := "{title}_{layer}_{tag}"
 var errors := PackedStringArray()
 
 
-## [param options] keys: layer_exclude_pattern, tag_exclude_pattern, output_folder, filename.
+## [param layers] must be the names reported by Aseprite: user-typed names are validated against
+## them, because Aseprite silently exports the wrong thing for unknown names.
+## [param options] keys: layer_exclude_pattern, tag_exclude_pattern, output_folder, filename,
+## always_include ("a,b": composed into every strip, never exported alone) and combinations
+## ("name=a+b;other=c+d": one strip per combination, its layers are not exported alone).
 func build_jobs(
 	title: String, layers: PackedStringArray, tags: PackedStringArray, options: Dictionary
 ) -> Array[Dictionary]:
@@ -31,7 +35,7 @@ func build_jobs(
 		export_tags.append("")
 
 	var seen_paths := {}
-	for source: Dictionary in _collect_sources(layers, layer_filter):
+	for source: Dictionary in _collect_sources(layers, layer_filter, options):
 		var output_name: String = source["name"]
 		for tag: String in export_tags:
 			var relative_path := build_relative_path(
@@ -101,11 +105,95 @@ static func _collapse_separators(text: String) -> String:
 	return result.lstrip("_").rstrip("_/")
 
 
-func _collect_sources(layers: PackedStringArray, layer_filter: RegEx) -> Array[Dictionary]:
+## A source is one strip per tag: {"name": String, "layers": PackedStringArray}.
+func _collect_sources(
+	layers: PackedStringArray, layer_filter: RegEx, options: Dictionary
+) -> Array[Dictionary]:
+	var always_include := _parse_always_include(str(options.get("always_include", "")), layers)
+	var combinations := _parse_combinations(str(options.get("combinations", "")), layers)
+	var consumed := always_include.duplicate()
+	for combination: Dictionary in combinations:
+		var members: PackedStringArray = combination["layers"]
+		consumed.append_array(members)
+
 	var sources: Array[Dictionary] = []
 	for layer: String in _without_excluded(layers, layer_filter):
-		sources.append({"name": layer, "layers": PackedStringArray([layer])})
+		if not consumed.has(layer):
+			sources.append(_source(layer, always_include, PackedStringArray([layer])))
+	for combination: Dictionary in combinations:
+		var combination_name: String = combination["name"]
+		var combination_layers: PackedStringArray = combination["layers"]
+		sources.append(_source(combination_name, always_include, combination_layers))
 	return sources
+
+
+func _parse_always_include(text: String, layers: PackedStringArray) -> PackedStringArray:
+	var names := PackedStringArray()
+	for entry: String in text.split(",", false):
+		var layer := entry.strip_edges()
+		if layer == "" or names.has(layer):
+			continue
+		if not layers.has(layer):
+			errors.append("always_include: unknown layer '%s'; ignored." % layer)
+			continue
+		names.append(layer)
+	return names
+
+
+func _parse_combinations(text: String, layers: PackedStringArray) -> Array[Dictionary]:
+	var combinations: Array[Dictionary] = []
+	var names := PackedStringArray()
+	for entry: String in text.split(";", false):
+		var definition := entry.strip_edges()
+		if definition == "":
+			continue
+		var parts := definition.split("=")
+		var name := parts[0].strip_edges() if parts.size() == 2 else ""
+		var members := _parse_members(parts[1] if parts.size() == 2 else "")
+		if name == "" or members.is_empty():
+			errors.append(
+				"Combination '%s' must look like name=layerA+layerB; skipped." % definition
+			)
+			continue
+		if names.has(name):
+			errors.append("Combination '%s' is defined twice; skipped the second one." % name)
+			continue
+		var unknown := _unknown_names(members, layers)
+		if not unknown.is_empty():
+			errors.append(
+				"Combination '%s' uses unknown layer(s) %s; skipped." % [name, ", ".join(unknown)]
+			)
+			continue
+		names.append(name)
+		combinations.append({"name": name, "layers": members})
+	return combinations
+
+
+static func _parse_members(text: String) -> PackedStringArray:
+	var members := PackedStringArray()
+	for entry: String in text.split("+", false):
+		var member := entry.strip_edges()
+		if member != "" and not members.has(member):
+			members.append(member)
+	return members
+
+
+static func _unknown_names(names: PackedStringArray, known: PackedStringArray) -> PackedStringArray:
+	var unknown := PackedStringArray()
+	for name: String in names:
+		if not known.has(name):
+			unknown.append("'%s'" % name)
+	return unknown
+
+
+static func _source(
+	name: String, always_include: PackedStringArray, members: PackedStringArray
+) -> Dictionary:
+	var composed := always_include.duplicate()
+	for member: String in members:
+		if not composed.has(member):
+			composed.append(member)
+	return {"name": name, "layers": composed}
 
 
 func _compile_filter(pattern: String, label: String) -> RegEx:

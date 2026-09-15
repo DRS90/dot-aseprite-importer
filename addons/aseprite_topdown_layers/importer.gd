@@ -28,6 +28,8 @@ const OPTION_FILENAME := "output/filename"
 const OPTION_DELETE_STALE := "output/delete_stale"
 const OPTION_ONLY_VISIBLE := "layers/only_visible"
 const OPTION_LAYER_EXCLUDE := "layers/exclude_pattern"
+const OPTION_ALWAYS_INCLUDE := "layers/always_include"
+const OPTION_COMBINATIONS := "layers/combinations"
 const OPTION_TAG_EXCLUDE := "tags/exclude_pattern"
 const OPTION_SHEET_TYPE := "sheet/type"
 
@@ -101,6 +103,8 @@ func _get_import_options(_path: String, _preset_index: int) -> Array[Dictionary]
 			"name": OPTION_LAYER_EXCLUDE,
 			"default_value": _project_default(Settings.DEFAULT_LAYER_EXCLUDE_KEY),
 		},
+		{"name": OPTION_ALWAYS_INCLUDE, "default_value": ""},
+		{"name": OPTION_COMBINATIONS, "default_value": ""},
 		{
 			"name": OPTION_TAG_EXCLUDE,
 			"default_value": _project_default(Settings.DEFAULT_TAG_EXCLUDE_KEY),
@@ -196,6 +200,8 @@ func _planner_options(options: Dictionary, folder: String) -> Dictionary:
 		"tag_exclude_pattern": str(options.get(OPTION_TAG_EXCLUDE, "")),
 		"output_folder": folder,
 		"filename": str(options.get(OPTION_FILENAME, ExportPlanner.DEFAULT_FILENAME)),
+		"always_include": str(options.get(OPTION_ALWAYS_INCLUDE, "")),
+		"combinations": str(options.get(OPTION_COMBINATIONS, "")),
 	}
 
 
