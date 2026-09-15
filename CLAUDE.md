@@ -22,7 +22,7 @@ changed, and can be forced with a button.
   (editor UI), and `aseprite_batch.lua` (runs inside Aseprite: `mode=list` and `mode=export`).
 - Tests: `tests/test_runner.gd`. Demo: `examples/`. `tests/tools/build_grid.lua` turns a
   layer-per-direction sprite into the grid format; `tests/tools/build_cases.lua` builds sprites for
-  manual tests into `examples/character/cases/`.
+  manual tests into the folder passed as `out=`.
 - Pending work: `ROADMAP.md`. Read it before proposing anything.
 - Full plan and decision history: `plan/plan-aseprite-topdown-layers.md`. Section 9 ("Emendas")
   overrides the earlier sections. `plan/` is gitignored and local only.
@@ -58,9 +58,6 @@ changed, and can be forced with a button.
   `Image(image, Rectangle)`, `saveAs`). Create the strip `Image` from a copy of `sprite.spec`:
   `Image(w, h, colorMode)` has no color space. A crop outside the sprite raises no error, so cell
   sizes are validated in the planner and again in Lua.
-- The reference strips in `tests/expected/` come from the plain CLI on the layer-per-direction
-  `character.aseprite`; the tests check that the imported idle frames of
-  `examples/character/character-matrix/character-matrix.aseprite` match them pixel for pixel.
 - `append_import_external_resource()` cannot import files created during the same `_import`
   (`Can't find file ... during file reimport`, even after `EditorFileSystem.update_file()`), and a
   failed import leaves `valid=false` that is not retried. That is why textures are embedded.
@@ -90,7 +87,7 @@ changed, and can be forced with a button.
   included). Everything is tracked in git and the tests compare the imported frames with the sheets,
   so there is no `tests/expected/` folder any more.
 - **No `git push`, GitHub repo creation or Asset Library submission without explicit user
-  confirmation**.
+  confirmation.**
 
 ## Git
 

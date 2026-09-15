@@ -166,7 +166,7 @@ Import dock. Switching importers keeps the source file untouched.
 
 ## Development
 
-The repository root is a demo project (`examples/character`). Checks used during development:
+The repository root is a demo project (`examples/`). Checks used during development:
 
 ```
 gdformat --check addons tests && gdlint addons tests
