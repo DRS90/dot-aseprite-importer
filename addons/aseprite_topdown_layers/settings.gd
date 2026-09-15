@@ -13,7 +13,7 @@ const DEFAULT_LAYER_EXCLUDE_KEY := "aseprite_topdown_layers/defaults/layer_exclu
 const DEFAULT_TAG_EXCLUDE_KEY := "aseprite_topdown_layers/defaults/tag_exclude_pattern"
 const PROJECT_DEFAULTS := {
 	DEFAULT_OUTPUT_FOLDER_KEY: "assets/{tag}",
-	DEFAULT_FILENAME_KEY: "{title}_{layer}_{tag}",
+	DEFAULT_FILENAME_KEY: "{title}_{direction}_{tag}",
 	DEFAULT_LAYER_EXCLUDE_KEY: "^_",
 	DEFAULT_TAG_EXCLUDE_KEY: "^_",
 }

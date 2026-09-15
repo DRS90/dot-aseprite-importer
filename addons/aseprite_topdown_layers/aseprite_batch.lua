@@ -1,18 +1,39 @@
 -- Runs inside Aseprite: aseprite -b --script-param key=value ... --script aseprite_batch.lua
 --
+-- Every frame is a 3x3 grid of cells named after the direction they face; the center is ignored:
+--   left_up   | up   | right_up
+--   left      |      | right
+--   left_down | down | right_down
+--
 -- Starting Aseprite costs about 200 ms while exporting one strip costs a few, so a whole import is
 -- served by one process per mode instead of one process per strip.
 --
 -- mode=list    params: file, only_visible ("true"/"false")
---              Prints "layer<TAB>name" per top-level layer or group, then "tag<TAB>name" per tag.
--- mode=export  params: file, jobs, data, sheet_type ("horizontal"/"vertical")
---              jobs is a text file with one strip per line: output_png<TAB>tag<TAB>layer[<TAB>layer]
---              An empty tag exports the whole timeline. data receives the (unused) JSON data.
+--              Prints "size<TAB>width<TAB>height", then "layer<TAB>name" per top-level layer or
+--              group, then "tag<TAB>name" per tag.
+-- mode=export  params: file, jobs, cell_width, cell_height, sheet_type ("horizontal"/"vertical")
+--              jobs is a text file with "layer<TAB>name" lines (the layers composed into every
+--              strip) and "strip<TAB>output_png<TAB>tag<TAB>direction" lines. An empty tag exports
+--              the whole timeline. Prints "written<TAB>output_png" per strip, or
+--              "empty<TAB>output_png" when the cell has no pixels in any frame of the tag (nothing
+--              is saved then).
 --
--- Unknown layers or tags raise an error instead of silently exporting the wrong image.
+-- Unknown layers, tags or directions and cells that do not fit the sprite raise an error instead of
+-- silently exporting the wrong image.
 -- Success ends with "done<TAB>count"; the caller treats a missing "done" line as a failure.
 
 local params = app.params
+
+local DIRECTIONS = {
+  left_up = { 0, 0 },
+  up = { 1, 0 },
+  right_up = { 2, 0 },
+  left = { 0, 1 },
+  right = { 2, 1 },
+  left_down = { 0, 2 },
+  down = { 1, 2 },
+  right_down = { 2, 2 },
+}
 
 local sprite = app.open(params.file)
 if sprite == nil then
@@ -37,6 +58,7 @@ local function show_all(layers)
 end
 
 local function list()
+  print("size\t" .. sprite.width .. "\t" .. sprite.height)
   local count = 0
   for _, layer in ipairs(sprite.layers) do
     if params.only_visible ~= "true" or layer.isVisible then
@@ -53,7 +75,7 @@ end
 
 -- Same result as the CLI's --all-layers --layer <name>...: only the wanted top-level layers are
 -- visible, and everything inside groups is visible.
-local function show_only(wanted, output)
+local function show_only(wanted)
   local found = {}
   for _, layer in ipairs(sprite.layers) do
     local visible = wanted[layer.name] == true
@@ -68,78 +90,123 @@ local function show_only(wanted, output)
   local any = false
   for name in pairs(wanted) do
     if not found[name] then
-      error("unknown layer '" .. name .. "' for '" .. output .. "'")
+      error("unknown layer '" .. name .. "'")
     end
     any = true
   end
   if not any then
-    error("no layers for '" .. output .. "'")
+    error("no layers to export")
   end
 end
 
-local function export()
-  local sheet_type = SpriteSheetType.HORIZONTAL
-  if params.sheet_type == "vertical" then
-    sheet_type = SpriteSheetType.VERTICAL
+local function cell_size()
+  local width = tonumber(params.cell_width)
+  local height = tonumber(params.cell_height)
+  if width == nil or height == nil or width < 1 or height < 1 or width % 1 ~= 0
+      or height % 1 ~= 0 or width * 3 > sprite.width or height * 3 > sprite.height then
+    error("cell " .. tostring(params.cell_width) .. "x" .. tostring(params.cell_height)
+      .. " does not fit 3x3 times in the " .. sprite.width .. "x" .. sprite.height .. " sprite")
   end
-  local tags = {}
-  for _, tag in ipairs(sprite.tags) do
-    tags[tag.name] = true
-  end
+  return width, height
+end
 
-  local count = 0
+local function read_jobs()
+  local wanted = {}
+  local strips = {}
   for line in io.lines(params.jobs) do
     line = line:gsub("\r$", "")
     if line ~= "" then
       local fields = split_tabs(line)
-      local output = fields[1]
-      local tag = fields[2] or ""
-      if tag ~= "" and not tags[tag] then
-        error("unknown tag '" .. tag .. "' for '" .. output .. "'")
+      if fields[1] == "layer" and #fields == 2 then
+        wanted[fields[2]] = true
+      elseif fields[1] == "strip" and #fields == 4 then
+        table.insert(strips, { output = fields[2], tag = fields[3], direction = fields[4] })
+      else
+        error("malformed job line '" .. line .. "'")
       end
-      local wanted = {}
-      for index = 3, #fields do
-        wanted[fields[index]] = true
-      end
-      show_only(wanted, output)
-      -- Without ui, unset parameters fall back to the last Export Sprite Sheet dialog settings:
-      -- every parameter that changes the image is set explicitly.
-      app.command.ExportSpriteSheet {
-        ui = false,
-        recent = false,
-        askOverwrite = false,
-        openGenerated = false,
-        type = sheet_type,
-        columns = 0,
-        rows = 0,
-        width = 0,
-        height = 0,
-        bestFit = false,
-        textureFilename = output,
-        dataFilename = params.data,
-        borderPadding = 0,
-        shapePadding = 0,
-        innerPadding = 0,
-        trimSprite = false,
-        trim = false,
-        trimByGrid = false,
-        extrude = false,
-        ignoreEmpty = false,
-        mergeDuplicates = false,
-        layer = "",
-        tag = tag,
-        splitLayers = false,
-        splitTags = false,
-        splitGrid = false,
-        listLayers = false,
-        listTags = false,
-        listSlices = false,
-        fromTilesets = false,
-      }
-      count = count + 1
     end
   end
-  print("done\t" .. count)
+  return wanted, strips
+end
+
+-- Strips of the same tag share its rendered frames: group them, keeping the job order.
+local function group_by_tag(strips)
+  local order = {}
+  local groups = {}
+  for _, strip in ipairs(strips) do
+    if DIRECTIONS[strip.direction] == nil then
+      error("unknown direction '" .. strip.direction .. "' for '" .. strip.output .. "'")
+    end
+    if groups[strip.tag] == nil then
+      groups[strip.tag] = {}
+      table.insert(order, strip.tag)
+    end
+    table.insert(groups[strip.tag], strip)
+  end
+  return order, groups
+end
+
+local function frame_range(tag_name)
+  if tag_name == "" then
+    return 1, #sprite.frames
+  end
+  for _, tag in ipairs(sprite.tags) do
+    if tag.name == tag_name then
+      return tag.fromFrame.frameNumber, tag.toFrame.frameNumber
+    end
+  end
+  error("unknown tag '" .. tag_name .. "'")
+end
+
+local function export_tag(tag_name, strips, cell_width, cell_height)
+  local first, last = frame_range(tag_name)
+  local frame_count = last - first + 1
+  local vertical = params.sheet_type == "vertical"
+  -- A copy of the sprite spec keeps its color space: without it the PNG has no sRGB chunk and
+  -- differs from what Export Sprite Sheet writes.
+  local spec = sprite.spec
+  spec.width = vertical and cell_width or cell_width * frame_count
+  spec.height = vertical and cell_height * frame_count or cell_height
+  for _, strip in ipairs(strips) do
+    strip.image = Image(spec)
+    strip.filled = false
+  end
+
+  for index = 0, frame_count - 1 do
+    local rendered = Image(sprite.spec)
+    rendered:drawSprite(sprite, first + index)
+    local position = vertical and Point(0, index * cell_height) or Point(index * cell_width, 0)
+    for _, strip in ipairs(strips) do
+      local cell = DIRECTIONS[strip.direction]
+      local bounds = Rectangle(cell[1] * cell_width, cell[2] * cell_height, cell_width, cell_height)
+      local piece = Image(rendered, bounds)
+      if not piece:isEmpty() then
+        strip.filled = true
+        strip.image:drawImage(piece, position, 255, BlendMode.SRC)
+      end
+    end
+  end
+
+  for _, strip in ipairs(strips) do
+    if strip.filled then
+      strip.image:saveAs { filename = strip.output, palette = sprite.palettes[1] }
+      print("written\t" .. strip.output)
+    else
+      print("empty\t" .. strip.output)
+    end
+    strip.image = nil
+  end
+end
+
+local function export()
+  local cell_width, cell_height = cell_size()
+  local wanted, strips = read_jobs()
+  show_only(wanted)
+  local order, groups = group_by_tag(strips)
+  for _, tag_name in ipairs(order) do
+    export_tag(tag_name, groups[tag_name], cell_width, cell_height)
+  end
+  print("done\t" .. #strips)
 end
 
 if params.mode == "list" then

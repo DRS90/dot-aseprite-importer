@@ -5,19 +5,24 @@ extends RefCounted
 ## Has no editor dependency, so headless tests can use it. Every path passed in must be absolute
 ## (the caller globalizes res:// paths). Starting Aseprite costs about 200 ms while exporting a
 ## strip costs a few, so listing and exporting each run as a single process of aseprite_batch.lua,
-## whatever the number of layers and tags. The script rejects unknown layer or tag names, which the
-## plain CLI silently turns into a wrong image. Failures are described in [member last_error].
+## whatever the number of strips. The script rejects unknown layer, tag or direction names and cells
+## that do not fit the sprite. Failures are described in [member last_error].
 
 const BATCH_SCRIPT := "aseprite_batch.lua"
 const JOBS_FILE := "jobs.txt"
-const DATA_FILE := "data.json"
+const SIZE_PREFIX := "size\t"
 const LAYER_PREFIX := "layer\t"
 const TAG_PREFIX := "tag\t"
+const STRIP_PREFIX := "strip\t"
+const WRITTEN_PREFIX := "written\t"
 const DONE_PREFIX := "done\t"
 const MAX_LOGGED_OUTPUT := 500
 
 ## Why the last failed call failed.
 var last_error := ""
+## Relative paths of the strips written by the last [method export_strips] call. A cell with no
+## pixels in any frame of its tag writes nothing, so it is not listed.
+var last_written := PackedStringArray()
 
 var _executable: String = ""
 var _batch_script: String = ""
@@ -45,8 +50,9 @@ func get_executable() -> String:
 	return _executable
 
 
-## Names of the top-level layers and groups and of the tags, in file order:
-## {"layers": PackedStringArray, "tags": PackedStringArray}. Empty when Aseprite failed.
+## Sprite size and the names of the top-level layers, groups and tags, in file order:
+## {"size": Vector2i, "layers": PackedStringArray, "tags": PackedStringArray}.
+## Empty when Aseprite failed.
 func list_contents(aseprite_file: String, only_visible: bool) -> Dictionary:
 	var lines := _run_batch(
 		PackedStringArray(
@@ -55,33 +61,39 @@ func list_contents(aseprite_file: String, only_visible: bool) -> Dictionary:
 	)
 	if lines.is_empty():
 		return {}
+	var size := Vector2i.ZERO
 	var layers := PackedStringArray()
 	var tags := PackedStringArray()
 	for line: String in lines:
-		if line.begins_with(LAYER_PREFIX):
+		if line.begins_with(SIZE_PREFIX):
+			size = Vector2i(line.get_slice("\t", 1).to_int(), line.get_slice("\t", 2).to_int())
+		elif line.begins_with(LAYER_PREFIX):
 			layers.append(line.trim_prefix(LAYER_PREFIX))
 		elif line.begins_with(TAG_PREFIX):
 			tags.append(line.trim_prefix(TAG_PREFIX))
-	return {"layers": layers, "tags": tags}
+	return {"size": size, "layers": layers, "tags": tags}
 
 
-## Exports every job built by ExportPlanner.build_jobs() in one Aseprite process, each to
-## [param output_dir]/relative_path as a [param sheet_type] ("horizontal" or "vertical") sheet.
-## The job list and the unused JSON data are written to [param output_dir] as well.
+## Exports every job built by ExportPlanner.build_jobs() in one Aseprite process. [param layers] are
+## composed, and the job's direction cell ([param cell_size]) is cropped from every frame of its tag
+## into [param output_dir]/relative_path as a [param sheet_type] ("horizontal" or "vertical")
+## strip. The strips written end up in [member last_written]; the job list is written to
+## [param output_dir] as well.
 func export_strips(
-	aseprite_file: String, jobs: Array[Dictionary], sheet_type: String, output_dir: String
+	aseprite_file: String,
+	jobs: Array[Dictionary],
+	layers: PackedStringArray,
+	cell_size: Vector2i,
+	sheet_type: String,
+	output_dir: String
 ) -> Error:
 	last_error = ""
+	last_written = PackedStringArray()
 	if jobs.is_empty():
 		return OK
-	var lines := PackedStringArray()
-	var outputs := PackedStringArray()
-	for job: Dictionary in jobs:
-		var line := _prepare_job(job, output_dir)
-		if line == "":
-			return ERR_INVALID_PARAMETER
-		lines.append(line)
-		outputs.append(line.get_slice("\t", 0))
+	var lines := _job_lines(jobs, layers, output_dir)
+	if lines.is_empty():
+		return ERR_INVALID_PARAMETER
 	var jobs_path := output_dir.path_join(JOBS_FILE)
 	if _write_text(jobs_path, "\n".join(lines) + "\n") != OK:
 		return ERR_FILE_CANT_WRITE
@@ -91,39 +103,67 @@ func export_strips(
 			"mode=export",
 			"file=" + aseprite_file,
 			"jobs=" + jobs_path,
-			"data=" + output_dir.path_join(DATA_FILE),
+			"cell_width=%d" % cell_size.x,
+			"cell_height=%d" % cell_size.y,
 			"sheet_type=" + sheet_type,
 		]
 	)
-	if _run_batch(params).is_empty():
+	var output := _run_batch(params)
+	if output.is_empty():
 		return FAILED
-	for output_png: String in outputs:
+	var written := PackedStringArray()
+	for job: Dictionary in jobs:
+		var relative_path: String = job["relative_path"]
+		var output_png := output_dir.path_join(relative_path)
+		if not output.has(WRITTEN_PREFIX + output_png):
+			continue
 		if _file_size(output_png) <= 0:
 			last_error = "Aseprite did not write '%s'." % output_png
 			return FAILED
+		written.append(relative_path)
+	last_written = written
 	return OK
 
 
-## Returns the job's line for the jobs file (output<TAB>tag<TAB>layers...) and clears its output, or
-## "" with [member last_error] set when the job cannot be exported.
+## Lines of the jobs file: the composed layers, then one strip per job. Empty, with
+## [member last_error] set, when something cannot be passed to the script.
+func _job_lines(
+	jobs: Array[Dictionary], layers: PackedStringArray, output_dir: String
+) -> PackedStringArray:
+	if layers.is_empty():
+		last_error = "Refusing to export without layers."
+		return PackedStringArray()
+	var lines := PackedStringArray()
+	for layer: String in layers:
+		if not _is_single_field(layer):
+			last_error = "Cannot export layer '%s': its name has a tab or a line break." % layer
+			return PackedStringArray()
+		lines.append(LAYER_PREFIX + layer)
+	for job: Dictionary in jobs:
+		var line := _prepare_job(job, output_dir)
+		if line == "":
+			return PackedStringArray()
+		lines.append(line)
+	return lines
+
+
+## Returns the job's line for the jobs file (strip<TAB>output<TAB>tag<TAB>direction) and clears its
+## output, or "" with [member last_error] set when the job cannot be exported.
 func _prepare_job(job: Dictionary, output_dir: String) -> String:
-	var job_layers: PackedStringArray = job["layers"]
 	var tag: String = job["tag"]
+	var direction: String = job["direction"]
 	var relative_path: String = job["relative_path"]
 	var output_png := output_dir.path_join(relative_path)
-	if job_layers.is_empty():
-		last_error = "Refusing to export '%s' without layers." % output_png
-		return ""
-	var fields := PackedStringArray([output_png, tag]) + job_layers
+	var fields := PackedStringArray([output_png, tag, direction])
 	for field: String in fields:
-		if field.contains("\t") or field.contains("\n") or field.contains("\r"):
-			last_error = "Cannot export '%s': a name contains a tab or a line break." % output_png
+		if not _is_single_field(field):
+			last_error = "Cannot export '%s': a name has a tab or a line break." % output_png
 			return ""
 	# A leftover file from a previous run would hide a failed export.
 	if FileAccess.file_exists(output_png):
 		DirAccess.remove_absolute(output_png)
 	DirAccess.make_dir_recursive_absolute(output_png.get_base_dir())
-	return "\t".join(fields)
+	return STRIP_PREFIX + "\t".join(fields)
 
 
 func _write_text(path: String, text: String) -> Error:
@@ -160,6 +200,10 @@ func _run_batch(params: PackedStringArray) -> PackedStringArray:
 		"Aseprite failed (exit %d): %s" % [code, text.strip_edges().right(MAX_LOGGED_OUTPUT)]
 	)
 	return PackedStringArray()
+
+
+static func _is_single_field(text: String) -> bool:
+	return not (text.contains("\t") or text.contains("\n") or text.contains("\r"))
 
 
 static func _file_size(path: String) -> int:

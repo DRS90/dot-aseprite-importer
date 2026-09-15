@@ -1,72 +1,100 @@
 @tool
 extends RefCounted
-## Turns the layer and tag names of one .aseprite file into export jobs.
+## Turns the size, layer and tag names of one .aseprite file into export jobs.
 ##
-## Pure: no filesystem, no CLI, no editor. One job is one Aseprite CLI call:
-## {"layers": PackedStringArray, "output_name": String, "tag": String, "relative_path": String}
+## Every frame is a 3x3 grid of cells named after the direction they face; the center cell is not
+## exported. Pure: no filesystem, no CLI, no editor. One job is one strip:
+## {"direction": String, "tag": String, "relative_path": String}
 ## Problems are collected in [member errors] instead of being printed, so the caller decides how
 ## to report them and tests can assert on them.
 
 const PNG_EXTENSION := ".png"
-const DEFAULT_FILENAME := "{title}_{layer}_{tag}"
+const DEFAULT_FILENAME := "{title}_{direction}_{tag}"
+## Grid cells in reading order, center excluded. aseprite_batch.lua maps each name to its cell.
+const DIRECTIONS: Array[String] = [
+	"left_up", "up", "right_up", "left", "right", "left_down", "down", "right_down"
+]
+const REMOVED_PLACEHOLDER := "{layer}"
 
 ## Problems found by the last [method build_jobs] call.
 var errors := PackedStringArray()
+## True when the last [method build_jobs] call found a problem that prevents any export.
+var failed := false
+## Layers composed into every strip by the last [method build_jobs] call.
+var composed_layers := PackedStringArray()
+## Cell size of the last [method build_jobs] call, or [constant Vector2i.ZERO] when the 3x3 grid
+## does not fit the sprite.
+var cell_size := Vector2i.ZERO
 
 
-## [param layers] must be the names reported by Aseprite: user-typed names are validated against
-## them, because Aseprite silently exports the wrong thing for unknown names.
-## [param options] keys: layer_exclude_pattern, tag_exclude_pattern, output_folder, filename,
-## always_include ("a,b": composed into every strip, never exported alone) and combinations
-## ("name=a+b;other=c+d": one strip per combination, its layers are not exported alone).
+## [param layer_names] must be the names reported by Aseprite: user-typed names are validated
+## against them. [param options] keys: cell_size (Vector2i; 0 on an axis is a third of the sprite),
+## layer_include ("a, b": top-level layers or groups composed into every strip; empty means every
+## layer not matched by layer_exclude_pattern), layer_exclude_pattern, tag_exclude_pattern,
+## output_folder and filename.
 func build_jobs(
-	title: String, layers: PackedStringArray, tags: PackedStringArray, options: Dictionary
+	title: String,
+	sprite_size: Vector2i,
+	layer_names: PackedStringArray,
+	tags: PackedStringArray,
+	options: Dictionary
 ) -> Array[Dictionary]:
 	errors = PackedStringArray()
 	var jobs: Array[Dictionary] = []
+	var requested_cell := Vector2i.ZERO
+	var cell_option: Variant = options.get("cell_size", Vector2i.ZERO)
+	if cell_option is Vector2i:
+		requested_cell = cell_option
+	cell_size = _resolve_cell_size(requested_cell, sprite_size)
 	var layer_filter := _compile_filter(str(options.get("layer_exclude_pattern", "")), "layer")
+	var include := str(options.get("layer_include", ""))
+	composed_layers = _select_layers(include, layer_names, layer_filter)
 	var tag_filter := _compile_filter(str(options.get("tag_exclude_pattern", "")), "tag")
 	var folder_template := str(options.get("output_folder", ""))
 	var filename_template := str(options.get("filename", DEFAULT_FILENAME))
 
+	failed = cell_size == Vector2i.ZERO or composed_layers.is_empty()
+	if (folder_template + filename_template).contains(REMOVED_PLACEHOLDER):
+		errors.append("'{layer}' is no longer a template placeholder: use '{direction}'.")
+		failed = true
+	if failed:
+		return jobs
+
 	var export_tags := _without_excluded(tags, tag_filter)
 	if tags.is_empty():
-		# No tags at all: the whole timeline becomes one strip per layer.
+		# No tags at all: the whole timeline becomes one strip per direction.
 		export_tags.append("")
 
 	var seen_paths := {}
-	for source: Dictionary in _collect_sources(layers, layer_filter, options):
-		var output_name: String = source["name"]
+	for direction: String in DIRECTIONS:
 		for tag: String in export_tags:
 			var relative_path := build_relative_path(
-				folder_template, filename_template, title, output_name, tag
+				folder_template, filename_template, title, direction, tag
 			)
 			if seen_paths.has(relative_path):
 				errors.append(
 					(
-						"Two outputs resolve to '%s'; skipped the one for '%s'."
-						% [relative_path, output_name]
+						"Two outputs resolve to '%s'; skipped the one for '%s' '%s'."
+						% [relative_path, direction, tag]
 					)
 				)
 				continue
 			seen_paths[relative_path] = true
-			var job := {
-				"layers": source["layers"],
-				"output_name": output_name,
-				"tag": tag,
-				"relative_path": relative_path,
-			}
-			jobs.append(job)
+			jobs.append({"direction": direction, "tag": tag, "relative_path": relative_path})
 	return jobs
 
 
 ## Relative output path (with extension) for one strip. Folder and filename templates accept
-## {title}, {layer} and {tag}. An empty tag collapses the separators left around it.
+## {title}, {direction} and {tag}. An empty tag collapses the separators left around it.
 static func build_relative_path(
-	folder_template: String, filename_template: String, title: String, layer: String, tag: String
+	folder_template: String,
+	filename_template: String,
+	title: String,
+	direction: String,
+	tag: String
 ) -> String:
-	var folder := apply_template(folder_template, title, layer, tag)
-	var file_name := apply_template(filename_template, title, layer, tag)
+	var folder := apply_template(folder_template, title, direction, tag)
+	var file_name := apply_template(filename_template, title, direction, tag)
 	if tag == "":
 		folder = _collapse_separators(folder)
 		file_name = _collapse_separators(file_name)
@@ -76,13 +104,15 @@ static func build_relative_path(
 	return path.simplify_path()
 
 
-static func apply_template(template: String, title: String, layer: String, tag: String) -> String:
-	return template.replace("{title}", title).replace("{layer}", sanitize(layer)).replace(
+static func apply_template(
+	template: String, title: String, direction: String, tag: String
+) -> String:
+	return template.replace("{title}", title).replace("{direction}", direction).replace(
 		"{tag}", sanitize(tag)
 	)
 
 
-## Makes a layer or tag name safe to use as part of a file name.
+## Makes a tag name safe to use as part of a file name.
 static func sanitize(name: String) -> String:
 	if name == "":
 		return ""
@@ -105,95 +135,45 @@ static func _collapse_separators(text: String) -> String:
 	return result.lstrip("_").rstrip("_/")
 
 
-## A source is one strip per tag: {"name": String, "layers": PackedStringArray}.
-func _collect_sources(
-	layers: PackedStringArray, layer_filter: RegEx, options: Dictionary
-) -> Array[Dictionary]:
-	var always_include := _parse_always_include(str(options.get("always_include", "")), layers)
-	var combinations := _parse_combinations(str(options.get("combinations", "")), layers)
-	var consumed := always_include.duplicate()
-	for combination: Dictionary in combinations:
-		var members: PackedStringArray = combination["layers"]
-		consumed.append_array(members)
-
-	var sources: Array[Dictionary] = []
-	for layer: String in _without_excluded(layers, layer_filter):
-		if not consumed.has(layer):
-			sources.append(_source(layer, always_include, PackedStringArray([layer])))
-	for combination: Dictionary in combinations:
-		var combination_name: String = combination["name"]
-		var combination_layers: PackedStringArray = combination["layers"]
-		sources.append(_source(combination_name, always_include, combination_layers))
-	return sources
+## [param requested] with each 0 axis replaced by a third of [param sprite_size], or
+## [constant Vector2i.ZERO] (and an error) when three cells do not fit the sprite on an axis.
+func _resolve_cell_size(requested: Vector2i, sprite_size: Vector2i) -> Vector2i:
+	var cell := requested
+	var problem := ""
+	for axis: int in 2:
+		if requested[axis] == 0 and sprite_size[axis] % 3 == 0:
+			cell[axis] = int(sprite_size[axis] / 3.0)
+		elif requested[axis] == 0:
+			problem = "cannot be split in 3 equal cells: set grid/cell_size"
+		if problem == "" and (cell[axis] < 1 or cell[axis] * 3 > sprite_size[axis]):
+			problem = "cannot hold 3x3 cells of %dx%d" % [requested.x, requested.y]
+	if problem == "":
+		return cell
+	errors.append("The %dx%d sprite %s." % [sprite_size.x, sprite_size.y, problem])
+	return Vector2i.ZERO
 
 
-func _parse_always_include(text: String, layers: PackedStringArray) -> PackedStringArray:
-	var names := PackedStringArray()
-	for entry: String in text.split(",", false):
-		var layer := entry.strip_edges()
-		if layer == "" or names.has(layer):
+## The layers typed in [param include] ("a, b"), or every layer not matched by [param exclude] when
+## nothing is typed. Typed names must be in [param layer_names]; unknown ones are reported.
+func _select_layers(
+	include: String, layer_names: PackedStringArray, exclude: RegEx
+) -> PackedStringArray:
+	var selected := PackedStringArray()
+	var typed := false
+	for entry: String in include.split(",", false):
+		var name := entry.strip_edges()
+		if name == "":
 			continue
-		if not layers.has(layer):
-			errors.append("always_include: unknown layer '%s'; ignored." % layer)
-			continue
-		names.append(layer)
-	return names
-
-
-func _parse_combinations(text: String, layers: PackedStringArray) -> Array[Dictionary]:
-	var combinations: Array[Dictionary] = []
-	var names := PackedStringArray()
-	for entry: String in text.split(";", false):
-		var definition := entry.strip_edges()
-		if definition == "":
-			continue
-		var parts := definition.split("=")
-		var name := parts[0].strip_edges() if parts.size() == 2 else ""
-		var members := _parse_members(parts[1] if parts.size() == 2 else "")
-		if name == "" or members.is_empty():
-			errors.append(
-				"Combination '%s' must look like name=layerA+layerB; skipped." % definition
-			)
-			continue
-		if names.has(name):
-			errors.append("Combination '%s' is defined twice; skipped the second one." % name)
-			continue
-		var unknown := _unknown_names(members, layers)
-		if not unknown.is_empty():
-			errors.append(
-				"Combination '%s' uses unknown layer(s) %s; skipped." % [name, ", ".join(unknown)]
-			)
-			continue
-		names.append(name)
-		combinations.append({"name": name, "layers": members})
-	return combinations
-
-
-static func _parse_members(text: String) -> PackedStringArray:
-	var members := PackedStringArray()
-	for entry: String in text.split("+", false):
-		var member := entry.strip_edges()
-		if member != "" and not members.has(member):
-			members.append(member)
-	return members
-
-
-static func _unknown_names(names: PackedStringArray, known: PackedStringArray) -> PackedStringArray:
-	var unknown := PackedStringArray()
-	for name: String in names:
-		if not known.has(name):
-			unknown.append("'%s'" % name)
-	return unknown
-
-
-static func _source(
-	name: String, always_include: PackedStringArray, members: PackedStringArray
-) -> Dictionary:
-	var composed := always_include.duplicate()
-	for member: String in members:
-		if not composed.has(member):
-			composed.append(member)
-	return {"name": name, "layers": composed}
+		typed = true
+		if not layer_names.has(name):
+			errors.append("layers/include: unknown layer '%s'; ignored." % name)
+		elif not selected.has(name):
+			selected.append(name)
+	if not typed:
+		selected = _without_excluded(layer_names, exclude)
+	if selected.is_empty():
+		errors.append("No layers to export.")
+	return selected
 
 
 func _compile_filter(pattern: String, label: String) -> RegEx:

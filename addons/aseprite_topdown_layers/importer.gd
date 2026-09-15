@@ -1,6 +1,7 @@
 @tool
 extends EditorImportPlugin
-## Imports .aseprite/.ase files as one PNG strip per top-level layer (or group) and tag.
+## Imports .aseprite/.ase files drawn as a 3x3 grid of directions as one PNG strip per direction
+## and tag.
 ##
 ## The imported resource is only a manifest (PackedDataContainer) with the PNGs this importer
 ## owns, so the next import can delete strips that are no longer produced. Strips are exported to a
@@ -26,10 +27,10 @@ const SHEET_TYPES_HINT := "horizontal,vertical"
 const OPTION_FOLDER := "output/folder"
 const OPTION_FILENAME := "output/filename"
 const OPTION_DELETE_STALE := "output/delete_stale"
-const OPTION_ONLY_VISIBLE := "layers/only_visible"
+const OPTION_CELL_SIZE := "grid/cell_size"
+const OPTION_LAYER_INCLUDE := "layers/include"
 const OPTION_LAYER_EXCLUDE := "layers/exclude_pattern"
-const OPTION_ALWAYS_INCLUDE := "layers/always_include"
-const OPTION_COMBINATIONS := "layers/combinations"
+const OPTION_ONLY_VISIBLE := "layers/only_visible"
 const OPTION_TAG_EXCLUDE := "tags/exclude_pattern"
 const OPTION_SHEET_TYPE := "sheet/type"
 
@@ -99,13 +100,13 @@ func _get_import_options(_path: String, _preset_index: int) -> Array[Dictionary]
 			"default_value": _project_default(Settings.DEFAULT_FILENAME_KEY),
 		},
 		{"name": OPTION_DELETE_STALE, "default_value": true},
-		{"name": OPTION_ONLY_VISIBLE, "default_value": false},
+		{"name": OPTION_CELL_SIZE, "default_value": Vector2i.ZERO},
+		{"name": OPTION_LAYER_INCLUDE, "default_value": ""},
 		{
 			"name": OPTION_LAYER_EXCLUDE,
 			"default_value": _project_default(Settings.DEFAULT_LAYER_EXCLUDE_KEY),
 		},
-		{"name": OPTION_ALWAYS_INCLUDE, "default_value": ""},
-		{"name": OPTION_COMBINATIONS, "default_value": ""},
+		{"name": OPTION_ONLY_VISIBLE, "default_value": false},
 		{
 			"name": OPTION_TAG_EXCLUDE,
 			"default_value": _project_default(Settings.DEFAULT_TAG_EXCLUDE_KEY),
@@ -142,14 +143,13 @@ func _import(
 			return ERR_UNCONFIGURED
 		_verified_executable = cli.get_executable()
 
-	var absolute_source := ProjectSettings.globalize_path(source_file)
 	var only_visible: bool = options.get(OPTION_ONLY_VISIBLE, false)
-	var contents := cli.list_contents(absolute_source, only_visible)
-	var layers: PackedStringArray = contents.get("layers", PackedStringArray())
-	if layers.is_empty():
-		var reason := cli.last_error if contents.is_empty() else "No layers found."
-		push_error(LOG_PREFIX + "%s: %s" % [source_file, reason])
+	var contents := cli.list_contents(ProjectSettings.globalize_path(source_file), only_visible)
+	if contents.is_empty():
+		push_error(LOG_PREFIX + "%s: %s" % [source_file, cli.last_error])
 		return FAILED
+	var sprite_size: Vector2i = contents["size"]
+	var layers: PackedStringArray = contents["layers"]
 	var tags: PackedStringArray = contents["tags"]
 
 	var base_dir := source_file.get_base_dir()
@@ -158,30 +158,26 @@ func _import(
 		base_dir = RES_PREFIX
 		folder = folder.trim_prefix(RES_PREFIX)
 	var title := source_file.get_file().get_basename()
-	var jobs := _planner.build_jobs(title, layers, tags, _planner_options(options, folder))
+	var planner_options := _planner_options(options, folder)
+	var jobs := _planner.build_jobs(title, sprite_size, layers, tags, planner_options)
 	for message: String in _planner.errors:
 		push_error(LOG_PREFIX + "%s: %s" % [source_file, message])
-
-	var written := PackedStringArray()
+	if _planner.failed:
+		return FAILED
 	for job: Dictionary in jobs:
 		var relative_path: String = job["relative_path"]
-		var target := base_dir.path_join(relative_path).simplify_path()
+		var target := _target_path(base_dir, relative_path)
 		if not target.begins_with(RES_PREFIX):
 			push_error(LOG_PREFIX + "Output '%s' is outside the project." % target)
 			return ERR_FILE_BAD_PATH
-		written.append(target)
 
-	var cache_dir := OS.get_cache_dir().path_join(CACHE_FOLDER).path_join(
-		absolute_source.md5_text()
+	var written_strips: Array[String] = []
+	var export_error := _export_to_project(
+		cli, source_file, jobs, _sheet_type(options), base_dir, written_strips
 	)
-	if cli.export_strips(absolute_source, jobs, _sheet_type(options), cache_dir) != OK:
-		push_error(LOG_PREFIX + "%s: %s" % [source_file, cli.last_error])
-		return FAILED
-	for index: int in jobs.size():
-		var relative_path: String = jobs[index]["relative_path"]
-		var copy_error := _copy_if_changed(cache_dir.path_join(relative_path), written[index])
-		if copy_error != OK:
-			return copy_error
+	if export_error != OK:
+		return export_error
+	var written := PackedStringArray(written_strips)
 
 	var previous_files := _load_previous_files(save_path)
 	var manifest_files := written
@@ -191,7 +187,9 @@ func _import(
 	else:
 		# Stale strips stay listed, so turning delete_stale on later still removes them.
 		manifest_files = _with_kept_files(previous_files, written)
-	var save_error := _save_manifest(save_path, absolute_source, manifest_files)
+	var save_error := _save_manifest(
+		save_path, ProjectSettings.globalize_path(source_file), manifest_files
+	)
 	# Never scan from inside _import(): the scheduler runs it deferred, after the import ends.
 	if is_instance_valid(_scheduler):
 		_scheduler.schedule()
@@ -207,12 +205,12 @@ func _project_default(key: String) -> String:
 
 func _planner_options(options: Dictionary, folder: String) -> Dictionary:
 	return {
+		"cell_size": options.get(OPTION_CELL_SIZE, Vector2i.ZERO),
+		"layer_include": str(options.get(OPTION_LAYER_INCLUDE, "")),
 		"layer_exclude_pattern": str(options.get(OPTION_LAYER_EXCLUDE, "")),
 		"tag_exclude_pattern": str(options.get(OPTION_TAG_EXCLUDE, "")),
 		"output_folder": folder,
 		"filename": str(options.get(OPTION_FILENAME, ExportPlanner.DEFAULT_FILENAME)),
-		"always_include": str(options.get(OPTION_ALWAYS_INCLUDE, "")),
-		"combinations": str(options.get(OPTION_COMBINATIONS, "")),
 	}
 
 
@@ -221,6 +219,40 @@ func _sheet_type(options: Dictionary) -> String:
 	if index < 0 or index >= SHEET_TYPES.size():
 		return SHEET_TYPES[0]
 	return SHEET_TYPES[index]
+
+
+static func _target_path(base_dir: String, relative_path: String) -> String:
+	return base_dir.path_join(relative_path).simplify_path()
+
+
+## Exports the strips of [param jobs] to the cache, then copies the ones that changed into the
+## project. [param written] receives the project path of every strip written; a cell with no pixels
+## in its tag writes nothing.
+func _export_to_project(
+	cli: AsepriteCli,
+	source_file: String,
+	jobs: Array[Dictionary],
+	sheet_type: String,
+	base_dir: String,
+	written: Array[String]
+) -> Error:
+	var absolute_source := ProjectSettings.globalize_path(source_file)
+	var cache_dir := OS.get_cache_dir().path_join(CACHE_FOLDER).path_join(
+		absolute_source.md5_text()
+	)
+	var export_error := cli.export_strips(
+		absolute_source, jobs, _planner.composed_layers, _planner.cell_size, sheet_type, cache_dir
+	)
+	if export_error != OK:
+		push_error(LOG_PREFIX + "%s: %s" % [source_file, cli.last_error])
+		return FAILED
+	for relative_path: String in cli.last_written:
+		var target := _target_path(base_dir, relative_path)
+		var copy_error := _copy_if_changed(cache_dir.path_join(relative_path), target)
+		if copy_error != OK:
+			return copy_error
+		written.append(target)
+	return OK
 
 
 ## Copies only when the content differs, so unchanged strips keep their mtime and .import.

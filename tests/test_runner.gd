@@ -6,24 +6,30 @@ extends SceneTree
 const AsepriteCli := preload("res://addons/aseprite_topdown_layers/aseprite_cli.gd")
 const ExportPlanner := preload("res://addons/aseprite_topdown_layers/export_planner.gd")
 
-const SOURCE := "res://examples/character/character.aseprite"
-const TITLE := "character"
+const SOURCE := "res://examples/character/character-matrix/character-matrix.aseprite"
+const TITLE := "character-matrix"
+const SPRITE_SIZE := Vector2i(144, 192)
+const CELL_SIZE := Vector2i(48, 64)
 const EXPECTED_DIR := "res://tests/expected/idle_loop"
-const EXPECTED_LAYERS: Array[String] = [
-	"up", "right_up", "right_down", "left_up", "left_down", "down"
-]
+const EXPECTED_LAYERS: Array[String] = ["default"]
 const EXPECTED_TAGS: Array[String] = ["idle_loop", "walk", "death", "dash", "jump"]
+## Directions drawn in the example; its left and right cells are empty.
+const DRAWN_DIRECTIONS: Array[String] = [
+	"left_up", "up", "right_up", "left_down", "down", "right_down"
+]
 const STRIP_SIZE := Vector2i(384, 64)
 const DEFAULT_OPTIONS := {
+	"cell_size": Vector2i.ZERO,
+	"layer_include": "",
 	"layer_exclude_pattern": "^_",
 	"tag_exclude_pattern": "^_",
 	"output_folder": "assets/{tag}",
-	"filename": "{title}_{layer}_{tag}",
+	"filename": "{title}_{direction}_{tag}",
 }
 const ASSET_HELP := (
-	"Place the example character.aseprite at "
-	+ "examples/character/character.aseprite and export the reference strips to "
-	+ "tests/expected/idle_loop/ (see README > Credits)."
+	"See README > Credits to build "
+	+ "examples/character/character-matrix/character-matrix.aseprite and the reference strips in "
+	+ "tests/expected/idle_loop/."
 )
 
 var _failures := 0
@@ -46,8 +52,8 @@ func _missing_example_files() -> PackedStringArray:
 	var missing := PackedStringArray()
 	if not FileAccess.file_exists(SOURCE):
 		missing.append(SOURCE)
-	for layer: String in EXPECTED_LAYERS:
-		var expected := EXPECTED_DIR.path_join("character_%s_idle_loop.png" % layer)
+	for direction: String in DRAWN_DIRECTIONS:
+		var expected := _expected_strip(direction)
 		if not FileAccess.file_exists(expected):
 			missing.append(expected)
 	return missing
@@ -58,247 +64,301 @@ func _test_with_example_asset() -> void:
 	_check(cli.is_available(), "Aseprite executable available", cli.get_executable())
 	if not cli.is_available():
 		return
-	var layers := _test_listing(cli)
-	var jobs := _test_planner(layers)
-	_test_export_strips(cli, jobs)
-	_test_combination_matches_cli(cli, layers)
-	_test_export_rejects_unknown_names(cli)
+	var contents := _test_listing(cli)
+	var planner := ExportPlanner.new()
+	var jobs := _test_planner(planner, contents)
+	_test_export_strips(cli, planner, jobs)
+	_test_vertical_strip(cli, planner, jobs)
+	_test_export_rejects_bad_input(cli)
 
 
-func _test_listing(cli: AsepriteCli) -> PackedStringArray:
+func _test_listing(cli: AsepriteCli) -> Dictionary:
 	var source := ProjectSettings.globalize_path(SOURCE)
 	var contents := cli.list_contents(source, false)
+	var size: Vector2i = contents.get("size", Vector2i.ZERO)
+	_check(size == SPRITE_SIZE, "list_contents returns the size", "%s %s" % [size, cli.last_error])
 	var layers: PackedStringArray = contents.get("layers", PackedStringArray())
 	_check(
-		layers == PackedStringArray(EXPECTED_LAYERS),
-		"list_contents returns 6 layers",
-		"%s %s" % [layers, cli.last_error]
+		layers == PackedStringArray(EXPECTED_LAYERS), "list_contents returns layers", str(layers)
 	)
 	var visible: PackedStringArray = cli.list_contents(source, true).get(
 		"layers", PackedStringArray()
 	)
-	_check(visible == PackedStringArray(["left_down"]), "list_contents only_visible", str(visible))
+	_check(
+		visible == PackedStringArray(EXPECTED_LAYERS), "list_contents only_visible", str(visible)
+	)
 	var tags: PackedStringArray = contents.get("tags", PackedStringArray())
 	_check(tags == PackedStringArray(EXPECTED_TAGS), "list_contents returns 5 tags", str(tags))
-	return layers
+	return contents
 
 
-func _test_planner(layers: PackedStringArray) -> Array[Dictionary]:
-	var planner := ExportPlanner.new()
-	var jobs := planner.build_jobs(TITLE, layers, PackedStringArray(EXPECTED_TAGS), DEFAULT_OPTIONS)
-	_check(jobs.size() == 30, "planner builds 30 jobs", str(jobs.size()))
-	_check(planner.errors.is_empty(), "planner reports no errors", str(planner.errors))
-	for layer: String in EXPECTED_LAYERS:
-		var expected_path := "assets/idle_loop/character_%s_idle_loop.png" % layer
-		var job := _find_job(jobs, expected_path)
-		_check(not job.is_empty(), "job exists: " + expected_path)
-		if not job.is_empty():
-			_check(job["layers"] == PackedStringArray([layer]), "job layers: " + expected_path)
+func _test_planner(planner: ExportPlanner, contents: Dictionary) -> Array[Dictionary]:
+	var size: Vector2i = contents.get("size", Vector2i.ZERO)
+	var layers: PackedStringArray = contents.get("layers", PackedStringArray())
+	var tags: PackedStringArray = contents.get("tags", PackedStringArray())
+	var jobs := planner.build_jobs(TITLE, size, layers, tags, DEFAULT_OPTIONS)
+	_check(jobs.size() == 40, "planner builds 8 directions x 5 tags", str(jobs.size()))
+	_check(
+		not planner.failed and planner.errors.is_empty(),
+		"planner reports no errors",
+		str(planner.errors)
+	)
+	_check(planner.cell_size == CELL_SIZE, "cell is a third of the sprite", str(planner.cell_size))
+	_check(
+		planner.composed_layers == PackedStringArray(EXPECTED_LAYERS),
+		"every layer is composed",
+		str(planner.composed_layers)
+	)
+	var job := _find_job(jobs, "assets/walk/character-matrix_right_down_walk.png")
+	_check(
+		not job.is_empty() and job["direction"] == "right_down" and job["tag"] == "walk",
+		"job fields: right_down walk",
+		str(job)
+	)
 	return jobs
 
 
-## All 30 strips in one Aseprite process: idle_loop matches the CLI reference byte for byte, the
-## other tags have the expected size.
-func _test_export_strips(cli: AsepriteCli, jobs: Array[Dictionary]) -> void:
-	var source := ProjectSettings.globalize_path(SOURCE)
+## All 40 jobs in one Aseprite process: the drawn directions are written for every tag, and their
+## idle_loop strips match the layer-per-direction reference strips byte for byte. The empty left
+## and right cells write nothing.
+func _test_export_strips(cli: AsepriteCli, planner: ExportPlanner, jobs: Array[Dictionary]) -> void:
 	var output_dir := _tmp_dir.path_join("batch")
-	var code := cli.export_strips(source, jobs, "horizontal", output_dir)
-	_check(code == OK, "export_strips exports 30 jobs", cli.last_error)
+	var code := cli.export_strips(
+		ProjectSettings.globalize_path(SOURCE),
+		jobs,
+		planner.composed_layers,
+		planner.cell_size,
+		"horizontal",
+		output_dir
+	)
+	_check(
+		code == OK and cli.last_written.size() == 30,
+		"export_strips writes 30 of 40 strips",
+		"%d written, %s" % [cli.last_written.size(), cli.last_error]
+	)
 	for job: Dictionary in jobs:
+		var direction: String = job["direction"]
 		var tag: String = job["tag"]
 		var relative_path: String = job["relative_path"]
 		var exported := output_dir.path_join(relative_path)
-		if tag == "idle_loop":
-			var expected := ProjectSettings.globalize_path(
-				EXPECTED_DIR.path_join(relative_path.get_file())
+		if not DRAWN_DIRECTIONS.has(direction):
+			_check(
+				not cli.last_written.has(relative_path) and not FileAccess.file_exists(exported),
+				"empty cell writes nothing: " + relative_path.get_file()
 			)
+			continue
+		_check(cli.last_written.has(relative_path), "strip written: " + relative_path.get_file())
+		if tag == "idle_loop":
 			var actual_md5 := FileAccess.get_md5(exported)
-			var expected_md5 := FileAccess.get_md5(expected)
+			var expected_md5 := FileAccess.get_md5(_expected_strip(direction))
 			_check(
 				actual_md5 == expected_md5 and expected_md5 != "",
 				"MD5 matches expected: " + relative_path.get_file(),
 				"%s vs %s" % [actual_md5, expected_md5]
 			)
 			continue
-		var size := Vector2i.ZERO
-		var image := Image.load_from_file(exported)
-		if image != null:
-			size = image.get_size()
+		var size := _image_size(exported)
 		_check(size == STRIP_SIZE, "strip is 384x64: " + relative_path.get_file(), str(size))
 
 
-## A combination composes several layers: compare with the CLI's --layer a --layer b.
-func _test_combination_matches_cli(cli: AsepriteCli, layers: PackedStringArray) -> void:
-	var options := DEFAULT_OPTIONS.duplicate()
-	options["combinations"] = "combo=down+up"
-	var planner := ExportPlanner.new()
-	var all_jobs := planner.build_jobs(TITLE, layers, PackedStringArray(EXPECTED_TAGS), options)
-	var job := _find_job(all_jobs, "assets/walk/character_combo_walk.png")
-	_check(not job.is_empty(), "combination job exists")
+func _test_vertical_strip(
+	cli: AsepriteCli, planner: ExportPlanner, jobs: Array[Dictionary]
+) -> void:
+	var relative_path := "assets/walk/character-matrix_down_walk.png"
+	var job := _find_job(jobs, relative_path)
 	if job.is_empty():
+		_check(false, "vertical strip job exists", relative_path)
 		return
-	var jobs: Array[Dictionary] = [job]
-	var output_dir := _tmp_dir.path_join("combination")
+	var vertical_jobs: Array[Dictionary] = [job]
+	var output_dir := _tmp_dir.path_join("vertical")
 	var code := cli.export_strips(
-		ProjectSettings.globalize_path(SOURCE), jobs, "horizontal", output_dir
+		ProjectSettings.globalize_path(SOURCE),
+		vertical_jobs,
+		planner.composed_layers,
+		planner.cell_size,
+		"vertical",
+		output_dir
 	)
-	var reference := _tmp_dir.path_join("cli").path_join("character_combo_walk.png")
-	var cli_code := _export_with_cli(job["layers"], "walk", reference)
-	var batch_md5 := FileAccess.get_md5(output_dir.path_join(job["relative_path"]))
-	var cli_md5 := FileAccess.get_md5(reference)
+	var size := _image_size(output_dir.path_join(relative_path))
 	_check(
-		code == OK and cli_code == OK and batch_md5 == cli_md5 and cli_md5 != "",
-		"combination strip matches the CLI",
-		"%s vs %s %s" % [batch_md5, cli_md5, cli.last_error]
+		code == OK and size == Vector2i(48, 512),
+		"vertical strip is 48x512",
+		"%s %s" % [size, cli.last_error]
 	)
 
 
-func _test_export_rejects_unknown_names(cli: AsepriteCli) -> void:
-	var source := ProjectSettings.globalize_path(SOURCE)
-	var output_dir := _tmp_dir.path_join("rejected")
-	var unknown_layer: Array[Dictionary] = [
-		{"layers": PackedStringArray(["ghost"]), "tag": "walk", "relative_path": "ghost.png"}
+func _test_export_rejects_bad_input(cli: AsepriteCli) -> void:
+	var layers := PackedStringArray(EXPECTED_LAYERS)
+	var ghost := PackedStringArray(["ghost"])
+	_expect_rejected(
+		cli, "an unknown layer", ghost, CELL_SIZE, "walk", "up", "unknown layer 'ghost'"
+	)
+	_expect_rejected(cli, "an unknown tag", layers, CELL_SIZE, "nope", "up", "unknown tag 'nope'")
+	_expect_rejected(
+		cli, "an unknown direction", layers, CELL_SIZE, "walk", "center", "unknown direction"
+	)
+	_expect_rejected(cli, "a cell too big", layers, Vector2i(50, 64), "walk", "up", "does not fit")
+
+
+func _expect_rejected(
+	cli: AsepriteCli,
+	description: String,
+	layers: PackedStringArray,
+	cell: Vector2i,
+	tag: String,
+	direction: String,
+	expected_error: String
+) -> void:
+	var jobs: Array[Dictionary] = [
+		{"direction": direction, "tag": tag, "relative_path": "rejected.png"}
 	]
-	var code := cli.export_strips(source, unknown_layer, "horizontal", output_dir)
+	var code := cli.export_strips(
+		ProjectSettings.globalize_path(SOURCE),
+		jobs,
+		layers,
+		cell,
+		"horizontal",
+		_tmp_dir.path_join("rejected")
+	)
 	_check(
-		code != OK and cli.last_error.contains("unknown layer 'ghost'"),
-		"export_strips rejects an unknown layer",
+		code != OK and cli.last_error.contains(expected_error),
+		"export_strips rejects " + description,
 		cli.last_error
 	)
-	var unknown_tag: Array[Dictionary] = [
-		{"layers": PackedStringArray(["up"]), "tag": "nope", "relative_path": "nope.png"}
-	]
-	code = cli.export_strips(source, unknown_tag, "horizontal", output_dir)
-	_check(
-		code != OK and cli.last_error.contains("unknown tag 'nope'"),
-		"export_strips rejects an unknown tag",
-		cli.last_error
-	)
-
-
-func _export_with_cli(layers: PackedStringArray, tag: String, output_png: String) -> Error:
-	if FileAccess.file_exists(output_png):
-		DirAccess.remove_absolute(output_png)
-	DirAccess.make_dir_recursive_absolute(output_png.get_base_dir())
-	var args := PackedStringArray(["-b", "--all-layers"])
-	for layer: String in layers:
-		args.append_array(PackedStringArray(["--layer", layer]))
-	(
-		args
-		. append_array(
-			PackedStringArray(
-				[
-					"--tag",
-					tag,
-					ProjectSettings.globalize_path(SOURCE),
-					"--sheet-type",
-					"horizontal",
-					"--sheet",
-					output_png,
-				]
-			)
-		)
-	)
-	var output: Array = []
-	var code := OS.execute(OS.get_environment("ASEPRITE_PATH"), args, output, true)
-	return OK if code == 0 else FAILED
 
 
 func _test_planner_edge_cases() -> void:
 	var planner := ExportPlanner.new()
-	var layers := PackedStringArray(EXPECTED_LAYERS)
+	var layers := PackedStringArray(["body", "_guide", "fx"])
 	var tags := PackedStringArray(EXPECTED_TAGS)
 
+	var jobs := planner.build_jobs(TITLE, SPRITE_SIZE, layers, tags, DEFAULT_OPTIONS)
+	_check(
+		jobs.size() == 40 and planner.composed_layers == PackedStringArray(["body", "fx"]),
+		"default composes every layer not excluded",
+		str(planner.composed_layers)
+	)
+
 	var options := DEFAULT_OPTIONS.duplicate()
-	options["layer_exclude_pattern"] = "^up$"
-	var jobs := planner.build_jobs(TITLE, layers, tags, options)
-	_check(jobs.size() == 25, "layer exclude pattern removes 'up'", str(jobs.size()))
-
-	options = DEFAULT_OPTIONS.duplicate()
 	options["tag_exclude_pattern"] = "^(walk|jump)$"
-	jobs = planner.build_jobs(TITLE, layers, tags, options)
-	_check(jobs.size() == 18, "tag exclude pattern removes 2 tags", str(jobs.size()))
+	jobs = planner.build_jobs(TITLE, SPRITE_SIZE, layers, tags, options)
+	_check(jobs.size() == 24, "tag exclude pattern removes 2 tags", str(jobs.size()))
 
-	jobs = planner.build_jobs(TITLE, layers, PackedStringArray(), DEFAULT_OPTIONS)
-	var untagged := _find_job(jobs, "assets/character_up.png")
-	_check(jobs.size() == 6 and not untagged.is_empty(), "no tags: one strip per layer")
+	jobs = planner.build_jobs(TITLE, SPRITE_SIZE, layers, PackedStringArray(), DEFAULT_OPTIONS)
+	var untagged := _find_job(jobs, "assets/character-matrix_up.png")
+	_check(jobs.size() == 8 and not untagged.is_empty(), "no tags: one strip per direction")
 
 	options = DEFAULT_OPTIONS.duplicate()
 	options["output_folder"] = "sprites"
-	options["filename"] = "{layer}"
-	jobs = planner.build_jobs(TITLE, layers, tags, options)
-	_check(jobs.size() == 6, "colliding outputs are skipped", str(jobs.size()))
+	options["filename"] = "{direction}"
+	jobs = planner.build_jobs(TITLE, SPRITE_SIZE, layers, tags, options)
+	_check(jobs.size() == 8, "colliding outputs are skipped", str(jobs.size()))
 	_check(
-		planner.errors.size() == 24, "colliding outputs are reported", str(planner.errors.size())
+		planner.errors.size() == 32, "colliding outputs are reported", str(planner.errors.size())
+	)
+
+	options = DEFAULT_OPTIONS.duplicate()
+	options["filename"] = "{title}_{layer}_{tag}"
+	jobs = planner.build_jobs(TITLE, SPRITE_SIZE, layers, tags, options)
+	_check(
+		jobs.is_empty() and planner.failed and planner.errors.size() == 1,
+		"the removed {layer} placeholder is an error",
+		str(planner.errors)
 	)
 
 	_check(
 		ExportPlanner.sanitize("body/arm left") == "body_arm_left", "sanitize replaces / and space"
 	)
-	_test_combinations(planner, layers, tags)
+	_test_layer_include(planner, layers, tags)
+	_test_cell_size(planner, layers, tags)
 
 
-func _test_combinations(
+func _test_layer_include(
 	planner: ExportPlanner, layers: PackedStringArray, tags: PackedStringArray
 ) -> void:
 	var options := DEFAULT_OPTIONS.duplicate()
-	options["combinations"] = "test=down+up"
-	var jobs := planner.build_jobs(TITLE, layers, tags, options)
-	var combined := _find_job(jobs, "assets/idle_loop/character_test_idle_loop.png")
-	_check(jobs.size() == 25, "combination replaces its layers: 25 jobs", str(jobs.size()))
-	_check(
-		not combined.is_empty() and combined["layers"] == PackedStringArray(["down", "up"]),
-		"combination job composes down+up"
-	)
-	_check(
-		_find_job(jobs, "assets/idle_loop/character_down_idle_loop.png").is_empty(),
-		"combined layers are not exported alone"
-	)
-
-	options["combinations"] = "bad=down+nope"
-	jobs = planner.build_jobs(TITLE, layers, tags, options)
-	_check(
-		jobs.size() == 30 and planner.errors.size() == 1,
-		"unknown layer skips the combination",
-		str(planner.errors)
-	)
-
-	options["combinations"] = "oops; =up; empty="
-	jobs = planner.build_jobs(TITLE, layers, tags, options)
-	_check(
-		jobs.size() == 30 and planner.errors.size() == 3,
-		"malformed combinations are reported",
-		str(planner.errors)
-	)
-
-	options = DEFAULT_OPTIONS.duplicate()
-	options["always_include"] = "down"
-	jobs = planner.build_jobs(TITLE, layers, tags, options)
-	var with_base := _find_job(jobs, "assets/walk/character_up_walk.png")
+	options["layer_include"] = "fx, _guide, fx"
+	var jobs := planner.build_jobs(TITLE, SPRITE_SIZE, layers, tags, options)
 	_check(
 		(
-			jobs.size() == 25
-			and not with_base.is_empty()
-			and with_base["layers"] == PackedStringArray(["down", "up"])
+			jobs.size() == 40
+			and planner.errors.is_empty()
+			and planner.composed_layers == PackedStringArray(["fx", "_guide"])
 		),
-		"always_include composes into every strip",
-		str(jobs.size())
+		"layers/include picks layers, excluded ones too",
+		str(planner.composed_layers)
 	)
 
-	options["always_include"] = "down, ghost"
-	options["combinations"] = "test=left_up+right_up"
-	jobs = planner.build_jobs(TITLE, layers, tags, options)
-	var mixed := _find_job(jobs, "assets/dash/character_test_dash.png")
+	options["layer_include"] = "ghost, body"
+	jobs = planner.build_jobs(TITLE, SPRITE_SIZE, layers, tags, options)
 	_check(
 		(
-			jobs.size() == 20
+			jobs.size() == 40
 			and planner.errors.size() == 1
-			and not mixed.is_empty()
-			and mixed["layers"] == PackedStringArray(["down", "left_up", "right_up"])
+			and planner.composed_layers == PackedStringArray(["body"])
 		),
-		"always_include + combination, unknown always_include reported",
-		"%d jobs, %s" % [jobs.size(), planner.errors]
+		"unknown included layer is reported and ignored",
+		str(planner.errors)
 	)
+
+	options["layer_include"] = "ghost"
+	jobs = planner.build_jobs(TITLE, SPRITE_SIZE, layers, tags, options)
+	_check(
+		jobs.is_empty() and planner.failed and planner.errors.size() == 2,
+		"no known included layer fails",
+		str(planner.errors)
+	)
+
+	options["layer_include"] = ""
+	options["layer_exclude_pattern"] = "."
+	jobs = planner.build_jobs(TITLE, SPRITE_SIZE, layers, tags, options)
+	_check(jobs.is_empty() and planner.failed, "every layer excluded fails", str(planner.errors))
+
+
+func _test_cell_size(
+	planner: ExportPlanner, layers: PackedStringArray, tags: PackedStringArray
+) -> void:
+	var options := DEFAULT_OPTIONS.duplicate()
+	options["cell_size"] = CELL_SIZE
+	var jobs := planner.build_jobs(TITLE, SPRITE_SIZE, layers, tags, options)
+	_check(
+		jobs.size() == 40 and planner.cell_size == CELL_SIZE,
+		"explicit cell size equal to the default",
+		str(planner.cell_size)
+	)
+
+	options["cell_size"] = Vector2i(40, 0)
+	jobs = planner.build_jobs(TITLE, SPRITE_SIZE, layers, tags, options)
+	_check(
+		jobs.size() == 40 and planner.cell_size == Vector2i(40, 64),
+		"smaller cell width, 0 height is a third",
+		str(planner.cell_size)
+	)
+
+	for cell: Vector2i in [Vector2i(50, 64), Vector2i(-1, 64), Vector2i(48, 65)]:
+		options["cell_size"] = cell
+		jobs = planner.build_jobs(TITLE, SPRITE_SIZE, layers, tags, options)
+		_check(
+			jobs.is_empty() and planner.failed and planner.cell_size == Vector2i.ZERO,
+			"cell size %s does not fit" % cell,
+			str(planner.errors)
+		)
+
+	jobs = planner.build_jobs(TITLE, Vector2i(145, 192), layers, tags, DEFAULT_OPTIONS)
+	_check(
+		jobs.is_empty() and planner.failed,
+		"default cell needs a size multiple of 3",
+		str(planner.errors)
+	)
+
+
+func _expected_strip(direction: String) -> String:
+	return EXPECTED_DIR.path_join("character_%s_idle_loop.png" % direction)
+
+
+static func _image_size(path: String) -> Vector2i:
+	var image := Image.load_from_file(path)
+	return Vector2i.ZERO if image == null else image.get_size()
 
 
 func _find_job(jobs: Array[Dictionary], relative_path: String) -> Dictionary:
