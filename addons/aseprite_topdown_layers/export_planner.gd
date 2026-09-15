@@ -15,6 +15,8 @@ const DIRECTIONS: Array[String] = [
 	"left_up", "up", "right_up", "left", "right", "left_down", "down", "right_down"
 ]
 const REMOVED_PLACEHOLDER := "{layer}"
+## Layer choice that composes every layer not matched by the exclude pattern.
+const ALL_LAYERS := "[all]"
 
 ## Problems found by the last [method build_jobs] call.
 var errors := PackedStringArray()
@@ -29,8 +31,8 @@ var cell_size := Vector2i.ZERO
 
 ## [param layer_names] must be the names reported by Aseprite: user-typed names are validated
 ## against them. [param options] keys: cell_size (Vector2i; 0 on an axis is a third of the sprite),
-## layer_include ("a, b": top-level layers or groups composed into every strip; empty means every
-## layer not matched by layer_exclude_pattern), layer_exclude_pattern, tag_exclude_pattern,
+## layer (the top-level layer or group composed into every strip, or [constant ALL_LAYERS] for
+## every layer not matched by layer_exclude_pattern), layer_exclude_pattern, tag_exclude_pattern,
 ## output_folder and filename.
 func build_jobs(
 	title: String,
@@ -47,8 +49,8 @@ func build_jobs(
 		requested_cell = cell_option
 	cell_size = _resolve_cell_size(requested_cell, sprite_size)
 	var layer_filter := _compile_filter(str(options.get("layer_exclude_pattern", "")), "layer")
-	var include := str(options.get("layer_include", ""))
-	composed_layers = _select_layers(include, layer_names, layer_filter)
+	var layer_choice := str(options.get("layer", ALL_LAYERS))
+	composed_layers = _select_layers(layer_choice, layer_names, layer_filter)
 	var tag_filter := _compile_filter(str(options.get("tag_exclude_pattern", "")), "tag")
 	var folder_template := str(options.get("output_folder", ""))
 	var filename_template := str(options.get("filename", DEFAULT_FILENAME))
@@ -153,24 +155,18 @@ func _resolve_cell_size(requested: Vector2i, sprite_size: Vector2i) -> Vector2i:
 	return Vector2i.ZERO
 
 
-## The layers typed in [param include] ("a, b"), or every layer not matched by [param exclude] when
-## nothing is typed. Typed names must be in [param layer_names]; unknown ones are reported.
+## [param choice] alone when it is one of [param layer_names] (it may match [param exclude]), or
+## every layer not matched by [param exclude] for [constant ALL_LAYERS] or an empty choice.
 func _select_layers(
-	include: String, layer_names: PackedStringArray, exclude: RegEx
+	choice: String, layer_names: PackedStringArray, exclude: RegEx
 ) -> PackedStringArray:
 	var selected := PackedStringArray()
-	var typed := false
-	for entry: String in include.split(",", false):
-		var name := entry.strip_edges()
-		if name == "":
-			continue
-		typed = true
-		if not layer_names.has(name):
-			errors.append("layers/include: unknown layer '%s'; ignored." % name)
-		elif not selected.has(name):
-			selected.append(name)
-	if not typed:
+	if choice == ALL_LAYERS or choice == "":
 		selected = _without_excluded(layer_names, exclude)
+	elif layer_names.has(choice):
+		selected.append(choice)
+	else:
+		errors.append("layers/layer: unknown layer '%s'." % choice)
 	if selected.is_empty():
 		errors.append("No layers to export.")
 	return selected

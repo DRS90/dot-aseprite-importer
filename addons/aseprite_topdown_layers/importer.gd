@@ -28,7 +28,7 @@ const OPTION_FOLDER := "output/folder"
 const OPTION_FILENAME := "output/filename"
 const OPTION_DELETE_STALE := "output/delete_stale"
 const OPTION_CELL_SIZE := "grid/cell_size"
-const OPTION_LAYER_INCLUDE := "layers/include"
+const OPTION_LAYER := "layers/layer"
 const OPTION_LAYER_EXCLUDE := "layers/exclude_pattern"
 const OPTION_ONLY_VISIBLE := "layers/only_visible"
 const OPTION_TAG_EXCLUDE := "tags/exclude_pattern"
@@ -38,6 +38,8 @@ var _scheduler: FsScanScheduler
 var _settings: Settings
 var _planner := ExportPlanner.new()
 var _verified_executable := ""
+## res:// path -> {"md5": String, "contents": Dictionary} of the last Aseprite listing.
+var _contents_cache := {}
 
 
 func _init(scheduler: FsScanScheduler, settings: Settings) -> void:
@@ -89,7 +91,7 @@ func _get_option_visibility(_path: String, _option_name: StringName, _options: D
 	return true
 
 
-func _get_import_options(_path: String, _preset_index: int) -> Array[Dictionary]:
+func _get_import_options(path: String, _preset_index: int) -> Array[Dictionary]:
 	return [
 		{
 			"name": OPTION_FOLDER,
@@ -101,7 +103,12 @@ func _get_import_options(_path: String, _preset_index: int) -> Array[Dictionary]
 		},
 		{"name": OPTION_DELETE_STALE, "default_value": true},
 		{"name": OPTION_CELL_SIZE, "default_value": Vector2i.ZERO},
-		{"name": OPTION_LAYER_INCLUDE, "default_value": ""},
+		{
+			"name": OPTION_LAYER,
+			"default_value": ExportPlanner.ALL_LAYERS,
+			"property_hint": PROPERTY_HINT_ENUM,
+			"hint_string": _layer_choices(path),
+		},
 		{
 			"name": OPTION_LAYER_EXCLUDE,
 			"default_value": _project_default(Settings.DEFAULT_LAYER_EXCLUDE_KEY),
@@ -143,13 +150,13 @@ func _import(
 			return ERR_UNCONFIGURED
 		_verified_executable = cli.get_executable()
 
-	var only_visible: bool = options.get(OPTION_ONLY_VISIBLE, false)
-	var contents := cli.list_contents(ProjectSettings.globalize_path(source_file), only_visible)
+	var contents := _list_contents(cli, source_file)
 	if contents.is_empty():
 		push_error(LOG_PREFIX + "%s: %s" % [source_file, cli.last_error])
 		return FAILED
+	var only_visible: bool = options.get(OPTION_ONLY_VISIBLE, false)
 	var sprite_size: Vector2i = contents["size"]
-	var layers: PackedStringArray = contents["layers"]
+	var layers: PackedStringArray = contents["visible_layers" if only_visible else "layers"]
 	var tags: PackedStringArray = contents["tags"]
 
 	var base_dir := source_file.get_base_dir()
@@ -203,10 +210,39 @@ func _project_default(key: String) -> String:
 	return _settings.get_project_default(key, fallback)
 
 
+## Choices of the layer dropdown: [all], then the file's top-level layers and groups. Names with a
+## comma or a colon would break the hint string, so they are not offered.
+func _layer_choices(path: String) -> String:
+	var choices := PackedStringArray([ExportPlanner.ALL_LAYERS])
+	# The path is empty when the import defaults are edited in Project Settings.
+	if path == "" or _settings == null or not FileAccess.file_exists(path):
+		return ",".join(choices)
+	var cli := AsepriteCli.new(_settings.get_executable_path())
+	var layers: PackedStringArray = _list_contents(cli, path).get("layers", PackedStringArray())
+	for layer: String in layers:
+		if not layer.contains(",") and not layer.contains(":"):
+			choices.append(layer)
+	return ",".join(choices)
+
+
+## Aseprite's listing of [param source_file], cached by file content. Godot asks for the import
+## options right before importing, so the dropdown and the import share one Aseprite process.
+func _list_contents(cli: AsepriteCli, source_file: String) -> Dictionary:
+	var md5 := FileAccess.get_md5(source_file)
+	var cached: Dictionary = _contents_cache.get(source_file, {})
+	if not cached.is_empty() and cached["md5"] == md5:
+		var cached_contents: Dictionary = cached["contents"]
+		return cached_contents
+	var contents := cli.list_contents(ProjectSettings.globalize_path(source_file))
+	if not contents.is_empty():
+		_contents_cache[source_file] = {"md5": md5, "contents": contents}
+	return contents
+
+
 func _planner_options(options: Dictionary, folder: String) -> Dictionary:
 	return {
 		"cell_size": options.get(OPTION_CELL_SIZE, Vector2i.ZERO),
-		"layer_include": str(options.get(OPTION_LAYER_INCLUDE, "")),
+		"layer": str(options.get(OPTION_LAYER, ExportPlanner.ALL_LAYERS)),
 		"layer_exclude_pattern": str(options.get(OPTION_LAYER_EXCLUDE, "")),
 		"tag_exclude_pattern": str(options.get(OPTION_TAG_EXCLUDE, "")),
 		"output_folder": folder,

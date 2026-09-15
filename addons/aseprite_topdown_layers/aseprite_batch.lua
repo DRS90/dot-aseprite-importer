@@ -8,9 +8,9 @@
 -- Starting Aseprite costs about 200 ms while exporting one strip costs a few, so a whole import is
 -- served by one process per mode instead of one process per strip.
 --
--- mode=list    params: file, only_visible ("true"/"false")
---              Prints "size<TAB>width<TAB>height", then "layer<TAB>name" per top-level layer or
---              group, then "tag<TAB>name" per tag.
+-- mode=list    params: file
+--              Prints "size<TAB>width<TAB>height", then "layer<TAB>name<TAB>visible" ("true" or
+--              "false") per top-level layer or group, then "tag<TAB>name" per tag.
 -- mode=export  params: file, jobs, cell_width, cell_height, sheet_type ("horizontal"/"vertical")
 --              jobs is a text file with "layer<TAB>name" lines (the layers composed into every
 --              strip) and "strip<TAB>output_png<TAB>tag<TAB>direction" lines. An empty tag exports
@@ -61,10 +61,8 @@ local function list()
   print("size\t" .. sprite.width .. "\t" .. sprite.height)
   local count = 0
   for _, layer in ipairs(sprite.layers) do
-    if params.only_visible ~= "true" or layer.isVisible then
-      print("layer\t" .. layer.name)
-      count = count + 1
-    end
+    print("layer\t" .. layer.name .. "\t" .. tostring(layer.isVisible))
+    count = count + 1
   end
   for _, tag in ipairs(sprite.tags) do
     print("tag\t" .. tag.name)

@@ -50,28 +50,28 @@ func get_executable() -> String:
 	return _executable
 
 
-## Sprite size and the names of the top-level layers, groups and tags, in file order:
-## {"size": Vector2i, "layers": PackedStringArray, "tags": PackedStringArray}.
-## Empty when Aseprite failed.
-func list_contents(aseprite_file: String, only_visible: bool) -> Dictionary:
-	var lines := _run_batch(
-		PackedStringArray(
-			["mode=list", "file=" + aseprite_file, "only_visible=" + str(only_visible).to_lower()]
-		)
-	)
+## Sprite size and the names of the top-level layers and groups (all of them, and the visible
+## ones) and of the tags, in file order: {"size": Vector2i, "layers": PackedStringArray,
+## "visible_layers": PackedStringArray, "tags": PackedStringArray}. Empty when Aseprite failed.
+func list_contents(aseprite_file: String) -> Dictionary:
+	var lines := _run_batch(PackedStringArray(["mode=list", "file=" + aseprite_file]))
 	if lines.is_empty():
 		return {}
 	var size := Vector2i.ZERO
 	var layers := PackedStringArray()
+	var visible_layers := PackedStringArray()
 	var tags := PackedStringArray()
 	for line: String in lines:
 		if line.begins_with(SIZE_PREFIX):
 			size = Vector2i(line.get_slice("\t", 1).to_int(), line.get_slice("\t", 2).to_int())
 		elif line.begins_with(LAYER_PREFIX):
-			layers.append(line.trim_prefix(LAYER_PREFIX))
+			var layer := line.get_slice("\t", 1)
+			layers.append(layer)
+			if line.get_slice("\t", 2) == "true":
+				visible_layers.append(layer)
 		elif line.begins_with(TAG_PREFIX):
 			tags.append(line.trim_prefix(TAG_PREFIX))
-	return {"size": size, "layers": layers, "tags": tags}
+	return {"size": size, "layers": layers, "visible_layers": visible_layers, "tags": tags}
 
 
 ## Exports every job built by ExportPlanner.build_jobs() in one Aseprite process. [param layers] are

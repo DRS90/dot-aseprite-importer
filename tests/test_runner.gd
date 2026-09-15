@@ -20,7 +20,7 @@ const DRAWN_DIRECTIONS: Array[String] = [
 const STRIP_SIZE := Vector2i(384, 64)
 const DEFAULT_OPTIONS := {
 	"cell_size": Vector2i.ZERO,
-	"layer_include": "",
+	"layer": "[all]",
 	"layer_exclude_pattern": "^_",
 	"tag_exclude_pattern": "^_",
 	"output_folder": "assets/{tag}",
@@ -73,19 +73,18 @@ func _test_with_example_asset() -> void:
 
 
 func _test_listing(cli: AsepriteCli) -> Dictionary:
-	var source := ProjectSettings.globalize_path(SOURCE)
-	var contents := cli.list_contents(source, false)
+	var contents := cli.list_contents(ProjectSettings.globalize_path(SOURCE))
 	var size: Vector2i = contents.get("size", Vector2i.ZERO)
 	_check(size == SPRITE_SIZE, "list_contents returns the size", "%s %s" % [size, cli.last_error])
 	var layers: PackedStringArray = contents.get("layers", PackedStringArray())
 	_check(
 		layers == PackedStringArray(EXPECTED_LAYERS), "list_contents returns layers", str(layers)
 	)
-	var visible: PackedStringArray = cli.list_contents(source, true).get(
-		"layers", PackedStringArray()
-	)
+	var visible: PackedStringArray = contents.get("visible_layers", PackedStringArray())
 	_check(
-		visible == PackedStringArray(EXPECTED_LAYERS), "list_contents only_visible", str(visible)
+		visible == PackedStringArray(EXPECTED_LAYERS),
+		"list_contents returns visible layers",
+		str(visible)
 	)
 	var tags: PackedStringArray = contents.get("tags", PackedStringArray())
 	_check(tags == PackedStringArray(EXPECTED_TAGS), "list_contents returns 5 tags", str(tags))
@@ -235,7 +234,7 @@ func _test_planner_edge_cases() -> void:
 	var jobs := planner.build_jobs(TITLE, SPRITE_SIZE, layers, tags, DEFAULT_OPTIONS)
 	_check(
 		jobs.size() == 40 and planner.composed_layers == PackedStringArray(["body", "fx"]),
-		"default composes every layer not excluded",
+		"[all] composes every layer not excluded",
 		str(planner.composed_layers)
 	)
 
@@ -269,47 +268,51 @@ func _test_planner_edge_cases() -> void:
 	_check(
 		ExportPlanner.sanitize("body/arm left") == "body_arm_left", "sanitize replaces / and space"
 	)
-	_test_layer_include(planner, layers, tags)
+	_test_layer_choice(planner, layers, tags)
 	_test_cell_size(planner, layers, tags)
 
 
-func _test_layer_include(
+func _test_layer_choice(
 	planner: ExportPlanner, layers: PackedStringArray, tags: PackedStringArray
 ) -> void:
 	var options := DEFAULT_OPTIONS.duplicate()
-	options["layer_include"] = "fx, _guide, fx"
+	options["layer"] = ""
 	var jobs := planner.build_jobs(TITLE, SPRITE_SIZE, layers, tags, options)
+	_check(
+		jobs.size() == 40 and planner.composed_layers == PackedStringArray(["body", "fx"]),
+		"an empty layer choice means [all]",
+		str(planner.composed_layers)
+	)
+
+	options["layer"] = "fx"
+	jobs = planner.build_jobs(TITLE, SPRITE_SIZE, layers, tags, options)
 	_check(
 		(
 			jobs.size() == 40
 			and planner.errors.is_empty()
-			and planner.composed_layers == PackedStringArray(["fx", "_guide"])
+			and planner.composed_layers == PackedStringArray(["fx"])
 		),
-		"layers/include picks layers, excluded ones too",
+		"a chosen layer is composed alone",
 		str(planner.composed_layers)
 	)
 
-	options["layer_include"] = "ghost, body"
+	options["layer"] = "_guide"
 	jobs = planner.build_jobs(TITLE, SPRITE_SIZE, layers, tags, options)
 	_check(
-		(
-			jobs.size() == 40
-			and planner.errors.size() == 1
-			and planner.composed_layers == PackedStringArray(["body"])
-		),
-		"unknown included layer is reported and ignored",
-		str(planner.errors)
+		jobs.size() == 40 and planner.composed_layers == PackedStringArray(["_guide"]),
+		"an excluded layer can still be chosen",
+		str(planner.composed_layers)
 	)
 
-	options["layer_include"] = "ghost"
+	options["layer"] = "ghost"
 	jobs = planner.build_jobs(TITLE, SPRITE_SIZE, layers, tags, options)
 	_check(
 		jobs.is_empty() and planner.failed and planner.errors.size() == 2,
-		"no known included layer fails",
+		"an unknown chosen layer fails",
 		str(planner.errors)
 	)
 
-	options["layer_include"] = ""
+	options["layer"] = "[all]"
 	options["layer_exclude_pattern"] = "."
 	jobs = planner.build_jobs(TITLE, SPRITE_SIZE, layers, tags, options)
 	_check(jobs.is_empty() and planner.failed, "every layer excluded fails", str(planner.errors))
