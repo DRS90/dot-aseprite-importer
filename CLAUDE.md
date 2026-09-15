@@ -74,8 +74,8 @@ changed, and can be forced with a button.
   `_get_format_version()`: it reimports a file (and writes `importer_version` to its `.import`)
   only once that file is checked again, so existing projects need *Reimport all* or a touch.
 - `EditorFileSystem.resources_reimported` is handled with a deferred sync, so the reimported
-  SpriteFrames is reloaded before the AnimationPlayer is synced. Only an editor test shows whether
-  that timing holds.
+  SpriteFrames is reloaded before the AnimationPlayer is synced (confirmed in the editor: a
+  duration changed in Aseprite reaches the AnimationPlayer and user tracks survive).
 - Metadata names starting with `_` are editor-only and not saved: the sprite's link and sync key use
   `aseprite_topdown_layers_*` names.
 

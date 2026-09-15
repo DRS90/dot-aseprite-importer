@@ -22,7 +22,7 @@
 - [x] Manual test in the editor: save in Aseprite, focus Godot, strips update with no cascading reimports
 - [x] Manual test in the editor of the grid format (strips per direction, empty cells, `grid/cell_size`,
       `layers/layer` dropdown; sprites from `tests/tools/build_cases.lua`)
-- [ ] Manual test in the editor of the SpriteFrames import and the AnimationPlayer sync
+- [x] Manual test in the editor of the SpriteFrames import and the AnimationPlayer sync
 - [ ] Rename the addon: "Layers" no longer describes the grid format
 - [ ] Screenshots in `screenshots/`
 - [ ] Square PNG icon (≥128 px) for the Asset Library listing
