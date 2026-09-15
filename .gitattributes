@@ -1,0 +1,9 @@
+* text=auto eol=lf
+*.png binary
+*.aseprite binary
+*.ase binary
+/examples export-ignore
+/tests export-ignore
+/screenshots export-ignore
+/.github export-ignore
+/gdlintrc export-ignore
