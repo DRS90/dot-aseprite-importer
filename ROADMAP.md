@@ -13,12 +13,16 @@
 - [x] 3x3 grid format replaces one layer per direction: one strip per direction × tag,
       `grid/cell_size`, `layers/layer` dropdown, empty cells skipped
       (layer combinations removed; `tests/tools/build_grid.lua` converts old sprites)
+- [x] Import as SpriteFrames with Aseprite frame timing, tag direction and a configurable loop
+      suffix; strips are no longer written to the project
+- [x] AnimationPlayer section in the AnimatedSprite2D inspector, synced on reimport and scene open
 
 ## Before publishing
 
 - [x] Manual test in the editor: save in Aseprite, focus Godot, strips update with no cascading reimports
 - [x] Manual test in the editor of the grid format (strips per direction, empty cells, `grid/cell_size`,
       `layers/layer` dropdown; sprites from `tests/tools/build_cases.lua`)
+- [ ] Manual test in the editor of the SpriteFrames import and the AnimationPlayer sync
 - [ ] Rename the addon: "Layers" no longer describes the grid format
 - [ ] Screenshots in `screenshots/`
 - [ ] Square PNG icon (≥128 px) for the Asset Library listing
@@ -30,12 +34,13 @@
 
 - [ ] Custom direction name per grid cell
 - [ ] Warn when the ignored center cell has pixels
+- [ ] Undo/redo for AnimationPlayer syncs
 - [ ] Test on Godot 4.4–4.6 and lower the declared minimum version
 - [ ] CI: gdformat/gdlint and headless tests on GitHub Actions
-- [ ] Honor tag direction (reverse / ping-pong) in the exported strip
 
 ## Ideas (undecided)
 
-- Optional SpriteFrames generation from the strips
 - Companion Aseprite Lua extension to export on save, without waiting for Godot to regain focus
 - Grids other than 3x3 (e.g. 4 or 16 directions), or directions from named slices
+- Honor the tag repeat count (play N times, then stop)
+- Import without Aseprite for teammates, e.g. from a committed bake of the SpriteFrames
