@@ -76,6 +76,9 @@ changed, and can be forced with a button.
 - `EditorFileSystem.resources_reimported` is handled with a deferred sync, so the reimported
   SpriteFrames is reloaded before the AnimationPlayer is synced (confirmed in the editor: a
   duration changed in Aseprite reaches the AnimationPlayer and user tracks survive).
+- Rename or move the addon folder only with the Godot editor **closed**. A running editor that loses
+  the importer rewrites the `.import` files using it to `importer="keep"` (dropping params and uid)
+  or leaves them with `valid=false`, and *Reimport all* then finds no file.
 - Metadata names starting with `_` are editor-only and not saved: the sprite's link and sync key use
   `aseprite_topdown_grid_animations_*` names.
 
