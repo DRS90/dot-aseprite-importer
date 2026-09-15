@@ -60,20 +60,26 @@ func _test_with_example_asset() -> void:
 		return
 	var layers := _test_listing(cli)
 	var jobs := _test_planner(layers)
-	_test_idle_loop_matches_expected(cli, jobs)
-	_test_other_tags_strip_size(cli, jobs)
+	_test_export_strips(cli, jobs)
+	_test_combination_matches_cli(cli, layers)
+	_test_export_rejects_unknown_names(cli)
 
 
 func _test_listing(cli: AsepriteCli) -> PackedStringArray:
 	var source := ProjectSettings.globalize_path(SOURCE)
-	var layers := cli.list_layers(source, false)
+	var contents := cli.list_contents(source, false)
+	var layers: PackedStringArray = contents.get("layers", PackedStringArray())
 	_check(
-		layers == PackedStringArray(EXPECTED_LAYERS), "list_layers returns 6 layers", str(layers)
+		layers == PackedStringArray(EXPECTED_LAYERS),
+		"list_contents returns 6 layers",
+		"%s %s" % [layers, cli.last_error]
 	)
-	var visible := cli.list_layers(source, true)
-	_check(visible == PackedStringArray(["left_down"]), "list_layers only_visible", str(visible))
-	var tags := cli.list_tags(source)
-	_check(tags == PackedStringArray(EXPECTED_TAGS), "list_tags returns 5 tags", str(tags))
+	var visible: PackedStringArray = cli.list_contents(source, true).get(
+		"layers", PackedStringArray()
+	)
+	_check(visible == PackedStringArray(["left_down"]), "list_contents only_visible", str(visible))
+	var tags: PackedStringArray = contents.get("tags", PackedStringArray())
+	_check(tags == PackedStringArray(EXPECTED_TAGS), "list_contents returns 5 tags", str(tags))
 	return layers
 
 
@@ -91,45 +97,111 @@ func _test_planner(layers: PackedStringArray) -> Array[Dictionary]:
 	return jobs
 
 
-func _test_idle_loop_matches_expected(cli: AsepriteCli, jobs: Array[Dictionary]) -> void:
+## All 30 strips in one Aseprite process: idle_loop matches the CLI reference byte for byte, the
+## other tags have the expected size.
+func _test_export_strips(cli: AsepriteCli, jobs: Array[Dictionary]) -> void:
 	var source := ProjectSettings.globalize_path(SOURCE)
+	var output_dir := _tmp_dir.path_join("batch")
+	var code := cli.export_strips(source, jobs, "horizontal", output_dir)
+	_check(code == OK, "export_strips exports 30 jobs", cli.last_error)
 	for job: Dictionary in jobs:
 		var tag: String = job["tag"]
-		if tag != "idle_loop":
-			continue
-		var job_layers: PackedStringArray = job["layers"]
 		var relative_path: String = job["relative_path"]
-		var tmp := _tmp_dir.path_join(relative_path)
-		var code := cli.export_strip(source, job_layers, tag, "horizontal", tmp)
-		var expected := ProjectSettings.globalize_path(
-			EXPECTED_DIR.path_join(relative_path.get_file())
-		)
-		var actual_md5 := FileAccess.get_md5(tmp)
-		var expected_md5 := FileAccess.get_md5(expected)
-		_check(
-			code == OK and actual_md5 == expected_md5 and expected_md5 != "",
-			"MD5 matches expected: " + relative_path.get_file(),
-			"%s vs %s" % [actual_md5, expected_md5]
-		)
-
-
-func _test_other_tags_strip_size(cli: AsepriteCli, jobs: Array[Dictionary]) -> void:
-	var source := ProjectSettings.globalize_path(SOURCE)
-	var done := {}
-	for job: Dictionary in jobs:
-		var tag: String = job["tag"]
-		if tag == "idle_loop" or done.has(tag):
+		var exported := output_dir.path_join(relative_path)
+		if tag == "idle_loop":
+			var expected := ProjectSettings.globalize_path(
+				EXPECTED_DIR.path_join(relative_path.get_file())
+			)
+			var actual_md5 := FileAccess.get_md5(exported)
+			var expected_md5 := FileAccess.get_md5(expected)
+			_check(
+				actual_md5 == expected_md5 and expected_md5 != "",
+				"MD5 matches expected: " + relative_path.get_file(),
+				"%s vs %s" % [actual_md5, expected_md5]
+			)
 			continue
-		done[tag] = true
-		var job_layers: PackedStringArray = job["layers"]
-		var relative_path: String = job["relative_path"]
-		var tmp := _tmp_dir.path_join(relative_path)
 		var size := Vector2i.ZERO
-		if cli.export_strip(source, job_layers, tag, "horizontal", tmp) == OK:
-			var image := Image.load_from_file(tmp)
-			if image != null:
-				size = image.get_size()
+		var image := Image.load_from_file(exported)
+		if image != null:
+			size = image.get_size()
 		_check(size == STRIP_SIZE, "strip is 384x64: " + relative_path.get_file(), str(size))
+
+
+## A combination composes several layers: compare with the CLI's --layer a --layer b.
+func _test_combination_matches_cli(cli: AsepriteCli, layers: PackedStringArray) -> void:
+	var options := DEFAULT_OPTIONS.duplicate()
+	options["combinations"] = "combo=down+up"
+	var planner := ExportPlanner.new()
+	var all_jobs := planner.build_jobs(TITLE, layers, PackedStringArray(EXPECTED_TAGS), options)
+	var job := _find_job(all_jobs, "assets/walk/character_combo_walk.png")
+	_check(not job.is_empty(), "combination job exists")
+	if job.is_empty():
+		return
+	var jobs: Array[Dictionary] = [job]
+	var output_dir := _tmp_dir.path_join("combination")
+	var code := cli.export_strips(
+		ProjectSettings.globalize_path(SOURCE), jobs, "horizontal", output_dir
+	)
+	var reference := _tmp_dir.path_join("cli").path_join("character_combo_walk.png")
+	var cli_code := _export_with_cli(job["layers"], "walk", reference)
+	var batch_md5 := FileAccess.get_md5(output_dir.path_join(job["relative_path"]))
+	var cli_md5 := FileAccess.get_md5(reference)
+	_check(
+		code == OK and cli_code == OK and batch_md5 == cli_md5 and cli_md5 != "",
+		"combination strip matches the CLI",
+		"%s vs %s %s" % [batch_md5, cli_md5, cli.last_error]
+	)
+
+
+func _test_export_rejects_unknown_names(cli: AsepriteCli) -> void:
+	var source := ProjectSettings.globalize_path(SOURCE)
+	var output_dir := _tmp_dir.path_join("rejected")
+	var unknown_layer: Array[Dictionary] = [
+		{"layers": PackedStringArray(["ghost"]), "tag": "walk", "relative_path": "ghost.png"}
+	]
+	var code := cli.export_strips(source, unknown_layer, "horizontal", output_dir)
+	_check(
+		code != OK and cli.last_error.contains("unknown layer 'ghost'"),
+		"export_strips rejects an unknown layer",
+		cli.last_error
+	)
+	var unknown_tag: Array[Dictionary] = [
+		{"layers": PackedStringArray(["up"]), "tag": "nope", "relative_path": "nope.png"}
+	]
+	code = cli.export_strips(source, unknown_tag, "horizontal", output_dir)
+	_check(
+		code != OK and cli.last_error.contains("unknown tag 'nope'"),
+		"export_strips rejects an unknown tag",
+		cli.last_error
+	)
+
+
+func _export_with_cli(layers: PackedStringArray, tag: String, output_png: String) -> Error:
+	if FileAccess.file_exists(output_png):
+		DirAccess.remove_absolute(output_png)
+	DirAccess.make_dir_recursive_absolute(output_png.get_base_dir())
+	var args := PackedStringArray(["-b", "--all-layers"])
+	for layer: String in layers:
+		args.append_array(PackedStringArray(["--layer", layer]))
+	(
+		args
+		. append_array(
+			PackedStringArray(
+				[
+					"--tag",
+					tag,
+					ProjectSettings.globalize_path(SOURCE),
+					"--sheet-type",
+					"horizontal",
+					"--sheet",
+					output_png,
+				]
+			)
+		)
+	)
+	var output: Array = []
+	var code := OS.execute(OS.get_environment("ASEPRITE_PATH"), args, output, true)
+	return OK if code == 0 else FAILED
 
 
 func _test_planner_edge_cases() -> void:

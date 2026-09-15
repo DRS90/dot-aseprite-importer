@@ -36,6 +36,7 @@ const OPTION_SHEET_TYPE := "sheet/type"
 var _scheduler: FsScanScheduler
 var _settings: Settings
 var _planner := ExportPlanner.new()
+var _verified_executable := ""
 
 
 func _init(scheduler: FsScanScheduler, settings: Settings) -> void:
@@ -126,25 +127,30 @@ func _import(
 	_gen_files: Array[String]
 ) -> Error:
 	var cli := AsepriteCli.new(_settings.get_executable_path())
-	if not cli.is_available():
-		push_error(
-			(
-				LOG_PREFIX
-				+ (
-					"Aseprite not found at '%s'. Set Editor Settings > %s or the %s variable."
-					% [cli.get_executable(), Settings.EXECUTABLE_KEY, Settings.EXECUTABLE_ENV]
+	# The check starts Aseprite once (~200 ms): do it once per executable path, not per import.
+	if cli.get_executable() != _verified_executable:
+		if not cli.is_available():
+			push_error(
+				(
+					LOG_PREFIX
+					+ (
+						"Aseprite not found at '%s'. Set Editor Settings > %s or the %s variable."
+						% [cli.get_executable(), Settings.EXECUTABLE_KEY, Settings.EXECUTABLE_ENV]
+					)
 				)
 			)
-		)
-		return ERR_UNCONFIGURED
+			return ERR_UNCONFIGURED
+		_verified_executable = cli.get_executable()
 
 	var absolute_source := ProjectSettings.globalize_path(source_file)
 	var only_visible: bool = options.get(OPTION_ONLY_VISIBLE, false)
-	var layers := cli.list_layers(absolute_source, only_visible)
+	var contents := cli.list_contents(absolute_source, only_visible)
+	var layers: PackedStringArray = contents.get("layers", PackedStringArray())
 	if layers.is_empty():
-		push_error(LOG_PREFIX + "No layers found in '%s'." % source_file)
+		var reason := cli.last_error if contents.is_empty() else "No layers found."
+		push_error(LOG_PREFIX + "%s: %s" % [source_file, reason])
 		return FAILED
-	var tags := cli.list_tags(absolute_source)
+	var tags: PackedStringArray = contents["tags"]
 
 	var base_dir := source_file.get_base_dir()
 	var folder := str(options.get(OPTION_FOLDER, ""))
@@ -156,26 +162,26 @@ func _import(
 	for message: String in _planner.errors:
 		push_error(LOG_PREFIX + "%s: %s" % [source_file, message])
 
-	var sheet_type := _sheet_type(options)
-	var cache_dir := OS.get_cache_dir().path_join(CACHE_FOLDER).path_join(
-		absolute_source.md5_text()
-	)
 	var written := PackedStringArray()
 	for job: Dictionary in jobs:
 		var relative_path: String = job["relative_path"]
-		var job_layers: PackedStringArray = job["layers"]
-		var tag: String = job["tag"]
 		var target := base_dir.path_join(relative_path).simplify_path()
 		if not target.begins_with(RES_PREFIX):
 			push_error(LOG_PREFIX + "Output '%s' is outside the project." % target)
 			return ERR_FILE_BAD_PATH
-		var exported := cache_dir.path_join(relative_path)
-		if cli.export_strip(absolute_source, job_layers, tag, sheet_type, exported) != OK:
-			return FAILED
-		var copy_error := _copy_if_changed(exported, target)
+		written.append(target)
+
+	var cache_dir := OS.get_cache_dir().path_join(CACHE_FOLDER).path_join(
+		absolute_source.md5_text()
+	)
+	if cli.export_strips(absolute_source, jobs, _sheet_type(options), cache_dir) != OK:
+		push_error(LOG_PREFIX + "%s: %s" % [source_file, cli.last_error])
+		return FAILED
+	for index: int in jobs.size():
+		var relative_path: String = jobs[index]["relative_path"]
+		var copy_error := _copy_if_changed(cache_dir.path_join(relative_path), written[index])
 		if copy_error != OK:
 			return copy_error
-		written.append(target)
 
 	var delete_stale: bool = options.get(OPTION_DELETE_STALE, true)
 	if delete_stale:

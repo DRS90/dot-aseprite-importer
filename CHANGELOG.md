@@ -9,7 +9,8 @@ All notable changes to this project are documented here. The format follows
 ### Added
 
 - `EditorImportPlugin` for `.aseprite` / `.ase` that exports one PNG strip per top-level layer
-  (or group) and tag through the Aseprite CLI.
+  (or group) and tag. Aseprite runs twice per import whatever the number of strips: once to list
+  layers and tags, once to export every strip through a bundled Lua script.
 - Output folder and file name templates with `{title}`, `{layer}` and `{tag}`.
 - Layer and tag exclusion patterns, `only_visible`, horizontal or vertical strips.
 - `always_include` layers and named layer `combinations`, validated against the file's layers.

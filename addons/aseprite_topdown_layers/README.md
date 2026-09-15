@@ -19,7 +19,8 @@ or shaders is up to you.
 ## Requirements
 
 - Godot **4.7** (tested with 4.7.1).
-- [Aseprite](https://www.aseprite.org/) with its command line interface (tested with 1.3.18).
+- [Aseprite](https://www.aseprite.org/) 1.3 with scripting support (tested with 1.3.18). The addon runs
+  it in batch mode with its bundled `aseprite_batch.lua`.
 
 ## Installation
 
@@ -52,6 +53,8 @@ The addon is a regular `EditorImportPlugin`. Godot reimports a source file when 
 which it notices **when the Godot editor window regains focus** (or on a manual *Reimport*). The
 usual loop is: save in Aseprite, switch back to Godot, and the strips are updated.
 
+- Each import starts Aseprite twice, however many layers and tags the file has: once to list them and
+  once to export every strip. Starting Aseprite is what costs time (about 200 ms), not the strips.
 - Strips are exported to a cache folder first and copied into the project **only when their content
   changed**, so saving an unrelated layer does not reimport every texture.
 - The imported resource is a small manifest listing the PNGs written. On the next import, strips
