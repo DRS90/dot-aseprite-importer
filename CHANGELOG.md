@@ -28,7 +28,7 @@ All notable changes to this project are documented here. The format follows
   added to them.
 - Executable path from Editor Settings, the `ASEPRITE_PATH` variable or the OS default.
 - Project-wide defaults in Project Settings.
-- *Project > Tools > Aseprite Top-Down Layers: Reimport all*.
+- *Project > Tools > Aseprite Top-Down Grid Animations: Reimport all*.
 - Headless test runner, demo project, `tests/tools/build_grid.lua` (turns a sprite drawn with one
   layer per direction into the grid format) and `tests/tools/build_cases.lua` (sprites for manual
   tests).

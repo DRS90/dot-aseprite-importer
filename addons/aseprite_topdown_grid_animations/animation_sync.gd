@@ -12,9 +12,9 @@ extends RefCounted
 const ExportPlanner := preload("export_planner.gd")
 
 ## NodePath from the sprite to its AnimationPlayer.
-const META_PLAYER := &"aseprite_topdown_layers_player"
+const META_PLAYER := &"aseprite_topdown_grid_animations_player"
 ## What the last sync wrote, see [method sync_key].
-const META_SYNC_KEY := &"aseprite_topdown_layers_sync_key"
+const META_SYNC_KEY := &"aseprite_topdown_grid_animations_sync_key"
 const ANIMATION_PROPERTY := "animation"
 const FRAME_PROPERTY := "frame"
 const GLOBAL_LIBRARY := &""

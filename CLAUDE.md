@@ -1,4 +1,4 @@
-# Aseprite Top-Down Layers — notes for Claude
+# Aseprite Top-Down Grid Animations — notes for Claude
 
 Godot 4 `EditorImportPlugin` for `.aseprite`/`.ase`. Every frame of the source is a 3x3 grid of
 facing directions (`left_up`, `up`, `right_up`, `left`, `right`, `left_down`, `down`, `right_down`;
@@ -16,7 +16,7 @@ becomes an animation in the player's global library with discrete `animation` an
 Syncs keep user tracks, run on reimport and scene change when a key stored in the sprite's metadata
 changed, and can be forced with a button.
 
-- Code: `addons/aseprite_topdown_layers/`: `plugin.gd`, `importer.gd`, `settings.gd`,
+- Code: `addons/aseprite_topdown_grid_animations/`: `plugin.gd`, `importer.gd`, `settings.gd`,
   `aseprite_cli.gd`, `export_planner.gd` (pure), `sprite_frames_builder.gd` (no editor),
   `animation_sync.gd` (no editor), `animated_sprite_inspector.gd` + `animation_player_panel.gd`
   (editor UI), and `aseprite_batch.lua` (runs inside Aseprite: `mode=list` and `mode=export`).
@@ -77,7 +77,7 @@ changed, and can be forced with a button.
   SpriteFrames is reloaded before the AnimationPlayer is synced (confirmed in the editor: a
   duration changed in Aseprite reaches the AnimationPlayer and user tracks survive).
 - Metadata names starting with `_` are editor-only and not saved: the sprite's link and sync key use
-  `aseprite_topdown_layers_*` names.
+  `aseprite_topdown_grid_animations_*` names.
 
 ## Publishing
 

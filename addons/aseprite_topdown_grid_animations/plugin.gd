@@ -1,15 +1,15 @@
 @tool
 extends EditorPlugin
-## Registers the Aseprite Top-Down Layers importer, its settings, the AnimationPlayer section of the
-## AnimatedSprite2D inspector and the Project > Tools item, and keeps linked AnimationPlayers in
-## sync with their sprites.
+## Registers the Aseprite Top-Down Grid Animations importer, its settings, the AnimationPlayer
+## section of the AnimatedSprite2D inspector and the Project > Tools item, and keeps linked
+## AnimationPlayers in sync with their sprites.
 
 const AnimatedSpriteInspector := preload("animated_sprite_inspector.gd")
 const AnimationSync := preload("animation_sync.gd")
 const Importer := preload("importer.gd")
 const Settings := preload("settings.gd")
 
-const REIMPORT_ALL_MENU := "Aseprite Top-Down Layers: Reimport all"
+const REIMPORT_ALL_MENU := "Aseprite Top-Down Grid Animations: Reimport all"
 const SOURCE_EXTENSIONS: Array[String] = ["aseprite", "ase"]
 
 var _settings: Settings

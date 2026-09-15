@@ -3,11 +3,11 @@ extends SceneTree
 ##   ASEPRITE_PATH=<aseprite> godot --headless --path . -s tests/test_runner.gd
 ## Prints one PASS/FAIL line per check and exits with 1 when any check fails.
 
-const AnimationSync := preload("res://addons/aseprite_topdown_layers/animation_sync.gd")
-const AsepriteCli := preload("res://addons/aseprite_topdown_layers/aseprite_cli.gd")
-const ExportPlanner := preload("res://addons/aseprite_topdown_layers/export_planner.gd")
+const AnimationSync := preload("res://addons/aseprite_topdown_grid_animations/animation_sync.gd")
+const AsepriteCli := preload("res://addons/aseprite_topdown_grid_animations/aseprite_cli.gd")
+const ExportPlanner := preload("res://addons/aseprite_topdown_grid_animations/export_planner.gd")
 const SpriteFramesBuilder := preload(
-	"res://addons/aseprite_topdown_layers/sprite_frames_builder.gd"
+	"res://addons/aseprite_topdown_grid_animations/sprite_frames_builder.gd"
 )
 
 const SOURCE := "res://examples/character/character-matrix/character-matrix.aseprite"
@@ -36,7 +36,7 @@ const ASSET_HELP := (
 )
 
 var _failures := 0
-var _tmp_dir := OS.get_cache_dir().path_join("aseprite_topdown_layers_tests")
+var _tmp_dir := OS.get_cache_dir().path_join("aseprite_topdown_grid_animations_tests")
 
 
 func _initialize() -> void:

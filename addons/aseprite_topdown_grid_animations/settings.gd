@@ -5,12 +5,12 @@ extends RefCounted
 ## The executable path is per machine (EditorSettings); import defaults are per project
 ## (ProjectSettings) and can still be overridden per file in the Import dock.
 
-const EXECUTABLE_KEY := "aseprite_topdown_layers/general/executable_path"
+const EXECUTABLE_KEY := "aseprite_topdown_grid_animations/general/executable_path"
 const EXECUTABLE_ENV := "ASEPRITE_PATH"
-const DEFAULT_LAYER_EXCLUDE_KEY := "aseprite_topdown_layers/defaults/layer_exclude_pattern"
-const DEFAULT_TAG_EXCLUDE_KEY := "aseprite_topdown_layers/defaults/tag_exclude_pattern"
-const DEFAULT_ANIMATION_NAME_KEY := "aseprite_topdown_layers/defaults/animation_name"
-const DEFAULT_LOOP_SUFFIX_KEY := "aseprite_topdown_layers/defaults/loop_suffix"
+const DEFAULT_LAYER_EXCLUDE_KEY := "aseprite_topdown_grid_animations/defaults/layer_exclude_pattern"
+const DEFAULT_TAG_EXCLUDE_KEY := "aseprite_topdown_grid_animations/defaults/tag_exclude_pattern"
+const DEFAULT_ANIMATION_NAME_KEY := "aseprite_topdown_grid_animations/defaults/animation_name"
+const DEFAULT_LOOP_SUFFIX_KEY := "aseprite_topdown_grid_animations/defaults/loop_suffix"
 const PROJECT_DEFAULTS := {
 	DEFAULT_LAYER_EXCLUDE_KEY: "^_",
 	DEFAULT_TAG_EXCLUDE_KEY: "^_",

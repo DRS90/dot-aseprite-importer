@@ -4,7 +4,7 @@ extends VBoxContainer
 ## animations into it.
 
 const AnimationSync := preload("animation_sync.gd")
-const LOG_PREFIX := "[Aseprite Top-Down Layers] "
+const LOG_PREFIX := "[Aseprite Top-Down Grid Animations] "
 
 var _sprite: AnimatedSprite2D
 var _sync := AnimationSync.new()

@@ -1,4 +1,4 @@
-# Aseprite Top-Down Layers
+# Aseprite Top-Down Grid Animations
 
 A Godot 4.7 editor addon that imports `.aseprite` / `.ase` sprites drawn as a **3x3 grid of facing
 directions** as a **SpriteFrames** resource: one animation per direction and tag, timed like in
@@ -26,12 +26,12 @@ directions (without plain `left` and `right`) just leaves those cells empty.
 
 ## Installation
 
-1. Copy `addons/aseprite_topdown_layers` into your project's `addons/` folder.
-2. Enable **Aseprite Top-Down Layers** in *Project > Project Settings > Plugins*.
+1. Copy `addons/aseprite_topdown_grid_animations` into your project's `addons/` folder.
+2. Enable **Aseprite Top-Down Grid Animations** in *Project > Project Settings > Plugins*.
 3. Point the addon at the Aseprite executable (see below).
 4. Put an `.aseprite` file in the project. It is imported as SpriteFrames; if another importer took
-   it, select the file, open the **Import** dock, choose **Import As: Aseprite Top-Down Layers** and
-   click **Reimport**.
+   it, select the file, open the **Import** dock, choose
+   **Import As: Aseprite Top-Down Grid Animations** and click **Reimport**.
 
 For crisp pixel art, set *Project Settings > Rendering > Textures > Canvas Textures >
 Default Texture Filter* to **Nearest**.
@@ -40,7 +40,7 @@ Default Texture Filter* to **Nearest**.
 
 The path is resolved in this order:
 
-1. *Editor Settings > Aseprite Top-Down Layers > General > Executable Path* (per machine).
+1. *Editor Settings > Aseprite Top-Down Grid Animations > General > Executable Path* (per machine).
 2. The `ASEPRITE_PATH` environment variable (handy for CI and headless imports).
 3. The OS default:
    - Windows: `C:\Program Files\Aseprite\Aseprite.exe`
@@ -112,15 +112,15 @@ which it notices **when the Godot editor window regains focus** (or on a manual 
   lossless textures embedded in the imported resource (in `.godot/imported/`), so nothing is written
   to the project, and exporting a scene that uses the file exports its textures with it.
 
-*Project > Tools > Aseprite Top-Down Layers: Reimport all* forces a reimport of every file that uses
-this importer, e.g. after changing the executable path or a project default, or after updating the
-addon.
+*Project > Tools > Aseprite Top-Down Grid Animations: Reimport all* forces a reimport of every file
+that uses this importer, e.g. after changing the executable path or a project default, or after
+updating the addon.
 
 ## Import options
 
 All options can be changed per file in the Import dock. The defaults of `layers/exclude_pattern`,
 `tags/exclude_pattern`, `sprite_frames/animation_name` and `sprite_frames/loop_suffix` come from
-*Project Settings > Aseprite Top-Down Layers > Defaults*.
+*Project Settings > Aseprite Top-Down Grid Animations > Defaults*.
 
 | Option | Default | Description |
 |---|---|---|
