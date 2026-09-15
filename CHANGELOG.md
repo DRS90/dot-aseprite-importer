@@ -14,8 +14,8 @@ All notable changes to this project are documented here. The format follows
   bundled Lua script.
 - Cell size taken from the sprite (a third on each axis) or set with `grid/cell_size`. A cell with
   no pixels in a tag produces no strip.
-- `layers/include` to choose the layers and groups composed into the strips, validated against the
-  file's layers.
+- `layers/layer` dropdown, filled with the file's top-level layers and groups, to export one of them
+  instead of `[all]`.
 - Output folder and file name templates with `{title}`, `{direction}` and `{tag}`.
 - Layer and tag exclusion patterns, `only_visible`, horizontal or vertical strips.
 - Anti-churn export: strips are copied into the project only when their content changed.

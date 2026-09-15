@@ -61,7 +61,7 @@ or `~/.steam/steam/steamapps/common/Aseprite/aseprite`.
   helps to keep every pose inside its cell.
 - Pixels that cross a cell border end up in the neighboring direction's strip.
 - Every layer is composed into the strips by default. Prefix helper layers (guides, references)
-  with `_` to leave them out, or list the layers to export in `layers/include`.
+  with `_` to leave them out, or pick a single layer or group in `layers/layer`.
 - Use one tag per animation. Frames outside any tag are not exported unless the file has no tags.
 
 ## How the automatic export works
@@ -96,8 +96,8 @@ All options can be changed per file in the Import dock. The defaults of `output/
 | `output/filename` | `{title}_{direction}_{tag}` | File name without extension. |
 | `output/delete_stale` | `true` | Delete strips written by a previous import that are no longer produced. |
 | `grid/cell_size` | `(0, 0)` | Size of one cell in pixels. `0` on an axis means a third of the sprite on that axis, which must then be a multiple of 3. A cell smaller than a third ignores the pixels left over at the right or bottom. |
-| `layers/include` | *(empty)* | Comma-separated top-level layers or groups composed into every strip, e.g. `body, shadow`. Empty means every layer not matched by `layers/exclude_pattern`. |
-| `layers/exclude_pattern` | `^_` | Regular expression; matching layers are left out when `layers/include` is empty. |
+| `layers/layer` | `[all]` | Dropdown with `[all]` and the file's top-level layers and groups. `[all]` composes every layer not matched by `layers/exclude_pattern`; any other choice exports only that layer or group. Put layers in a group to export them together. |
+| `layers/exclude_pattern` | `^_` | Regular expression; matching layers are left out when `layers/layer` is `[all]`. |
 | `layers/only_visible` | `false` | Use only layers visible in Aseprite. By default hidden layers are exported too. |
 | `tags/exclude_pattern` | `^_` | Regular expression; matching tags are not exported. |
 | `sheet/type` | `horizontal` | `horizontal` strip or `vertical` strip. |
@@ -106,10 +106,11 @@ Templates accept `{title}` (the source file name without extension), `{direction
 `right_up`, `left`, `right`, `left_down`, `down` or `right_down`) and `{tag}`. Tag names are
 sanitized for file names (`/` and spaces become `_`).
 
-Names typed in `layers/include` are checked against the layers Aseprite reports: an unknown name is
-reported as an error and skipped, and the import fails when no layer is left. They may reference
-layers matched by `layers/exclude_pattern`, so a `_shadow` layer stays out by default and can still
-be included.
+The `layers/layer` dropdown is filled by asking Aseprite for the file's layers when the Import dock
+shows the file. The listing is cached by file content and reused by the import, so it adds no
+Aseprite process. A chosen layer that no longer exists (renamed or removed) fails the import with
+an error and keeps the previous strips. The choice may be a layer matched by
+`layers/exclude_pattern`, so a `_shadow` layer stays out of `[all]` and can still be exported alone.
 
 ## Naming conventions
 
@@ -126,13 +127,13 @@ Import dock. Switching importers keeps the source file untouched.
 ## Known limitations
 
 - The grid is always 3x3, with fixed direction names and the center cell ignored.
-- Only top-level layers and groups can be included. A group is exported as the composite of its
+- Only top-level layers and groups can be chosen. A group is exported as the composite of its
   children; hidden children inside a group may be included, because hidden layers are made visible
   for export.
 - Tags with *reverse* or *ping-pong* direction are exported in timeline (forward) order.
 - A file without tags exports one strip per direction with the whole timeline; `{tag}` is empty and
   the separators around it are collapsed (`assets/character_up.png`).
-- Layer names containing `,` cannot be used in `layers/include`.
+- Layer names containing `,` or `:` are not offered in the `layers/layer` dropdown.
 - Aseprite is required to import. Without it the import fails and previously generated PNGs stay as
   they are, so committing the generated PNGs lets teammates without Aseprite use them.
 - Only tested on Windows with Godot 4.7.1 and Aseprite 1.3.18.

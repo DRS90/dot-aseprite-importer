@@ -4,7 +4,9 @@ Godot 4 `EditorImportPlugin` for `.aseprite`/`.ase`. Every frame of the source i
 facing directions (`left_up`, `up`, `right_up`, `left`, `right`, `left_down`, `down`, `right_down`;
 center ignored). On import it exports one horizontal PNG strip per direction × tag to
 `assets/{tag}/{title}_{direction}_{tag}.png`, relative to the source file, skipping cells with no
-pixels in the tag. The layers composed come from `layers/include` (default: all but `^_`). A `PackedDataContainer`
+pixels in the tag. `layers/layer` is a dropdown filled from the file's layers (`[all]` = every layer
+but `^_`); the listing is cached by the file's MD5 and shared with `_import`, so the dropdown adds no
+Aseprite process. A `PackedDataContainer`
 manifest lets it delete stale outputs, and PNGs are copied into `res://` only when their MD5
 changed (prevents cascading reimports).
 
@@ -59,7 +61,8 @@ changed (prevents cascading reimports).
   Tell the user to do that before a manual test of such changes.
 - Touching the `.aseprite` mtime does not reimport (Godot compares MD5). A parameter change in a
   `.import` file only applies on the next run. To force a reimport in tests, delete the matching
-  `.md5` in `.godot/imported/`. Keep the `.res` next to it: it *is* the manifest, and without it
+  `.md5` in `.godot/imported/` **and** touch the source's `.import` file: without an mtime change
+  Godot does not even check the `.md5`, and nothing is reimported. Keep the `.res` next to it: it *is* the manifest, and without it
   stale strips can no longer be found.
 
 ## Publishing

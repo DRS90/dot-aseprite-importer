@@ -11,14 +11,14 @@
 - [x] *Project > Tools* menu item to reimport every `.aseprite` file
 - [x] README (install, settings, naming templates, AsepriteWizard coexistence), CHANGELOG
 - [x] 3x3 grid format replaces one layer per direction: one strip per direction × tag,
-      `grid/cell_size`, `layers/include`, empty cells skipped
+      `grid/cell_size`, `layers/layer` dropdown, empty cells skipped
       (layer combinations removed; `tests/tools/build_grid.lua` converts old sprites)
 
 ## Before publishing
 
 - [x] Manual test in the editor: save in Aseprite, focus Godot, strips update with no cascading reimports
 - [ ] Manual test in the editor of the grid format (strips per direction, empty cells, `grid/cell_size`,
-      `layers/include`)
+      `layers/layer` dropdown)
 - [ ] Rename the addon: "Layers" no longer describes the grid format
 - [ ] Screenshots in `screenshots/`
 - [ ] Square PNG icon (≥128 px) for the Asset Library listing
