@@ -155,6 +155,15 @@ named like the grid cells) into the grid format:
 <aseprite> -b --script-param src=<layers.aseprite> --script-param out=<grid.aseprite> --script tests/tools/build_grid.lua
 ```
 
+`tests/tools/build_cases.lua` builds sprites for manual tests from a grid sprite: several layers and
+groups (hidden, excluded, names the dropdown cannot offer), eight directions with an empty cell in
+one tag, a canvas that is not a multiple of 3, and a file without tags. The comment at the top of
+the script lists what each one covers:
+
+```
+<aseprite> -b --script-param src=<grid.aseprite> --script-param out=<folder> --script tests/tools/build_cases.lua
+```
+
 ## License
 
 [MIT](LICENSE)
