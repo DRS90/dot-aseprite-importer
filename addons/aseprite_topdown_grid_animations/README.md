@@ -99,13 +99,19 @@ the SpriteFrames animation. Play them with `$AnimationPlayer.play("walk_down")`.
   built-in nodes and resources, so the game does not need the addon to run.
 - Nodes inside an instanced scene are synced when that scene is opened. **Clear** unlinks the player
   and keeps the animations already written.
-- The player's global library starts **built-in**, so the animations are written into the scene file
-  and every sync rewrites them there. Save that library to a `.tres` and the sync writes into it
-  instead, leaving a single `ext_resource` line in the scene: in Godot a resource with a file path is
-  external, and erasing the path makes it built-in again. Nothing else changes, because a sync only
-  creates a library when the player has none. The demo in `examples/` does this and is 18 lines
-  instead of 1107. Only worth it for many animations, and remember that two scenes pointing at the
-  same `.tres` write to the same file.
+- The animations are written to a resource file of their own, named by *Project Settings > Aseprite
+  Top-Down Grid Animations > Animation Player > Library Path* (default
+  `{scene_dir}/{scene}_animations.tres`, taken from the scene that holds the player). The scene
+  then keeps one `ext_resource` line instead of the animations: the demo in `examples/` is 18 lines
+  instead of 1107. **Empty the setting** to keep the library inside the scene, which is what Godot
+  does on its own. The file is written when the scene is saved.
+- A library that is already a file is never moved, even when the setting names another path, and
+  emptying the setting does not bring it back into the scene (clear its `resource_path` for that).
+  A built-in library moves to the file on the next sync. If that file already exists it wins, but
+  the animations only the built-in one had are copied into it, so tracks you added are not lost.
+  A scene that was never saved has no path to derive from, so its library stays built-in until you
+  save the scene and sync again. On any error the library stays built-in and the reason is reported.
+  Two scenes naming the same file write to the same file.
 
 ## How the automatic import works
 

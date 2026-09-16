@@ -16,6 +16,9 @@
 - [x] Import as SpriteFrames with Aseprite frame timing, tag direction and a configurable loop
       suffix; strips are no longer written to the project
 - [x] AnimationPlayer section in the AnimatedSprite2D inspector, synced on reimport and scene open
+- [x] The player's animation library is written to a resource file named by a Project Setting
+      (`{scene_dir}/{scene}_animations.tres`), keeping the generated animations out of the scene;
+      empty keeps it built into the scene
 
 ## Before publishing
 
@@ -37,9 +40,6 @@
 
 ## Next (v0.2.x)
 
-- [ ] Offer to write the AnimationPlayer's library to an external `.tres` instead of embedding it in
-      the scene (works today if the player already has one, but the addon neither creates nor
-      suggests it)
 - [ ] Custom direction name per grid cell
 - [ ] Warn when the ignored center cell has pixels
 - [ ] Undo/redo for AnimationPlayer syncs

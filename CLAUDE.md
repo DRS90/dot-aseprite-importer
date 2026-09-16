@@ -14,11 +14,14 @@ give no animation. Aseprite exports strips to the OS cache only; they become los
 An inspector section on AnimatedSprite2D links an AnimationPlayer: each SpriteFrames animation
 becomes an animation in the player's global library with discrete `animation` and `frame` tracks.
 Syncs keep user tracks, run on reimport and scene change when a key stored in the sprite's metadata
-changed, and can be forced with a button.
+changed, and can be forced with a button. The library is written to the file named by
+`animation_player/library_path` (default `{scene_dir}/{scene}_animations.tres`, empty = built into
+the scene); the path is part of the sync key, so a skipped sync never touches the disk.
 
 - Code: `addons/aseprite_topdown_grid_animations/`: `plugin.gd`, `importer.gd`, `settings.gd`,
   `aseprite_cli.gd`, `export_planner.gd` (pure), `sprite_frames_builder.gd` (no editor),
-  `animation_sync.gd` (no editor), `animated_sprite_inspector.gd` + `animation_player_panel.gd`
+  `animation_sync.gd` + `animation_library_store.gd` (no editor),
+  `animated_sprite_inspector.gd` + `animation_player_panel.gd`
   (editor UI), and `aseprite_batch.lua` (runs inside Aseprite: `mode=list` and `mode=export`).
 - Tests: `tests/test_runner.gd`. Demo: `examples/`. `tests/tools/build_grid.lua` turns a
   layer-per-direction sprite into the grid format; `tests/tools/build_cases.lua` builds sprites for
