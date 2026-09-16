@@ -9,6 +9,7 @@ extends RefCounted
 ## added to the same animations are kept. The linked player and the state of the last sync are
 ## stored in the sprite's metadata, which is saved with the scene.
 
+const AnimationLibraryStore := preload("animation_library_store.gd")
 const ExportPlanner := preload("export_planner.gd")
 
 ## NodePath from the sprite to its AnimationPlayer.
@@ -41,9 +42,12 @@ static func link(sprite: AnimatedSprite2D, player: AnimationPlayer) -> void:
 
 
 ## Changes whenever a sync of [param sprite] into [param player] would write something different:
-## animation names, speeds, loops, frame durations, or where the sprite is relative to the player.
-static func sync_key(sprite: AnimatedSprite2D, player: AnimationPlayer) -> String:
-	var parts := PackedStringArray([str(player.get_path_to(sprite))])
+## animation names, speeds, loops, frame durations, where the sprite is relative to the player, or
+## where the library is stored ([param library_path], empty when it is built into the scene).
+static func sync_key(
+	sprite: AnimatedSprite2D, player: AnimationPlayer, library_path: String
+) -> String:
+	var parts := PackedStringArray([str(player.get_path_to(sprite)), library_path])
 	var frames := sprite.sprite_frames
 	if frames != null:
 		for animation: StringName in frames.get_animation_names():
@@ -63,10 +67,19 @@ func sync_linked(sprite: AnimatedSprite2D, force: bool) -> bool:
 	var player := linked_player(sprite)
 	if player == null or sprite.sprite_frames == null:
 		return false
-	var key := sync_key(sprite, player)
+	# Resolved first because it is part of the key, and it writes nothing: a sync that is skipped
+	# must not create the library file nor touch the scene.
+	var path := AnimationLibraryStore.resolve_path(
+		AnimationLibraryStore.configured_template(), AnimationLibraryStore.scene_path(sprite)
+	)
+	var key := sync_key(sprite, player, path)
 	if not force and str(sprite.get_meta(META_SYNC_KEY, "")) == key:
 		return false
+	var store := AnimationLibraryStore.new()
+	store.library_for(player, path)
 	sync(sprite, player)
+	# After sync(), which clears the errors of the previous run.
+	errors.append_array(store.errors)
 	sprite.set_meta(META_SYNC_KEY, key)
 	return true
 

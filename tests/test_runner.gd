@@ -3,6 +3,9 @@ extends SceneTree
 ##   ASEPRITE_PATH=<aseprite> godot --headless --path . -s tests/test_runner.gd
 ## Prints one PASS/FAIL line per check and exits with 1 when any check fails.
 
+const AnimationLibraryStore := preload(
+	"res://addons/aseprite_topdown_grid_animations/animation_library_store.gd"
+)
 const AnimationSync := preload("res://addons/aseprite_topdown_grid_animations/animation_sync.gd")
 const AsepriteCli := preload("res://addons/aseprite_topdown_grid_animations/aseprite_cli.gd")
 const ExportPlanner := preload("res://addons/aseprite_topdown_grid_animations/export_planner.gd")
@@ -11,6 +14,9 @@ const SpriteFramesBuilder := preload(
 )
 
 const SOURCE := "res://examples/retro-top-down-character.aseprite"
+## Resources are written here: ResourceSaver needs a Godot path, not the native cache directory.
+const LIBRARY_DIR := "user://aseprite_topdown_grid_animations_tests"
+const LIBRARY_TEMPLATE := "{scene_dir}/{scene}_animations.tres"
 const SHEETS_DIR := "res://examples/rpg-type-retro-top-down-playable-character-spritesheett"
 const SHEET := SHEETS_DIR + "/16x16-rpg-topdown-playable-character-template.png"
 const ATTACK_SHEET := SHEETS_DIR + "/48x48-attack.png"
@@ -62,6 +68,7 @@ func _initialize() -> void:
 	_test_planner_edge_cases()
 	_test_builder()
 	_test_animation_sync()
+	_test_animation_library_store()
 	print("%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(0 if _failures == 0 else 1)
 
@@ -640,6 +647,167 @@ func _test_sync_linked(
 		str(library.get_animation(&"idle_down").get_track_count())
 	)
 	_check(sync.sync_linked(sprite, true), "force syncs even when nothing changed")
+
+
+func _test_animation_library_store() -> void:
+	_check(
+		(
+			AnimationLibraryStore.resolve_path(LIBRARY_TEMPLATE, "res://examples/main.tscn")
+			== "res://examples/main_animations.tres"
+		),
+		"resolve_path replaces {scene_dir} and {scene}"
+	)
+	_check(
+		AnimationLibraryStore.resolve_path("", "res://examples/main.tscn") == "",
+		"an empty template keeps the library built in"
+	)
+	_check(
+		AnimationLibraryStore.resolve_path(LIBRARY_TEMPLATE, "") == "",
+		"a scene that was never saved keeps the library built in"
+	)
+	DirAccess.make_dir_recursive_absolute(LIBRARY_DIR)
+	_test_library_created()
+	_test_library_converted()
+	_test_library_keeps_work()
+	_test_sync_linked_writes_the_file()
+	_remove_library_dir()
+
+
+func _test_library_created() -> void:
+	var store := AnimationLibraryStore.new()
+	var player := AnimationPlayer.new()
+	var built_in := store.library_for(player, "")
+	_check(
+		built_in.is_built_in() and player.has_animation_library(&"") and store.errors.is_empty(),
+		"an empty path leaves the library built in",
+		str(store.errors)
+	)
+	var path := LIBRARY_DIR + "/created.tres"
+	var created := store.library_for(player, path)
+	_check(
+		(
+			FileAccess.file_exists(path)
+			and not created.is_built_in()
+			and created.resource_path == path
+			and player.get_animation_library(&"") == created
+		),
+		"a missing library file is created and assigned to the player",
+		"%s %s" % [created.resource_path, store.errors]
+	)
+	var elsewhere := LIBRARY_DIR + "/elsewhere.tres"
+	var kept := store.library_for(player, elsewhere)
+	_check(
+		kept == created and not FileAccess.file_exists(elsewhere),
+		"a library that is already external is not moved",
+		kept.resource_path
+	)
+	player.free()
+
+
+func _test_library_converted() -> void:
+	var player := AnimationPlayer.new()
+	player.add_animation_library(&"", _library_with(&"idle_down", "Body:modulate"))
+	var path := LIBRARY_DIR + "/converted.tres"
+	var store := AnimationLibraryStore.new()
+	store.library_for(player, path)
+	# Fetched from the player: loading the saved file gives a different object.
+	var converted := player.get_animation_library(&"")
+	_check(
+		(
+			not converted.is_built_in()
+			and converted.has_animation(&"idle_down")
+			and converted.get_animation(&"idle_down").get_track_count() == 1
+			and FileAccess.file_exists(path)
+		),
+		"a built-in library moves to the file with its animations and tracks",
+		"%s %s" % [converted.resource_path, store.errors]
+	)
+	player.free()
+
+
+## The user must not lose work: adopting a file that already exists keeps what only the built-in
+## library had, and writes it, instead of dropping those animations.
+func _test_library_keeps_work() -> void:
+	var path := LIBRARY_DIR + "/converted.tres"
+	var player := AnimationPlayer.new()
+	player.add_animation_library(&"", _library_with(&"only_built_in", "Body:visible"))
+	var store := AnimationLibraryStore.new()
+	store.library_for(player, path)
+	var merged := player.get_animation_library(&"")
+	_check(
+		(
+			merged.has_animation(&"only_built_in")
+			and merged.has_animation(&"idle_down")
+			and store.errors.is_empty()
+		),
+		"animations only the built-in library had survive adopting an existing file",
+		"%s %s" % [merged.get_animation_list(), store.errors]
+	)
+	var from_disk := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE)
+	var reloaded := from_disk as AnimationLibrary
+	_check(
+		reloaded != null and reloaded.has_animation(&"only_built_in"),
+		"the kept animations are written to the file, not only held in memory",
+		"" if reloaded == null else str(reloaded.get_animation_list())
+	)
+	player.free()
+
+
+## A skipped sync must not create the file: the path is resolved before the key is compared.
+func _test_sync_linked_writes_the_file() -> void:
+	var previous: Variant = ProjectSettings.get_setting(
+		AnimationLibraryStore.LIBRARY_PATH_KEY, AnimationLibraryStore.DEFAULT_LIBRARY_PATH
+	)
+	ProjectSettings.set_setting(AnimationLibraryStore.LIBRARY_PATH_KEY, LIBRARY_TEMPLATE)
+	var root := Node2D.new()
+	root.scene_file_path = LIBRARY_DIR + "/scene.tscn"
+	var sprite := AnimatedSprite2D.new()
+	sprite.name = "Body"
+	root.add_child(sprite)
+	sprite.owner = root
+	var player := AnimationPlayer.new()
+	root.add_child(player)
+	player.owner = root
+	player.root_node = player.get_path_to(root)
+	var frames := SpriteFrames.new()
+	frames.add_animation(&"idle_down")
+	frames.add_frame(&"idle_down", PlaceholderTexture2D.new(), 1.0)
+	sprite.sprite_frames = frames
+	AnimationSync.link(sprite, player)
+
+	var path := LIBRARY_DIR + "/scene_animations.tres"
+	var sync := AnimationSync.new()
+	_check(
+		sync.sync_linked(sprite, false) and FileAccess.file_exists(path),
+		"sync_linked writes the library named by the setting",
+		str(sync.errors)
+	)
+	DirAccess.remove_absolute(path)
+	_check(
+		not sync.sync_linked(sprite, false) and not FileAccess.file_exists(path),
+		"a sync that is skipped never touches the file system"
+	)
+	ProjectSettings.set_setting(AnimationLibraryStore.LIBRARY_PATH_KEY, previous)
+	root.queue_free()
+
+
+func _library_with(animation_name: StringName, track_path: String) -> AnimationLibrary:
+	var library := AnimationLibrary.new()
+	var animation := Animation.new()
+	var track := animation.add_track(Animation.TYPE_VALUE)
+	animation.track_set_path(track, track_path)
+	animation.track_insert_key(track, 0.0, true)
+	library.add_animation(animation_name, animation)
+	return library
+
+
+func _remove_library_dir() -> void:
+	var directory := DirAccess.open(LIBRARY_DIR)
+	if directory == null:
+		return
+	for file: String in directory.get_files():
+		directory.remove(file)
+	DirAccess.remove_absolute(LIBRARY_DIR)
 
 
 func _find_job(jobs: Array[Dictionary], animation: String) -> Dictionary:

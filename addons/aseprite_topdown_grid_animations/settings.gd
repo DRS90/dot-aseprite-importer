@@ -5,6 +5,8 @@ extends RefCounted
 ## The executable path is per machine (EditorSettings); import defaults are per project
 ## (ProjectSettings) and can still be overridden per file in the Import dock.
 
+const AnimationLibraryStore := preload("animation_library_store.gd")
+
 const EXECUTABLE_KEY := "aseprite_topdown_grid_animations/general/executable_path"
 const EXECUTABLE_ENV := "ASEPRITE_PATH"
 const DEFAULT_LAYER_EXCLUDE_KEY := "aseprite_topdown_grid_animations/defaults/layer_exclude_pattern"
@@ -16,6 +18,7 @@ const PROJECT_DEFAULTS := {
 	DEFAULT_TAG_EXCLUDE_KEY: "^_",
 	DEFAULT_ANIMATION_NAME_KEY: "{tag}_{direction}",
 	DEFAULT_LOOP_SUFFIX_KEY: "_loop",
+	AnimationLibraryStore.LIBRARY_PATH_KEY: AnimationLibraryStore.DEFAULT_LIBRARY_PATH,
 }
 
 
