@@ -26,9 +26,10 @@ All notable changes to this project are documented here. The format follows
 - AnimationPlayer section in the AnimatedSprite2D inspector: the sprite's animations are written to
   the linked player and synced again on reimport and when a scene is opened, keeping the tracks
   added to them.
-- Project Setting *Animation Player > Library Path*: the player's animation library is written to a
-  resource file named by a template (`{scene_dir}/{scene}_animations.tres`) instead of into the
-  scene; an empty setting keeps it in the scene.
+- Project Settings *Animation Player > External Library* and *Library Path*: the player's animation
+  library is written to a resource file named by a template
+  (`{scene_dir}/{scene}_animations.tres`) instead of into the scene. On by default; turn it off to
+  keep the animations in the scene.
 - Executable path from Editor Settings, the `ASEPRITE_PATH` variable or the OS default.
 - Project-wide defaults in Project Settings.
 - *Project > Tools > Aseprite Top-Down Grid Animations: Reimport all*.

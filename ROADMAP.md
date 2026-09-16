@@ -16,9 +16,9 @@
 - [x] Import as SpriteFrames with Aseprite frame timing, tag direction and a configurable loop
       suffix; strips are no longer written to the project
 - [x] AnimationPlayer section in the AnimatedSprite2D inspector, synced on reimport and scene open
-- [x] The player's animation library is written to a resource file named by a Project Setting
-      (`{scene_dir}/{scene}_animations.tres`), keeping the generated animations out of the scene;
-      empty keeps it built into the scene
+- [x] The player's animation library is written to a resource file of its own (*External Library*
+      and *Library Path* in Project Settings, `{scene_dir}/{scene}_animations.tres`), keeping the
+      generated animations out of the scene; turn it off to keep them inside
 
 ## Before publishing
 
@@ -26,9 +26,9 @@
 - [x] Manual test in the editor of the grid format (strips per direction, empty cells, `grid/cell_size`,
       `layers/layer` dropdown; sprites from `tests/tools/build_cases.lua`)
 - [x] Manual test in the editor of the SpriteFrames import and the AnimationPlayer sync
-- [x] Manual test in the editor of the animation library setting: the five settings show without
-      *Advanced Settings*, the library file is created and adopted, and a tag removed in Aseprite
-      reaches the `.tres`
+- [x] Manual test in the editor of the animation library settings: they show without *Advanced
+      Settings*, the library file is created and adopted, and a tag removed in Aseprite reaches the
+      `.tres`
 - [x] Rename the addon to Aseprite Top-Down Grid Animations ("Layers" no longer described it)
 - [ ] Rename the repository to `godot-aseprite-topdown-grid-animations` when it is published
 - [ ] Screenshots in `screenshots/`
