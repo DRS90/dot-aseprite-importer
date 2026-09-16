@@ -27,7 +27,7 @@
 - [ ] Rename the repository to `godot-aseprite-topdown-grid-animations` when it is published
 - [ ] Screenshots in `screenshots/`
 - [ ] Square PNG icon (≥128 px) for the Asset Library listing
-- [ ] Confirm the license holder in `LICENSE`
+- [x] Confirm the license holder in `LICENSE` (MIT, Douglas Rodrigo dos Santos)
 - [x] Replace the example asset with 5yvalia's CC0
       [RPG Type Retro Top-Down Playable Character Template](https://5yvalia.itch.io/rpg-type-retro-top-down-playable-character-template):
       `tests/tools/build_retro_example.lua` builds `examples/retro-top-down-character.aseprite` from
