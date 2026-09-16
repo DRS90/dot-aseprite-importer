@@ -7,9 +7,9 @@
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1244402466]
 sprite_frames = ExtResource("1_d2j2t")
-animation = &"walk_down"
+animation = &"carry_down"
 metadata/aseprite_topdown_grid_animations_player = NodePath("../AnimationPlayer")
-metadata/aseprite_topdown_grid_animations_sync_key = "b3f21ce77e4fcb7145482ca73a178a18"
+metadata/aseprite_topdown_grid_animations_sync_key = "1d9879a1532ebfa00ebf342123cc0721"
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=141086055]
 root_node = NodePath("../AnimatedSprite2D")
