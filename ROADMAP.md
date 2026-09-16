@@ -31,7 +31,9 @@
       `.tres`
 - [x] Rename the addon to Aseprite Top-Down Grid Animations ("Layers" no longer described it)
 - [ ] Rename the repository to `godot-aseprite-topdown-grid-animations` when it is published
-- [ ] Screenshots in `screenshots/`
+- [x] Screenshots in `screenshots/`: the Aseprite frame as a 3x3 grid with guide lines and the tags
+      in the timeline, and the editor with the imported animations and the AnimationPlayer section.
+      They are linked from the README at publish time, when the repository URL exists
 - [ ] Square PNG icon (≥128 px) for the Asset Library listing
 - [x] Confirm the license holder in `LICENSE` (MIT, Douglas Rodrigo dos Santos)
 - [x] Replace the example asset with 5yvalia's CC0
