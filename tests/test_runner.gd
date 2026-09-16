@@ -665,12 +665,31 @@ func _test_animation_library_store() -> void:
 		AnimationLibraryStore.resolve_path(LIBRARY_TEMPLATE, "") == "",
 		"a scene that was never saved keeps the library built in"
 	)
+	_test_library_switch()
 	DirAccess.make_dir_recursive_absolute(LIBRARY_DIR)
 	_test_library_created()
 	_test_library_converted()
 	_test_library_keeps_work()
 	_test_sync_linked_writes_the_file()
 	_remove_library_dir()
+
+
+## The switch decides; the path only says where.
+func _test_library_switch() -> void:
+	var key := AnimationLibraryStore.LIBRARY_ENABLED_KEY
+	var previous: Variant = ProjectSettings.get_setting(key, true)
+	ProjectSettings.set_setting(key, false)
+	_check(
+		AnimationLibraryStore.configured_template() == "",
+		"the switch turned off keeps the library built in, whatever the path says"
+	)
+	ProjectSettings.set_setting(key, true)
+	_check(
+		AnimationLibraryStore.configured_template() == AnimationLibraryStore.DEFAULT_LIBRARY_PATH,
+		"the switch turned on uses the path template",
+		AnimationLibraryStore.configured_template()
+	)
+	ProjectSettings.set_setting(key, previous)
 
 
 func _test_library_created() -> void:

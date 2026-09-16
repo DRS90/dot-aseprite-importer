@@ -8,8 +8,12 @@ extends RefCounted
 ## already external is never moved, and a library that is replaced by an existing file keeps the
 ## animations that only it had: the file wins, but nothing is dropped.
 
-## Path template of the external library, empty to keep it built in.
+## Whether the library is written to a file of its own instead of into the scene. Named to sort
+## before the path in the settings dialog: the switch belongs above the field it governs.
+const LIBRARY_ENABLED_KEY := "aseprite_topdown_grid_animations/animation_player/external_library"
+## Where that file goes. Empty keeps the library built in even with the switch on.
 const LIBRARY_PATH_KEY := "aseprite_topdown_grid_animations/animation_player/library_path"
+const DEFAULT_LIBRARY_ENABLED := true
 const DEFAULT_LIBRARY_PATH := "{scene_dir}/{scene}_animations.tres"
 const GLOBAL_LIBRARY := &""
 
@@ -17,8 +21,11 @@ const GLOBAL_LIBRARY := &""
 var errors := PackedStringArray()
 
 
-## The template from Project Settings, or its default where the setting is not registered.
+## The template from Project Settings, empty when the library is set to stay in the scene. Returns
+## the defaults where the settings are not registered, as in headless runs.
 static func configured_template() -> String:
+	if not bool(ProjectSettings.get_setting(LIBRARY_ENABLED_KEY, DEFAULT_LIBRARY_ENABLED)):
+		return ""
 	return str(ProjectSettings.get_setting(LIBRARY_PATH_KEY, DEFAULT_LIBRARY_PATH))
 
 

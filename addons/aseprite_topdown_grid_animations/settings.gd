@@ -18,6 +18,7 @@ const PROJECT_DEFAULTS := {
 	DEFAULT_TAG_EXCLUDE_KEY: "^_",
 	DEFAULT_ANIMATION_NAME_KEY: "{tag}_{direction}",
 	DEFAULT_LOOP_SUFFIX_KEY: "_loop",
+	AnimationLibraryStore.LIBRARY_ENABLED_KEY: AnimationLibraryStore.DEFAULT_LIBRARY_ENABLED,
 	AnimationLibraryStore.LIBRARY_PATH_KEY: AnimationLibraryStore.DEFAULT_LIBRARY_PATH,
 }
 
@@ -32,12 +33,13 @@ func register() -> void:
 		{"name": EXECUTABLE_KEY, "type": TYPE_STRING, "hint": PROPERTY_HINT_GLOBAL_FILE}
 	)
 	for key: String in PROJECT_DEFAULTS:
-		var value: String = PROJECT_DEFAULTS[key]
+		# Variant, not String: the external library switch is a bool and must show as a checkbox.
+		var value: Variant = PROJECT_DEFAULTS[key]
 		if not ProjectSettings.has_setting(key):
 			ProjectSettings.set_setting(key, value)
 		# Equal to the initial value means it is not written to project.godot.
 		ProjectSettings.set_initial_value(key, value)
-		ProjectSettings.add_property_info({"name": key, "type": TYPE_STRING})
+		ProjectSettings.add_property_info({"name": key, "type": typeof(value)})
 		# Without this they only appear with Advanced Settings on, where nobody goes looking for
 		# the settings of an addon they just installed. Not persisted: set on every run.
 		ProjectSettings.set_as_basic(key, true)
