@@ -38,6 +38,9 @@ func register() -> void:
 		# Equal to the initial value means it is not written to project.godot.
 		ProjectSettings.set_initial_value(key, value)
 		ProjectSettings.add_property_info({"name": key, "type": TYPE_STRING})
+		# Without this they only appear with Advanced Settings on, where nobody goes looking for
+		# the settings of an addon they just installed. Not persisted: set on every run.
+		ProjectSettings.set_as_basic(key, true)
 
 
 ## EditorSettings first, then the ASEPRITE_PATH environment variable, then the OS default.
