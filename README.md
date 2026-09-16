@@ -99,6 +99,13 @@ the SpriteFrames animation. Play them with `$AnimationPlayer.play("walk_down")`.
   built-in nodes and resources, so the game does not need the addon to run.
 - Nodes inside an instanced scene are synced when that scene is opened. **Clear** unlinks the player
   and keeps the animations already written.
+- The player's global library starts **built-in**, so the animations are written into the scene file
+  and every sync rewrites them there. Save that library to a `.tres` and the sync writes into it
+  instead, leaving a single `ext_resource` line in the scene: in Godot a resource with a file path is
+  external, and erasing the path makes it built-in again. Nothing else changes, because a sync only
+  creates a library when the player has none. The demo in `examples/` does this and is 18 lines
+  instead of 1107. Only worth it for many animations, and remember that two scenes pointing at the
+  same `.tres` write to the same file.
 
 ## How the automatic import works
 

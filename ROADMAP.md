@@ -37,6 +37,9 @@
 
 ## Next (v0.2.x)
 
+- [ ] Offer to write the AnimationPlayer's library to an external `.tres` instead of embedding it in
+      the scene (works today if the player already has one, but the addon neither creates nor
+      suggests it)
 - [ ] Custom direction name per grid cell
 - [ ] Warn when the ignored center cell has pixels
 - [ ] Undo/redo for AnimationPlayer syncs
