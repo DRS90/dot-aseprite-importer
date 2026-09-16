@@ -81,6 +81,13 @@ the scene); the path is part of the sync key, so a skipped sync never touches th
   or leaves them with `valid=false`, and *Reimport all* then finds no file.
 - Metadata names starting with `_` are editor-only and not saved: the sprite's link and sync key use
   `aseprite_topdown_grid_animations_*` names.
+- A resource built into a scene still has a `resource_path`
+  (`res://scene.tscn::AnimationLibrary_abcd`), so `resource_path != ""` does **not** mean external:
+  use `is_built_in()`. Getting this wrong passes headless (where nodes have no scene path, so the
+  path is empty) and fails in the editor, where every saved scene looks external.
+- A setting registered with `ProjectSettings.add_property_info()` only shows with *Advanced
+  Settings* on, which is where nobody looks for an addon. `ProjectSettings.set_as_basic(key, true)`
+  fixes it and is not persisted, so `register()` calls it on every run.
 
 ## Example asset
 
