@@ -26,6 +26,9 @@
 - [x] Manual test in the editor of the grid format (strips per direction, empty cells, `grid/cell_size`,
       `layers/layer` dropdown; sprites from `tests/tools/build_cases.lua`)
 - [x] Manual test in the editor of the SpriteFrames import and the AnimationPlayer sync
+- [ ] Manual test in the editor of the animation library setting: the five settings show without
+      *Advanced Settings*, the library file is created and adopted, and a tag removed in Aseprite
+      reaches the `.tres` (this last one is already confirmed)
 - [x] Rename the addon to Aseprite Top-Down Grid Animations ("Layers" no longer described it)
 - [ ] Rename the repository to `godot-aseprite-topdown-grid-animations` when it is published
 - [ ] Screenshots in `screenshots/`
