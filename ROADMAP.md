@@ -34,7 +34,7 @@
 - [x] Screenshots in `screenshots/`: the Aseprite frame as a 3x3 grid with guide lines and the tags
       in the timeline, and the editor with the imported animations and the AnimationPlayer section.
       They are linked from the README at publish time, when the repository URL exists
-- [x] Square PNG icon (≥128 px) for the Asset Library listing: `icon.png`, 160 px pixel art
+- [x] Square PNG icon (≥128 px) for the Asset Library listing: `icon.png`, 320 px pixel art (160 px drawn, doubled without smoothing)
 - [x] Confirm the license holder in `LICENSE` (MIT, Douglas Rodrigo dos Santos)
 - [x] Replace the example asset with 5yvalia's CC0
       [RPG Type Retro Top-Down Playable Character Template](https://5yvalia.itch.io/rpg-type-retro-top-down-playable-character-template):
