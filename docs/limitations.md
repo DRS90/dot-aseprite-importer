@@ -1,5 +1,7 @@
 # Known limitations
 
+**English** | [Português (Brasil)](pt-BR/limitations.md)
+
 - The grid is always 3x3, with fixed direction names and the center cell ignored.
 - Only top-level layers and groups can be chosen. A group is imported as the composite of its
   children; hidden children inside a group may be included, because hidden layers are made visible

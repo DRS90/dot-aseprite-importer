@@ -1,5 +1,7 @@
 # AnimatedSprite2D
 
+**English** | [Português (Brasil)](pt-BR/animated-sprite-2d.md)
+
 Drag the `.aseprite` file from the FileSystem dock onto the **Sprite Frames** property of an
 AnimatedSprite2D, then play its animations as usual: `$AnimatedSprite2D.play("walk_down")`.
 

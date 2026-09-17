@@ -1,5 +1,7 @@
 # Development
 
+**English** | [Português (Brasil)](pt-BR/development.md)
+
 The repository root is a demo project (`examples/`). Checks used during development:
 
 ```

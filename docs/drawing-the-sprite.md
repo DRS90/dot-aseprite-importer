@@ -1,5 +1,7 @@
 # Drawing the sprite
 
+**English** | [Português (Brasil)](pt-BR/drawing-the-sprite.md)
+
 How to lay out the Aseprite file. The Import dock options that read it are in
 [Importing](importing.md#import-options).
 

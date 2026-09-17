@@ -1,5 +1,7 @@
 # Importing
 
+**English** | [Português (Brasil)](pt-BR/importing.md)
+
 ## Aseprite executable
 
 The path is resolved in this order:

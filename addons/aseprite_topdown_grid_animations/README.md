@@ -1,5 +1,7 @@
 # Aseprite Top-Down Grid Animations
 
+**English** | [Português (Brasil)](../../README.pt-BR.md)
+
 A Godot 4.7 editor addon that imports `.aseprite` / `.ase` sprites drawn as a **3x3 grid of facing
 directions** as a **SpriteFrames** resource: one animation per direction and tag, timed like in
 Aseprite. Assign the file to an AnimatedSprite2D, and optionally link an AnimationPlayer that gets

@@ -1,5 +1,7 @@
 # AnimationPlayer
 
+**English** | [Português (Brasil)](pt-BR/animation-player.md)
+
 In the inspector of the AnimatedSprite2D, under **AnimatedSprite2D**, the **AnimationPlayer** section
 links a player: click **Assign...** and pick an AnimationPlayer of the scene. Every animation of the
 sprite's SpriteFrames becomes an animation of the same name in the player's global library, with

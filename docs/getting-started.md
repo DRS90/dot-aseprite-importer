@@ -1,5 +1,7 @@
 # Getting started
 
+**English** | [Português (Brasil)](pt-BR/getting-started.md)
+
 From an empty Aseprite file to a character that walks in every direction it was drawn in. The
 steps assume the addon is [installed and enabled](../README.md#installation) and can find
 [the Aseprite executable](importing.md#aseprite-executable). The other pages of the
