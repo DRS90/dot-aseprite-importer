@@ -3,7 +3,7 @@
 [English](README.md) | **Português (Brasil)**
 
 Um addon de editor para Godot 4.7 que importa sprites `.aseprite` / `.ase` desenhados como uma
-**grade 3x3 de direções** como um recurso **SpriteFrames**: uma animação por direção e tag, com o
+**grade 3x3 de direções** e gera um recurso **SpriteFrames**: uma animação por direção e tag, com o
 tempo igual ao do Aseprite. Atribua o arquivo a um AnimatedSprite2D e, se quiser, vincule um
 AnimationPlayer que recebe as mesmas animações.
 
@@ -20,7 +20,7 @@ character.aseprite (144x192)              SpriteFrames (frames de 48x64)
 Uma célula sem pixels em nenhum frame de uma tag não gera animação: um personagem desenhado em seis
 direções (sem `left` e `right` puros) simplesmente deixa essas células vazias.
 
-Os nomes de menus, painéis e opções aparecem como no editor em inglês.
+Os nomes de menus, painéis, docks, botões e opções aparecem como no editor em inglês.
 
 ## Requisitos
 
@@ -42,10 +42,11 @@ Os nomes de menus, painéis e opções aparecem como no editor em inglês.
 ## Início rápido
 
 1. No Aseprite, faça o canvas com três células de largura e três de altura, desenhe cada direção na
-   sua célula e crie uma tag para cada animação. Uma tag terminada em `_loop` (`walk_loop`) repete.
+   sua célula e crie uma tag para cada animação. Uma tag terminada em `_loop` (`walk_loop`) fica em
+   loop.
 2. Salve o arquivo dentro do projeto Godot. Quando o editor do Godot recupera o foco, o arquivo é
    importado como SpriteFrames.
-3. Arraste o arquivo para a propriedade **Sprite Frames** de um AnimatedSprite2D e toque uma
+3. Arraste o arquivo para a propriedade **Sprite Frames** de um AnimatedSprite2D e reproduza uma
    animação: `$AnimatedSprite2D.play("walk_down")`.
 4. Se quiser, vincule um AnimationPlayer na seção **AnimationPlayer** do inspetor do sprite para ter
    as mesmas animações nele e adicionar suas próprias trilhas.

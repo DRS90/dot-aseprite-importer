@@ -5,8 +5,8 @@
 No inspetor do AnimatedSprite2D, em **AnimatedSprite2D**, a seção **AnimationPlayer** vincula um
 player: clique em **Assign...** e escolha um AnimationPlayer da cena. Cada animação do SpriteFrames
 do sprite vira uma animação de mesmo nome na biblioteca global do player, com duas trilhas no
-sprite, `animation` e `frame`, com chaves nos tempos dos frames do Aseprite e repetindo como a
-animação do SpriteFrames. Toque-as com `$AnimationPlayer.play("walk_down")`.
+sprite, `animation` e `frame`, cujas chaves ficam nos tempos dos frames do Aseprite e que ficam em
+loop como a animação do SpriteFrames. Reproduza-as com `$AnimationPlayer.play("walk_down")`.
 
 - As animações são sincronizadas de novo quando o arquivo `.aseprite` é reimportado (na cena aberta)
   e quando uma cena é aberta, se algo mudou. **Sync animations** força uma sincronização. Uma
@@ -17,12 +17,12 @@ animação do SpriteFrames. Toque-as com `$AnimationPlayer.play("walk_down")`.
   nela.
 - Vários sprites podem compartilhar um AnimationPlayer (por exemplo, um corpo e uma arma de arquivos
   diferentes): cada sprite tem suas próprias trilhas.
-- Enquanto um AnimationPlayer controla o sprite, não toque também o AnimatedSprite2D (`play()` ou
-  *Autoplay on Load*).
+- Enquanto um AnimationPlayer controla o sprite, não reproduza também o AnimatedSprite2D (`play()`
+  ou *Autoplay on Load*).
 - O vínculo fica nos metadados do sprite e é salvo com a cena. A cena só contém nós e recursos
   nativos do Godot, então o jogo não precisa do addon para rodar.
 - Nós dentro de uma cena instanciada são sincronizados quando essa cena é aberta. **Clear** desfaz o
-  vínculo com o player e mantém as animações já escritas.
+  vínculo com o player e mantém as animações já gravadas.
 - As animações são gravadas num arquivo de recurso próprio. Em *Project Settings > Aseprite
   Top-Down Grid Animations > Animation Player*, **External Library** (ativado) decide se isso
   acontece, e **Library Path** diz onde: `{scene_dir}` e `{scene}` vêm da cena que contém o player,
@@ -34,7 +34,7 @@ animação do SpriteFrames. Toque-as com `$AnimationPlayer.play("walk_down")`.
   caminho, e desativar External Library não a traz de volta para dentro da cena (para isso, limpe o
   `resource_path` dela).
   Uma biblioteca embutida na cena vai para o arquivo na próxima sincronização. Se esse arquivo já
-  existe, ele prevalece, mas as animações que só a embutida tinha são copiadas para ele, então as
+  existir, ele prevalece, mas as animações que só a embutida tinha são copiadas para ele, então as
   trilhas que você adicionou não se perdem. Uma cena que nunca foi salva não tem caminho de onde
   derivar o nome, então a biblioteca dela fica embutida até você salvar a cena e sincronizar de
   novo. Em caso de erro, a biblioteca fica embutida e o motivo é informado. Duas cenas que indicam o

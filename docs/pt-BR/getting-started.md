@@ -26,9 +26,9 @@ Os passos supõem que o addon está [instalado e ativado](../../README.pt-BR.md#
 4. Adicione frames (*Frame > New Frame*) e desenhe todas as direções em cada um. Defina quanto tempo
    cada frame dura em *Frame > Frame Properties*.
 5. Selecione os frames de uma animação na timeline e crie uma tag para eles
-   (*Frame > Tags > New Tag*). Dê à tag o nome da ação e termine com `_loop` se ela repete:
-   `walk_loop`. Uma ação que toca uma vez só, como `attack`, fica sem sufixo. Crie uma tag para cada
-   animação.
+   (*Frame > Tags > New Tag*). Dê à tag o nome da ação e acrescente `_loop` no fim se ela ficar em
+   loop: `walk_loop`. Uma ação reproduzida uma vez só, como `attack`, fica sem sufixo. Crie uma tag
+   para cada animação.
 6. Salve o arquivo dentro do projeto Godot, por exemplo `characters/hero.aseprite`.
 
 ## 2. Confira a importação no Godot
@@ -38,16 +38,16 @@ Os passos supõem que o addon está [instalado e ativado](../../README.pt-BR.md#
    um terço do canvas (32x32 aqui). Se o seu canvas não for múltiplo de 3, digite o tamanho da
    célula e clique em **Reimport**. Se o dock Import mostrar outro importador, escolha
    **Import As: Aseprite Top-Down Grid Animations**.
-3. Problemas (Aseprite não encontrado, uma tag que gera um nome já usado, e assim por diante)
+3. Problemas (Aseprite não encontrado, uma tag que gera um nome já usado e assim por diante)
    aparecem no painel **Output**, começando com `[Aseprite Top-Down Grid Animations]`.
 
-## 3. Toque as animações com um AnimatedSprite2D
+## 3. Reproduza as animações com um AnimatedSprite2D
 
 1. Crie uma cena com um **CharacterBody2D** como raiz (`Player`), adicione a ele um
-   **AnimatedSprite2D** e um **CollisionShape2D** com uma forma *New RectangleShape2D*, e salve como
-   `player.tscn`.
+   **AnimatedSprite2D** e um **CollisionShape2D** com uma forma *New RectangleShape2D*, e salve-a
+   como `player.tscn`.
 2. Arraste `hero.aseprite` do dock FileSystem para a propriedade **Sprite Frames** do
-   AnimatedSprite2D. O painel SpriteFrames, embaixo, agora lista `walk_down`, `walk_left`, e assim
+   AnimatedSprite2D. O painel SpriteFrames, embaixo, agora lista `walk_down`, `walk_left` e assim
    por diante: uma animação por tag e direção desenhada.
 3. Adicione um script ao `Player`:
 
@@ -88,7 +88,7 @@ Os passos supõem que o addon está [instalado e ativado](../../README.pt-BR.md#
    ```
 
 4. Rode a cena e mova com as setas. O personagem anda na direção das teclas e para no primeiro frame
-   da animação que estava tocando.
+   da animação que estava reproduzindo.
 
 ## 4. Altere a arte
 
@@ -106,7 +106,7 @@ animação.
 1. Adicione um **AnimationPlayer** à cena `Player`.
 2. Selecione o AnimatedSprite2D. No Inspector, em **AnimatedSprite2D**, clique em **Assign...** na
    seção **AnimationPlayer** e escolha o AnimationPlayer. A seção informa quantas animações
-   sincronizou, e o AnimationPlayer agora tem `walk_down`, `walk_left`, e assim por diante.
+   sincronizou, e o AnimationPlayer agora tem `walk_down`, `walk_left` e assim por diante.
 3. Salve a cena. As animações ficam em `player_animations.tres`, ao lado de `player.tscn`.
 4. No script, adicione `@onready var _player: AnimationPlayer = $AnimationPlayer` e troque
    `_sprite.play(...)` por `_player.play(...)` e `_sprite.stop()` por `_player.stop()`: os nomes são
@@ -121,8 +121,8 @@ animação.
 
 O repositório é, ele mesmo, um projeto Godot. Abra o `project.godot` dele (com
 [o executável do Aseprite](importing.md#executável-do-aseprite) configurado) e rode:
-`examples/main.tscn` mostra `examples/retro-top-down-character.aseprite` andando para baixo, tocado
-pelo AnimationPlayer. O sprite tem dez tags (`walk_loop`, `slash`, `swim_loop`, ...) desenhadas
-olhando para cima, para baixo, para a esquerda e para a direita (escalar só para cima e para baixo),
-com as células das diagonais vazias. A demo só existe no repositório, não no download da Asset
-Library.
+`examples/main.tscn` mostra `examples/retro-top-down-character.aseprite` andando para baixo,
+reproduzido pelo AnimationPlayer. O sprite tem dez tags (`walk_loop`, `slash`, `swim_loop`, ...)
+desenhadas olhando para cima, para baixo, para a esquerda e para a direita (escalar só para cima e
+para baixo), com as células das diagonais vazias. A demo só existe no repositório, não no download
+da Asset Library.

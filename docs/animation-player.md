@@ -2,11 +2,11 @@
 
 **English** | [Português (Brasil)](pt-BR/animation-player.md)
 
-In the inspector of the AnimatedSprite2D, under **AnimatedSprite2D**, the **AnimationPlayer** section
-links a player: click **Assign...** and pick an AnimationPlayer of the scene. Every animation of the
-sprite's SpriteFrames becomes an animation of the same name in the player's global library, with
-two tracks on the sprite, `animation` and `frame`, keyed at the Aseprite frame times and looping like
-the SpriteFrames animation. Play them with `$AnimationPlayer.play("walk_down")`.
+In the inspector of the AnimatedSprite2D, under **AnimatedSprite2D**, the **AnimationPlayer**
+section links a player: click **Assign...** and pick an AnimationPlayer of the scene. Every
+animation of the sprite's SpriteFrames becomes an animation of the same name in the player's global
+library, with two tracks on the sprite, `animation` and `frame`, keyed at the Aseprite frame times
+and looping like the SpriteFrames animation. Play them with `$AnimationPlayer.play("walk_down")`.
 
 - The animations are synced again when the `.aseprite` file is reimported (in the open scene) and
   when a scene is opened, if anything changed. **Sync animations** forces a sync. A sync marks the

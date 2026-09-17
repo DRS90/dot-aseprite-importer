@@ -15,5 +15,5 @@ Como organizar o arquivo do Aseprite. As opções do dock Import que o leem est�
   `layers/layer`.
 - Use uma tag por animação. As durações dos frames e a direção da tag (forward, reverse, ping-pong,
   ping-pong reverse) são mantidas. Termine uma tag com `_loop` (`idle_loop`) para que suas animações
-  repitam.
+  fiquem em loop.
 - Frames fora de qualquer tag não são importados, a menos que o arquivo não tenha tags.
