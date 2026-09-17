@@ -326,16 +326,21 @@ func _test_planner_edge_cases() -> void:
 	options["animation_name"] = "{direction}"
 	jobs = planner.build_jobs(SPRITE_SIZE, layers, tags, options)
 	_check(
-		jobs.size() == 8 and planner.errors.size() == 72,
-		"animation names used twice are skipped and reported",
+		jobs.is_empty() and planner.failed and planner.errors.size() == 72,
+		"a name template without {tag} collides and fails the import",
 		"%d jobs, %d errors" % [jobs.size(), planner.errors.size()]
 	)
 
 	var same_names := PackedStringArray(["idle", "idle_loop"])
 	jobs = planner.build_jobs(SPRITE_SIZE, layers, same_names, DEFAULT_OPTIONS)
 	_check(
-		jobs.size() == 8 and planner.errors.size() == 8,
-		"idle and idle_loop give the same names: the second is reported",
+		(
+			jobs.is_empty()
+			and planner.failed
+			and planner.errors.size() == 8
+			and planner.errors[0].contains("already used by tag 'idle' (left_up)")
+		),
+		"idle and idle_loop give the same name: the import fails naming both tags",
 		str(planner.errors)
 	)
 

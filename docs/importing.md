@@ -49,8 +49,10 @@ All options can be changed per file in the Import dock. The defaults of `layers/
 | `sprite_frames/loop_suffix` | `_loop` | A tag ending with this text loops, and the text is left out of `{tag}`. Empty: no animation loops. |
 
 The characters `/`, `:`, `,` and `[` become `_` in animation names, because AnimationPlayer rejects
-them. When two tags give the same name (`idle` and `idle_loop`), the second one is reported as an
-error and skipped.
+them. When two tags give the same name — `idle` and `idle_loop`, or two tags named alike in Aseprite
+— the import fails and the error names both tags. It is not a partial import on purpose: dropping
+the second animation would replace the ones that still worked with an incomplete resource, while a
+failed import keeps the previous animations until the names are fixed.
 
 The `layers/layer` dropdown is filled by asking Aseprite for the file's layers when the Import dock
 shows the file. The listing is cached by file content and reused by the import, so it adds no

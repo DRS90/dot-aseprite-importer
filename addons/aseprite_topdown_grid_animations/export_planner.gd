@@ -66,15 +66,27 @@ func build_jobs(
 		# No tags at all: the whole timeline becomes one animation per direction.
 		export_tags.append("")
 
+	# Every name is checked before anything is exported: a partial import would replace the
+	# animations that still worked with a resource missing the ones that collided.
 	var seen_names := {}
 	for direction: String in DIRECTIONS:
 		for tag: String in export_tags:
 			var animation := animation_name(name_template, tag, direction, loop_suffix)
-			if animation == "" or seen_names.has(animation):
-				var problem := "Tag '%s' (%s) gives the animation name '%s', empty or already used."
-				errors.append(problem % [tag, direction, animation])
+			if animation == "":
+				errors.append("%s gives an empty animation name." % _job_label(tag, direction))
+				failed = true
 				continue
-			seen_names[animation] = true
+			if seen_names.has(animation):
+				var claimed_by: String = seen_names[animation]
+				errors.append(
+					(
+						"%s gives the animation name '%s', already used by %s."
+						% [_job_label(tag, direction), animation, claimed_by]
+					)
+				)
+				failed = true
+				continue
+			seen_names[animation] = _job_label(tag, direction)
 			var job := {
 				"direction": direction,
 				"tag": tag,
@@ -83,6 +95,8 @@ func build_jobs(
 				"relative_path": "strip_%03d.png" % jobs.size(),
 			}
 			jobs.append(job)
+	if failed:
+		jobs.clear()
 	return jobs
 
 
@@ -109,6 +123,13 @@ static func sanitize_animation_name(text: String) -> String:
 	for character: String in INVALID_NAME_CHARACTERS:
 		result = result.replace(character, "_")
 	return result
+
+
+## How a job is named in an error message: its tag, and its direction when the grid has directions.
+static func _job_label(tag: String, direction: String) -> String:
+	if direction == "":
+		return "tag '%s'" % tag
+	return "tag '%s' (%s)" % [tag, direction]
 
 
 static func _collapse_separators(text: String) -> String:

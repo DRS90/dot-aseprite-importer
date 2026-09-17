@@ -52,8 +52,11 @@ Todas as opções podem ser alteradas por arquivo no dock Import. Os padrões de
 | `sprite_frames/loop_suffix` | `_loop` | Uma tag que termina com este texto fica em loop, e o texto sai de `{tag}`. Vazio: nenhuma animação fica em loop. |
 
 Os caracteres `/`, `:`, `,` e `[` viram `_` nos nomes das animações, porque o AnimationPlayer os
-rejeita. Quando duas tags geram o mesmo nome (`idle` e `idle_loop`), a segunda é informada como erro
-e ignorada.
+rejeita. Quando duas tags geram o mesmo nome — `idle` e `idle_loop`, ou duas tags com o mesmo nome
+no Aseprite — a importação falha e o erro cita as duas tags. Não é uma importação parcial de
+propósito: descartar a segunda animação substituiria as que ainda funcionavam por um recurso
+incompleto, enquanto uma importação que falha mantém as animações anteriores até os nomes serem
+corrigidos.
 
 A lista de `layers/layer` é preenchida perguntando ao Aseprite as camadas do arquivo quando o dock
 Import mostra o arquivo. A listagem fica em cache pelo conteúdo do arquivo e é reaproveitada pela
