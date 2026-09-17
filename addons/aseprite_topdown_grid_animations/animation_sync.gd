@@ -7,15 +7,17 @@ extends RefCounted
 ## sprite: "animation", keyed once at 0, and "frame", keyed when each frame starts, following the
 ## SpriteFrames speed and relative frame durations. A sync replaces only those two tracks, so tracks
 ## added to the same animations are kept. The linked player and the state of the last sync are
-## stored in the sprite's metadata, which is saved with the scene.
+## stored in the sprite's metadata, which is saved with the scene. Both names start with "_", which
+## only hides them from the inspector's Metadata list (they are still saved): the panel's
+## Assign/Clear buttons are the interface for them, not a raw NodePath the user has to type.
 
 const AnimationLibraryStore := preload("animation_library_store.gd")
 const ExportPlanner := preload("export_planner.gd")
 
 ## NodePath from the sprite to its AnimationPlayer.
-const META_PLAYER := &"aseprite_topdown_grid_animations_player"
+const META_PLAYER := &"_aseprite_topdown_grid_animations_player"
 ## What the last sync wrote, see [method sync_key].
-const META_SYNC_KEY := &"aseprite_topdown_grid_animations_sync_key"
+const META_SYNC_KEY := &"_aseprite_topdown_grid_animations_sync_key"
 const ANIMATION_PROPERTY := "animation"
 const FRAME_PROPERTY := "frame"
 const GLOBAL_LIBRARY := &""

@@ -94,8 +94,10 @@ the sync key, so a skipped sync never touches the disk.
 - Rename or move the addon folder only with the Godot editor **closed**. A running editor that loses
   the importer rewrites the `.import` files using it to `importer="keep"` (dropping params and uid)
   or leaves them with `valid=false`, and *Reimport all* then finds no file.
-- Metadata names starting with `_` are editor-only and not saved: the sprite's link and sync key use
-  `aseprite_topdown_grid_animations_*` names.
+- Metadata names starting with `_` are **saved** — verified headless for a node in a `.tscn` and a
+  resource in both `.tres` and binary `.res`. The `_` only hides the entry from the inspector's
+  Metadata list, which is what the docs mean by "editor-only". The sprite's link and sync key use
+  `_aseprite_topdown_grid_animations_*` for that reason.
 - A resource built into a scene still has a `resource_path`
   (`res://scene.tscn::AnimationLibrary_abcd`), so `resource_path != ""` does **not** mean external:
   use `is_built_in()`. Getting this wrong passes headless (where nodes have no scene path, so the

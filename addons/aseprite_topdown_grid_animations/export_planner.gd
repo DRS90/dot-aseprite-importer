@@ -203,13 +203,21 @@ func _resolve_cell_size(requested: Vector2i, sprite_size: Vector2i) -> Vector2i:
 		if requested[axis] == 0 and sprite_size[axis] % cells_per_axis == 0:
 			cell[axis] = int(sprite_size[axis] / float(cells_per_axis))
 		elif requested[axis] == 0:
-			problem = "cannot be split in %d equal cells: set grid/cell_size" % cells_per_axis
+			problem = _split_problem()
 		if problem == "" and (cell[axis] < 1 or cell[axis] * cells_per_axis > sprite_size[axis]):
 			problem = _cell_problem(requested)
 	if problem == "":
 		return cell
 	errors.append("The %dx%d sprite %s." % [sprite_size.x, sprite_size.y, problem])
 	return Vector2i.ZERO
+
+
+## Why a 0 axis cannot be resolved, naming both ways out: a cell size, or no grid at all. Since
+## this feature landed, a sprite that is not a multiple of 3 is most often one without directions,
+## so a message about grid/cell_size alone sends the user to the wrong fix.
+func _split_problem() -> String:
+	var fix := "set grid/cell_size, or grid/directions to '%s' if it has no directions" % MODE_NONE
+	return "cannot be split in %d equal cells: %s" % [cells_per_axis, fix]
 
 
 ## Why [param requested] does not fit, worded for the grid in use: a 3x3 grid has to hold nine of

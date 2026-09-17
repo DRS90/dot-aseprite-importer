@@ -655,8 +655,13 @@ func _test_cell_size(
 
 	jobs = planner.build_jobs(Vector2i(145, 144), layers, tags, DEFAULT_OPTIONS)
 	_check(
-		jobs.is_empty() and planner.failed,
-		"default cell needs a size multiple of 3",
+		(
+			jobs.is_empty()
+			and planner.failed
+			and planner.errors[0].contains("grid/cell_size")
+			and planner.errors[0].contains(ExportPlanner.MODE_NONE)
+		),
+		"a size that is not a multiple of 3 fails naming both ways out",
 		str(planner.errors)
 	)
 
