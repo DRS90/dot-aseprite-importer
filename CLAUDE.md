@@ -102,8 +102,8 @@ the sync key, so a skipped sync never touches the disk.
 - The example is `examples/retro-top-down-character.aseprite`, built by
   `tests/tools/build_retro_example.lua` from the CC0 sheets in
   `examples/rpg-type-retro-top-down-playable-character-spritesheett/` (5yvalia, `LICENSE.png`
-  included). Everything is tracked in git and the tests compare the imported frames with the sheets,
-  so there is no `tests/expected/` folder any more.
+  included). Everything is tracked in git and the tests compare the imported frames with the sheets.
+- Any third-party asset must allow redistribution before it is committed.
 - **No `git push`, GitHub repo creation or Asset Library submission without explicit user
   confirmation.**
 
