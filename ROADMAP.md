@@ -41,7 +41,9 @@
       [RPG Type Retro Top-Down Playable Character Template](https://5yvalia.itch.io/rpg-type-retro-top-down-playable-character-template):
       `tests/tools/build_retro_example.lua` builds `examples/retro-top-down-character.aseprite` from
       its sheets, both are tracked in git, and the tests compare the imported frames with the sheets
-- [ ] Push to GitHub, tag `v0.1.0`
+- [x] Create the GitHub repository, private for now
+      (<https://github.com/DRS90/godot-aseprite-topdown-grid-animations>), and push `main`
+- [ ] Make the repository public and tag `v0.1.0`
 - [ ] Submit to the Godot Asset Library (category Addon, Godot 4.7, MIT, commit hash of the tag)
 
 ## Next (v0.2.x)
