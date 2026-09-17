@@ -3,6 +3,12 @@
 [ext_resource type="SpriteFrames" uid="uid://lwuejbnc1ubr" path="res://examples/retro-top-down-character.aseprite" id="1_d2j2t"]
 [ext_resource type="Texture2D" uid="uid://th28mo82irwl" path="res://examples/shadow.aseprite" id="1_oe2cu"]
 [ext_resource type="AnimationLibrary" uid="uid://b3hhqqqwhrk7o" path="res://examples/main_animations.tres" id="2_aqi44"]
+[ext_resource type="Shader" path="res://examples/shadow_tint.gdshader" id="3_sh4d1"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_tint"]
+shader = ExtResource("3_sh4d1")
+shader_parameter/aseprite_texture = ExtResource("1_oe2cu")
+shader_parameter/tint = Color(0.35, 0.55, 1, 1)
 
 [node name="Main" type="Node2D" unique_id=1570837702]
 
@@ -14,6 +20,13 @@ sprite_frames = ExtResource("1_d2j2t")
 animation = &"carry_down"
 metadata/_aseprite_topdown_grid_animations_player = NodePath("../AnimationPlayer")
 metadata/_aseprite_topdown_grid_animations_sync_key = "1d9879a1532ebfa00ebf342123cc0721"
+
+[node name="TintedShadow" type="ColorRect" parent="." unique_id=884213977]
+offset_left = 80.0
+offset_top = -24.0
+offset_right = 128.0
+offset_bottom = 24.0
+material = SubResource("ShaderMaterial_tint")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=141086055]
 root_node = NodePath("../AnimatedSprite2D")

@@ -123,5 +123,9 @@ The repository is itself a Godot project. Open its `project.godot` (with
 [the Aseprite executable](importing.md#aseprite-executable) set up) and run it:
 `examples/main.tscn` shows `examples/retro-top-down-character.aseprite` walking down, played by its
 AnimationPlayer. The sprite has ten tags (`walk_loop`, `slash`, `swim_loop`, ...) drawn facing up,
-down, left and right (climbing only up and down), with the diagonal cells empty. The demo is only
-in the repository, not in the Asset Library download.
+down, left and right (climbing only up and down), with the diagonal cells empty.
+
+The same scene also shows the texture importer: `examples/shadow.aseprite` is imported with
+*Import As: Aseprite Texture* and used twice, once as the `texture` of a Sprite2D and once as a
+`sampler2D` uniform of `examples/shadow_tint.gdshader`, which recolours it from its alpha alone. The
+demo is only in the repository, not in the Asset Library download.

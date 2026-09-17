@@ -66,11 +66,36 @@ func _initialize() -> void:
 	else:
 		print("SKIP: Aseprite checks, example files not found: %s" % ", ".join(missing))
 		print("SKIP: " + ASSET_HELP)
+	_test_example_scene_files()
 	_test_planner_edge_cases()
 	_test_builder()
 	AnimationSyncTests.new(_check, get_root()).run()
 	print("%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(0 if _failures == 0 else 1)
+
+
+## Every file the demo scene points at has to exist. Reads the text instead of loading the scene,
+## so it holds on a fresh clone, before anything has been imported, which is exactly when a file
+## that was left untracked shows up.
+func _test_example_scene_files() -> void:
+	var scene := "res://examples/main.tscn"
+	var text := FileAccess.get_file_as_string(scene)
+	if not _check(text != "", "the demo scene is readable", scene):
+		return
+	var pattern := RegEx.new()
+	pattern.compile('path="(res://[^"]+)"')
+	var missing := PackedStringArray()
+	var found := 0
+	for match: RegExMatch in pattern.search_all(text):
+		var path := match.get_string(1)
+		found += 1
+		if not FileAccess.file_exists(path):
+			missing.append(path)
+	_check(
+		found > 0 and missing.is_empty(),
+		"every resource the demo scene references is on disk",
+		"%d referenced, missing: %s" % [found, missing]
+	)
 
 
 func _missing_example_files() -> PackedStringArray:

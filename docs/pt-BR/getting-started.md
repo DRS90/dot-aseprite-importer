@@ -129,5 +129,9 @@ O repositório é, ele mesmo, um projeto Godot. Abra o `project.godot` dele (com
 `examples/main.tscn` mostra `examples/retro-top-down-character.aseprite` andando para baixo,
 reproduzido pelo AnimationPlayer. O sprite tem dez tags (`walk_loop`, `slash`, `swim_loop`, ...)
 desenhadas olhando para cima, para baixo, para a esquerda e para a direita (escalar só para cima e
-para baixo), com as células das diagonais vazias. A demo só existe no repositório, não no download
-da Asset Library.
+para baixo), com as células das diagonais vazias.
+
+A mesma cena também mostra o importador de textura: `examples/shadow.aseprite` é importado com
+*Import As: Aseprite Texture* e usado duas vezes, uma como `texture` de um Sprite2D e outra como
+uniform `sampler2D` de `examples/shadow_tint.gdshader`, que o recolore a partir do alpha. A demo só
+existe no repositório, não no download da Asset Library.
