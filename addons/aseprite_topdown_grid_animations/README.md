@@ -60,7 +60,7 @@ cover each part in detail.
 
 1. Create a sprite three cells wide and three cells tall: for a 32x32 character, *File > New* with
    **96x96**.
-2. Set *View > Grid Settings* to **32x32** and turn on *View > Show > Grid*, so each cell is
+2. Set *View > Grid > Grid Settings* to **32x32** and turn on *View > Show > Grid*, so each cell is
    outlined.
 3. Draw the character in the cell of each direction it faces:
 
@@ -91,11 +91,11 @@ cover each part in detail.
 
 ### 3. Play the animations with an AnimatedSprite2D
 
-1. Create a scene with a **CharacterBody2D** root (`Player`) and add an **AnimatedSprite2D** and a
-   **CollisionShape2D** to it.
+1. Create a scene with a **CharacterBody2D** root (`Player`), add an **AnimatedSprite2D** and a
+   **CollisionShape2D** with a *New RectangleShape2D* shape to it, and save it as `player.tscn`.
 2. Drag `hero.aseprite` from the FileSystem dock onto the **Sprite Frames** property of the
-   AnimatedSprite2D. The SpriteFrames panel at the bottom now lists `walk_down`, `walk_left_up`,
-   and so on: one animation per tag and drawn direction.
+   AnimatedSprite2D. The SpriteFrames panel at the bottom now lists `walk_down`, `walk_left`, and so
+   on: one animation per tag and drawn direction.
 3. Attach a script to `Player`:
 
    ```gdscript
@@ -120,15 +120,16 @@ cover each part in detail.
    	_sprite.play(_animation_for("walk", input))
 
 
-   ## "walk" facing down-left gives "walk_left_down", or "walk_down" if that diagonal is not drawn.
+   ## "walk" facing down-left gives "walk_left_down", or "walk_left" if that diagonal is not drawn.
    func _animation_for(action: String, facing: Vector2) -> String:
    	var sector := wrapi(roundi(facing.angle() / (PI / 4.0)), 0, DIRECTIONS.size())
    	var animation := "%s_%s" % [action, DIRECTIONS[sector]]
    	if _sprite.sprite_frames.has_animation(animation):
    		return animation
-   	# Diagonal not drawn: use the closest side.
-   	sector = wrapi(roundi(facing.angle() / (PI / 2.0)) * 2, 0, DIRECTIONS.size())
-   	return "%s_%s" % [action, DIRECTIONS[sector]]
+   	# Diagonal not drawn: use the side of the longer axis (horizontal on an exact diagonal).
+   	if absf(facing.x) >= absf(facing.y):
+   		return "%s_%s" % [action, "right" if facing.x > 0.0 else "left"]
+   	return "%s_%s" % [action, "down" if facing.y > 0.0 else "up"]
    ```
 
 4. Run the scene and move with the arrow keys. The character walks in the direction of the keys
@@ -149,15 +150,16 @@ foot lands, a hitbox during an attack, a method call at the end of an animation.
 1. Add an **AnimationPlayer** to the `Player` scene.
 2. Select the AnimatedSprite2D. In the Inspector, under **AnimatedSprite2D**, click **Assign...** in
    the **AnimationPlayer** section and pick the AnimationPlayer. The section reports how many
-   animations it synced, and the AnimationPlayer now has `walk_down`, `walk_left_up`, and so on.
-3. Save the scene. With the scene saved as `player.tscn`, the animations go to
-   `player_animations.tres` next to it. A scene that had never been saved when you linked the player
-   keeps them inside the scene until you click **Sync animations** after saving it.
-4. In the script, call `play()` on the AnimationPlayer instead of the AnimatedSprite2D, with the
-   same animation names, and remove the sprite's `play()` and *Autoplay on Load*.
-5. Open an animation in the **Animation** panel and add your own tracks (audio, method calls,
-   properties of other nodes). They are kept when the animations are synced again after you change
-   the sprite in Aseprite.
+   animations it synced, and the AnimationPlayer now has `walk_down`, `walk_left`, and so on.
+3. Save the scene. The animations are stored in `player_animations.tres`, next to `player.tscn`.
+4. In the script, add `@onready var _player: AnimationPlayer = $AnimationPlayer` and replace
+   `_sprite.play(...)` with `_player.play(...)` and `_sprite.stop()` with `_player.stop()`: the
+   names are the same, and stopping the player also leaves the sprite on the first frame. Keep
+   `_sprite.sprite_frames.has_animation()` as it is. If you turned on *Autoplay on Load* in the
+   SpriteFrames panel, turn it off.
+5. Select the AnimationPlayer, open an animation in the **Animation** panel and add your own tracks
+   (audio, method calls, properties of other nodes). They are kept when the animations are synced
+   again after you change the sprite in Aseprite.
 
 ### Try the demo
 
@@ -170,8 +172,8 @@ The demo is only in the repository, not in the Asset Library download.
 ## Drawing the sprite
 
 - Make the canvas three cells wide and three cells tall, e.g. **144x192** for 48x64 characters, and
-  draw each direction in its cell. Setting Aseprite's grid (*View > Grid Settings*) to the cell size
-  helps to keep every pose inside its cell.
+  draw each direction in its cell. Setting Aseprite's grid (*View > Grid > Grid Settings*) to the
+  cell size helps to keep every pose inside its cell.
 - Pixels that cross a cell border end up in the neighboring direction's animation.
 - Every layer is composed into the animations by default. Prefix helper layers (guides, references)
   with `_` to leave them out, or pick a single layer or group in `layers/layer`.
