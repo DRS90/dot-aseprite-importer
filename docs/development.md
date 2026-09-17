@@ -10,6 +10,9 @@ ASEPRITE_PATH=<aseprite> godot --headless --path . -s tests/test_runner.gd
 ASEPRITE_PATH=<aseprite> godot --headless --path . --import
 ```
 
+`tests/test_runner.gd` runs every check and prints one `PASS`/`FAIL` line each; the AnimationPlayer
+sync checks live in `tests/animation_sync_tests.gd`, which it calls.
+
 `tests/tools/build_grid.lua` turns a sprite drawn with one top-level layer per direction (layers
 named like the grid cells) into the grid format:
 
@@ -19,7 +22,8 @@ named like the grid cells) into the grid format:
 
 `tests/tools/build_cases.lua` builds sprites for manual tests from a grid sprite: several layers and
 groups (hidden, excluded, names the dropdown cannot offer), eight directions with an empty cell in
-one tag, a canvas that is not a multiple of 3, and a file without tags. The comment at the top of
+one tag, a canvas that is not a multiple of 3, a file without tags, and a 16x16 sprite with no grid
+at all for `grid/directions` at `none`. The comment at the top of
 the script lists what each one covers:
 
 ```

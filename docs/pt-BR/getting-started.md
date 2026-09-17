@@ -37,7 +37,10 @@ Os passos supõem que o addon está [instalado e ativado](../../README.pt-BR.md#
 2. Selecione o arquivo no dock FileSystem e abra o dock **Import**. `grid/cell_size` em `(0, 0)` usa
    um terço do canvas (32x32 aqui). Se o seu canvas não for múltiplo de 3, digite o tamanho da
    célula e clique em **Reimport**. Se o dock Import mostrar outro importador, escolha
-   **Import As: Aseprite Top-Down Grid Animations**.
+   **Import As: Aseprite Top-Down Grid Animations**. Um sprite que não olha para lugar nenhum, como
+   um efeito ou o brilho de um item, é importado com `grid/directions` em **none**: o frame inteiro
+   vira uma célula.
+
 3. Problemas (Aseprite não encontrado, uma tag que gera um nome já usado e assim por diante)
    aparecem no painel **Output**, começando com `[Aseprite Top-Down Grid Animations]`.
 

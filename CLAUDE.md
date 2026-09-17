@@ -2,7 +2,8 @@
 
 Godot 4 `EditorImportPlugin` for `.aseprite`/`.ase`. Every frame of the source is a 3x3 grid of
 facing directions (`left_up`, `up`, `right_up`, `left`, `right`, `left_down`, `down`, `right_down`;
-center ignored). The file imports as a **SpriteFrames** with one animation per direction × tag
+center ignored), or a single nameless cell with `grid/directions` set to `none`, for sprites that
+have no direction. The file imports as a **SpriteFrames** with one animation per direction × tag
 (`sprite_frames/animation_name`, default `{tag}_{direction}`), timed like in Aseprite (speed = 1 /
 shortest frame, relative durations, reverse/ping-pong), looping when the tag ends with
 `sprite_frames/loop_suffix` (default `_loop`, removed from the name). Cells with no pixels in a tag
@@ -24,9 +25,10 @@ the sync key, so a skipped sync never touches the disk.
   `animation_sync.gd` + `animation_library_store.gd` (no editor),
   `animated_sprite_inspector.gd` + `animation_player_panel.gd`
   (editor UI), and `aseprite_batch.lua` (runs inside Aseprite: `mode=list` and `mode=export`).
-- Tests: `tests/test_runner.gd`. Demo: `examples/`. `tests/tools/build_grid.lua` turns a
-  layer-per-direction sprite into the grid format; `tests/tools/build_cases.lua` builds sprites for
-  manual tests into the folder passed as `out=`.
+- Tests: `tests/test_runner.gd`, plus `tests/animation_sync_tests.gd` (the AnimationPlayer sync
+  checks, which build their nodes by hand and never call Aseprite). Demo: `examples/`.
+  `tests/tools/build_grid.lua` turns a layer-per-direction sprite into the grid format;
+  `tests/tools/build_cases.lua` builds sprites for manual tests into the folder passed as `out=`.
 - Docs: `README.md` keeps only the overview, install, quick start and links; the details live in
   `docs/` (getting started, drawing, importing, AnimatedSprite2D, AnimationPlayer, limitations,
   development). English is the source of truth; `README.pt-BR.md` and `docs/pt-BR/` (same file
@@ -62,6 +64,10 @@ the sync key, so a skipped sync never touches the disk.
 - Performance: each Aseprite process costs ~200 ms to start (even `--version`); a strip costs a few
   ms. Never add per-strip or per-layer processes: an import is one `list` + one `export` run of
   `aseprite_batch.lua` (30 strips: ~0.3 s vs ~6 s with one CLI call per strip).
+- The nameless cell of `grid/directions` = `none` and `left_up` are both at (0, 0), so checking
+  that a direction exists is not enough: `aseprite_batch.lua` requires `cells_per_axis == 1` to
+  match an empty direction exactly, or a 3x3 job with no direction would export the `left_up` cell
+  under a name nobody asked for.
 - The plain Aseprite CLI exits 0 for a nonexistent layer or tag and produces a wrong image,
   `--split-tags` does not work with `--sheet`, and `--crop` is silently ignored with `--sheet`. The
   Lua script raises an error on unknown layers, tags or directions and on cells that do not fit;

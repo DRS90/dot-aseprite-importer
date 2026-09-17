@@ -43,13 +43,19 @@ Todas as opções podem ser alteradas por arquivo no dock Import. Os padrões de
 
 | Opção | Padrão | Descrição |
 |---|---|---|
-| `grid/cell_size` | `(0, 0)` | Tamanho de uma célula em pixels. `0` num eixo significa um terço do sprite nesse eixo, que então precisa ser múltiplo de 3. Uma célula menor que um terço ignora os pixels que sobram à direita ou embaixo. |
+| `grid/directions` | `3x3` | `3x3`: cada frame é uma grade 3x3 de direções. `none`: o frame é uma única célula e o sprite não tem direção, para os acompanhantes de um personagem top-down (a poeira de corrida, a faísca de impacto, o brilho de um item). |
+| `grid/cell_size` | `(0, 0)` | Tamanho de uma célula em pixels. `0` num eixo significa o sprite dividido pelas células da grade nesse eixo: um terço com `grid/directions` em `3x3`, e aí o sprite precisa ser múltiplo de 3, e o sprite inteiro em `none`. Uma célula menor recorta o canto superior esquerdo e ignora os pixels que sobram à direita ou embaixo. |
 | `layers/layer` | `[all]` | Lista suspensa com `[all]` e as camadas e grupos de nível superior do arquivo. `[all]` combina todas as camadas que não casam com `layers/exclude_pattern`; qualquer outra escolha importa só aquela camada ou grupo. Coloque camadas num grupo para importá-las juntas. |
 | `layers/exclude_pattern` | `^_` | Expressão regular; as camadas que casam ficam de fora quando `layers/layer` é `[all]`. |
 | `layers/only_visible` | `false` | Usa só as camadas visíveis no Aseprite. Por padrão, as camadas ocultas também são importadas. |
 | `tags/exclude_pattern` | `^_` | Expressão regular; as tags que casam não são importadas. |
-| `sprite_frames/animation_name` | `{tag}_{direction}` | Nome da animação. `{tag}` é o nome da tag sem o sufixo de loop; `{direction}` é `left_up`, `up`, `right_up`, `left`, `right`, `left_down`, `down` ou `right_down`. |
+| `sprite_frames/animation_name` | `{tag}_{direction}` | Nome da animação. `{tag}` é o nome da tag sem o sufixo de loop; `{direction}` é `left_up`, `up`, `right_up`, `left`, `right`, `left_down`, `down` ou `right_down`, e nada com `grid/directions` em `none`. |
 | `sprite_frames/loop_suffix` | `_loop` | Uma tag que termina com este texto fica em loop, e o texto sai de `{tag}`. Vazio: nenhuma animação fica em loop. |
+
+Um placeholder sem nada para colocar no lugar leva junto um separador vizinho, então
+`{tag}_{direction}` gera `run`, e não `run_`, num sprite sem direções; os separadores dentro do nome
+da tag ficam como estão. Um arquivo sem tags e sem direções para nomear sua única animação recebe
+`default`.
 
 Os caracteres `/`, `:`, `,` e `[` viram `_` nos nomes das animações, porque o AnimationPlayer os
 rejeita. Quando duas tags geram o mesmo nome — `idle` e `idle_loop`, ou duas tags com o mesmo nome

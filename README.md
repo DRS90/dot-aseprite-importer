@@ -20,6 +20,10 @@ character.aseprite (144x192)              SpriteFrames (48x64 frames)
 A cell with no pixels in any frame of a tag produces no animation: a character drawn in six
 directions (without plain `left` and `right`) just leaves those cells empty.
 
+The sprites of a top-down game that face nowhere — a run dust puff, a hit spark, an item shine — are
+imported by the same addon with `grid/directions` set to `none`: the frame becomes a single cell and
+the animations are named after the tag alone.
+
 ## Screenshots
 
 The example character in Aseprite: every frame is a 3x3 grid of directions (guides in blue), with

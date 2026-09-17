@@ -17,3 +17,11 @@ Como organizar o arquivo do Aseprite. As opções do dock Import que o leem est�
   ping-pong reverse) são mantidas. Termine uma tag com `_loop` (`idle_loop`) para que suas animações
   fiquem em loop.
 - Frames fora de qualquer tag não são importados, a menos que o arquivo não tenha tags.
+
+## Sprites sem direção
+
+Um jogo top-down também tem sprites que não olham para lugar nenhum: a poeira de corrida, a faísca
+de impacto, o brilho de um item. Coloque `grid/directions` em `none` no dock Import e o frame vira
+uma célula única, desenhada de ponta a ponta, sem grade para respeitar. Tags, durações dos frames, a
+direção da tag e o sufixo `_loop` funcionam igual, e as animações recebem só o nome da tag:
+`run_loop` gera `run`.

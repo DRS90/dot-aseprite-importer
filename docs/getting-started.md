@@ -36,7 +36,10 @@ steps assume the addon is [installed and enabled](../README.md#installation) and
 2. Select the file in the FileSystem dock and open the **Import** dock. `grid/cell_size` at `(0, 0)`
    takes a third of the canvas (32x32 here). If your canvas is not a multiple of 3, type the cell
    size and click **Reimport**. If the Import dock shows another importer, pick
-   **Import As: Aseprite Top-Down Grid Animations**.
+   **Import As: Aseprite Top-Down Grid Animations**. A sprite that faces nowhere, like an effect or
+   a pickup shine, is imported with `grid/directions` set to **none** instead: the whole frame
+   becomes one cell.
+
 3. Problems (Aseprite not found, a tag giving a name that is already taken, and so on) are reported
    in the **Output** panel, starting with `[Aseprite Top-Down Grid Animations]`.
 

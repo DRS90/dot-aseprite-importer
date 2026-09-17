@@ -40,13 +40,19 @@ All options can be changed per file in the Import dock. The defaults of `layers/
 
 | Option | Default | Description |
 |---|---|---|
-| `grid/cell_size` | `(0, 0)` | Size of one cell in pixels. `0` on an axis means a third of the sprite on that axis, which must then be a multiple of 3. A cell smaller than a third ignores the pixels left over at the right or bottom. |
+| `grid/directions` | `3x3` | `3x3`: every frame is a 3x3 grid of facing directions. `none`: the frame is a single cell and the sprite has no direction, for the companions of a top-down character (a run dust puff, a hit spark, an item shine). |
+| `grid/cell_size` | `(0, 0)` | Size of one cell in pixels. `0` on an axis means the sprite divided by the cells of the grid on that axis: a third with `grid/directions` at `3x3`, which the sprite must then be a multiple of, and the whole sprite at `none`. A smaller cell crops the top left corner and ignores the pixels left over at the right or bottom. |
 | `layers/layer` | `[all]` | Dropdown with `[all]` and the file's top-level layers and groups. `[all]` composes every layer not matched by `layers/exclude_pattern`; any other choice imports only that layer or group. Put layers in a group to import them together. |
 | `layers/exclude_pattern` | `^_` | Regular expression; matching layers are left out when `layers/layer` is `[all]`. |
 | `layers/only_visible` | `false` | Use only layers visible in Aseprite. By default hidden layers are imported too. |
 | `tags/exclude_pattern` | `^_` | Regular expression; matching tags are not imported. |
-| `sprite_frames/animation_name` | `{tag}_{direction}` | Animation name. `{tag}` is the tag name without the loop suffix; `{direction}` is `left_up`, `up`, `right_up`, `left`, `right`, `left_down`, `down` or `right_down`. |
+| `sprite_frames/animation_name` | `{tag}_{direction}` | Animation name. `{tag}` is the tag name without the loop suffix; `{direction}` is `left_up`, `up`, `right_up`, `left`, `right`, `left_down`, `down` or `right_down`, and nothing at all with `grid/directions` at `none`. |
 | `sprite_frames/loop_suffix` | `_loop` | A tag ending with this text loops, and the text is left out of `{tag}`. Empty: no animation loops. |
+
+A placeholder with nothing to put in it takes one neighbouring separator with it, so
+`{tag}_{direction}` gives `run`, not `run_`, for a sprite without directions; the separators inside
+a tag name are left alone. A file with neither tags nor directions to name its only animation after
+gets `default`.
 
 The characters `/`, `:`, `,` and `[` become `_` in animation names, because AnimationPlayer rejects
 them. When two tags give the same name — `idle` and `idle_loop`, or two tags named alike in Aseprite

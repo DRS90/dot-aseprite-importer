@@ -18,6 +18,12 @@ All notable changes to this project are documented here. The format follows
   a tag suffix, `sprite_frames/loop_suffix` (default `_loop`), which is left out of the name.
 - Cell size taken from the sprite (a third on each axis) or set with `grid/cell_size`. A cell with
   no pixels in a tag produces no animation.
+- `grid/directions` set to `none` imports a sprite that has no direction at all, the frame becoming
+  a single cell: the run dust, hit sparks and other companions of a top-down character need no
+  second Aseprite importer in the project. Animation names drop `{direction}` with its separator,
+  and a file without tags or directions names its only animation `default`.
+- Two tags that give the same animation name fail the import instead of dropping the second one, so
+  the animations that still worked are kept until the names are fixed.
 - `layers/layer` dropdown, filled with the file's top-level layers and groups, to import one of them
   instead of `[all]`.
 - Layer and tag exclusion patterns and `only_visible`.
