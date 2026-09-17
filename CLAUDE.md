@@ -27,6 +27,10 @@ the sync key, so a skipped sync never touches the disk.
 - Tests: `tests/test_runner.gd`. Demo: `examples/`. `tests/tools/build_grid.lua` turns a
   layer-per-direction sprite into the grid format; `tests/tools/build_cases.lua` builds sprites for
   manual tests into the folder passed as `out=`.
+- Docs: `README.md` keeps only the overview, install, quick start and links; the details live in
+  `docs/` (getting started, drawing, importing, AnimatedSprite2D, AnimationPlayer, limitations,
+  development). The addon folder's `README.md` is the root one with `](docs/` links rewritten to
+  `](../../docs/`: regenerate it with `sed 's#](docs/#](../../docs/#g' README.md` after any edit.
 - Pending work: `ROADMAP.md`. Read it before proposing anything.
 - Full plan and decision history: `plan/plan-aseprite-topdown-layers.md`. Section 9 ("Emendas")
   overrides the earlier sections. `plan/` is gitignored and local only.

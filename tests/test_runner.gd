@@ -51,7 +51,7 @@ const DEFAULT_OPTIONS := {
 }
 const ASSET_HELP := (
 	"The example is built from the CC0 sheets of 5yvalia with "
-	+ "tests/tools/build_retro_example.lua; see README > Credits."
+	+ "tests/tools/build_retro_example.lua; see docs/development.md."
 )
 
 var _failures := 0
