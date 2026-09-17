@@ -1,13 +1,13 @@
 [gd_scene format=3 uid="uid://dqj4sk583v8v2"]
 
 [ext_resource type="SpriteFrames" uid="uid://lwuejbnc1ubr" path="res://examples/retro-top-down-character.aseprite" id="1_d2j2t"]
-[ext_resource type="SpriteFrames" uid="uid://th28mo82irwl" path="res://examples/shadow.aseprite" id="1_oe2cu"]
+[ext_resource type="Texture2D" uid="uid://th28mo82irwl" path="res://examples/shadow.aseprite" id="1_oe2cu"]
 [ext_resource type="AnimationLibrary" uid="uid://b3hhqqqwhrk7o" path="res://examples/main_animations.tres" id="2_aqi44"]
 
 [node name="Main" type="Node2D" unique_id=1570837702]
 
-[node name="AnimatedSprite2D2" type="AnimatedSprite2D" parent="." unique_id=1275635387]
-sprite_frames = ExtResource("1_oe2cu")
+[node name="Shadow" type="Sprite2D" parent="." unique_id=1275635387]
+texture = ExtResource("1_oe2cu")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1244402466]
 sprite_frames = ExtResource("1_d2j2t")

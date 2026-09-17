@@ -1,8 +1,8 @@
 [remap]
 
-importer="aseprite_topdown_grid_animations.importer"
+importer="aseprite_topdown_grid_animations.texture_importer"
 importer_version=1
-type="SpriteFrames"
+type="PortableCompressedTexture2D"
 uid="uid://th28mo82irwl"
 path="res://.godot/imported/shadow.aseprite-05e5f49c4f230e9ea11e0801b3b00fe3.res"
 
@@ -13,11 +13,6 @@ dest_files=["res://.godot/imported/shadow.aseprite-05e5f49c4f230e9ea11e0801b3b00
 
 [params]
 
-grid/directions="none"
-grid/cell_size=Vector2i(0, 0)
 layers/layer="[all]"
 layers/exclude_pattern="^_"
 layers/only_visible=false
-tags/exclude_pattern="^_"
-sprite_frames/animation_name="{tag}_{direction}"
-sprite_frames/loop_suffix="_loop"
