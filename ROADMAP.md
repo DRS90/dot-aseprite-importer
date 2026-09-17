@@ -30,7 +30,8 @@
       Settings*, the library file is created and adopted, and a tag removed in Aseprite reaches the
       `.tres`
 - [x] Rename the addon to Aseprite Top-Down Grid Animations ("Layers" no longer described it)
-- [ ] Rename the repository to `godot-aseprite-topdown-grid-animations` when it is published
+- [x] Rename the repository folder to `godot-aseprite-topdown-grid-animations` (the GitHub
+      repository takes the same name when it is created)
 - [x] Screenshots in `screenshots/`: the Aseprite frame as a 3x3 grid with guide lines and the tags
       in the timeline, and the editor with the imported animations and the AnimationPlayer section.
       They are linked from the README at publish time, when the repository URL exists
