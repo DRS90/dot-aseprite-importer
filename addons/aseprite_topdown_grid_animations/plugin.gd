@@ -6,6 +6,7 @@ extends EditorPlugin
 
 const AnimatedSpriteInspector := preload("animated_sprite_inspector.gd")
 const AnimationSync := preload("animation_sync.gd")
+const AsepriteSource := preload("aseprite_source.gd")
 const Importer := preload("importer.gd")
 const Settings := preload("settings.gd")
 
@@ -13,6 +14,7 @@ const REIMPORT_ALL_MENU := "Aseprite Top-Down Grid Animations: Reimport all"
 const SOURCE_EXTENSIONS: Array[String] = ["aseprite", "ase"]
 
 var _settings: Settings
+var _source: AsepriteSource
 var _importer: Importer
 var _inspector: AnimatedSpriteInspector
 var _sync := AnimationSync.new()
@@ -21,7 +23,9 @@ var _sync := AnimationSync.new()
 func _enter_tree() -> void:
 	_settings = Settings.new()
 	_settings.register()
-	_importer = Importer.new(_settings)
+	# One source for every importer: the executable is checked once and a file listed once.
+	_source = AsepriteSource.new(_settings.get_executable_path)
+	_importer = Importer.new(_settings, _source)
 	add_import_plugin(_importer)
 	_inspector = AnimatedSpriteInspector.new()
 	add_inspector_plugin(_inspector)
@@ -72,7 +76,7 @@ func _sync_edited_scene() -> void:
 		if _sync.sync_linked(sprite, false):
 			changed = true
 			for message: String in _sync.errors:
-				push_warning(Importer.LOG_PREFIX + message)
+				push_warning(AsepriteSource.LOG_PREFIX + message)
 	if changed:
 		EditorInterface.mark_scene_as_unsaved()
 
@@ -82,11 +86,13 @@ func _sync_edited_scene() -> void:
 func _reimport_all() -> void:
 	var file_system := EditorInterface.get_resource_filesystem()
 	if file_system.is_scanning():
-		push_warning(Importer.LOG_PREFIX + "The file system is being scanned; try again after it.")
+		push_warning(
+			AsepriteSource.LOG_PREFIX + "The file system is being scanned; try again after it."
+		)
 		return
 	var sources := _find_sources(file_system.get_filesystem())
 	if sources.is_empty():
-		push_warning(Importer.LOG_PREFIX + "No .aseprite/.ase file uses this importer.")
+		push_warning(AsepriteSource.LOG_PREFIX + "No .aseprite/.ase file uses this importer.")
 		return
 	file_system.reimport_files(sources)
 

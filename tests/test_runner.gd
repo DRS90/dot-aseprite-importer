@@ -5,12 +5,16 @@ extends SceneTree
 
 const AnimationSyncTests := preload("res://tests/animation_sync_tests.gd")
 const AsepriteCli := preload("res://addons/aseprite_topdown_grid_animations/aseprite_cli.gd")
+const AsepriteSource := preload("res://addons/aseprite_topdown_grid_animations/aseprite_source.gd")
 const ExportPlanner := preload("res://addons/aseprite_topdown_grid_animations/export_planner.gd")
 const SpriteFramesBuilder := preload(
 	"res://addons/aseprite_topdown_grid_animations/sprite_frames_builder.gd"
 )
 
 const SOURCE := "res://examples/retro-top-down-character.aseprite"
+## A second sprite, only used to prove the listing cache notices a file changing under it.
+const SHADOW := "res://examples/shadow.aseprite"
+const SHADOW_SIZE := Vector2i(48, 48)
 const SHEETS_DIR := "res://examples/rpg-type-retro-top-down-playable-character-spritesheett"
 const SHEET := SHEETS_DIR + "/16x16-rpg-topdown-playable-character-template.png"
 const ATTACK_SHEET := SHEETS_DIR + "/48x48-attack.png"
@@ -68,7 +72,7 @@ func _initialize() -> void:
 
 func _missing_example_files() -> PackedStringArray:
 	var missing := PackedStringArray()
-	for path: String in [SOURCE, SHEET, ATTACK_SHEET]:
+	for path: String in [SOURCE, SHADOW, SHEET, ATTACK_SHEET]:
 		if not FileAccess.file_exists(path):
 			missing.append(path)
 	return missing
@@ -85,6 +89,49 @@ func _test_with_example_asset() -> void:
 	var frames := _test_sprite_frames(cli, planner, jobs, contents)
 	_test_directionless_export(cli, contents, frames)
 	_test_export_rejects_bad_input(cli)
+	_test_aseprite_source()
+
+
+## The source shared by the importers: it verifies the executable, caches a listing by file content
+## and hands out the layer dropdown. Headless, so the executable arrives as a Callable instead of
+## from the Editor Settings.
+func _test_aseprite_source() -> void:
+	var source := AsepriteSource.new(func() -> String: return OS.get_environment("ASEPRITE_PATH"))
+	var cli := source.verified_cli()
+	if not _check(cli != null, "the shared source verifies the executable", source.last_error):
+		return
+
+	var first := source.list(cli, SOURCE)
+	var second := source.list(cli, SOURCE)
+	_check(
+		is_same(first, second) and first.get("size", Vector2i.ZERO) == SPRITE_SIZE,
+		"listing the same file twice returns the cached dictionary",
+		str(first.get("size", Vector2i.ZERO))
+	)
+
+	# Keyed by content, not by path: a file replaced under the same name has to be listed again.
+	var copy := "user://aseprite_source_copy.aseprite"
+	DirAccess.copy_absolute(SOURCE, copy)
+	var before: Vector2i = source.list(cli, copy).get("size", Vector2i.ZERO)
+	DirAccess.copy_absolute(SHADOW, copy)
+	var after: Vector2i = source.list(cli, copy).get("size", Vector2i.ZERO)
+	DirAccess.remove_absolute(copy)
+	_check(
+		before == SPRITE_SIZE and after == SHADOW_SIZE,
+		"a file replaced under the same path is listed again",
+		"%s then %s" % [before, after]
+	)
+
+	_check(
+		source.layer_choices(SOURCE) == "[all],character,weapon",
+		"the layer dropdown offers [all] and the file's layers",
+		source.layer_choices(SOURCE)
+	)
+	_check(
+		source.layer_choices("") == "[all]",
+		"without a file the dropdown offers [all] alone",
+		source.layer_choices("")
+	)
 
 
 func _test_listing(cli: AsepriteCli) -> Dictionary:
