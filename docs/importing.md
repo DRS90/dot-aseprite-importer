@@ -25,9 +25,20 @@ The addon registers two `EditorImportPlugin`s, and every `.aseprite` uses one of
 | **Aseprite Top-Down Grid Animations** | `SpriteFrames` | animations, on an AnimatedSprite2D |
 | **Aseprite Texture** | a lossless `Texture2D` | Sprite2D, TextureRect, a shader uniform, the source image of a TileSet |
 
-A file nobody chose for lands on the first one; pick the other per file with **Import As** in the
-Import dock. Godot reimports a source file when its content changes, which it notices **when the
-Godot editor window regains focus** (or on a manual *Reimport*).
+Which one a file wants comes down to two questions: is it animated, and does it face anywhere?
+
+| The sprite | Import As | Gives |
+|---|---|---|
+| animated, one cell per facing direction | **Aseprite Top-Down Grid Animations** (the default) | one animation per direction and tag |
+| animated, no direction, like a dust puff or a hit spark | the same importer, with [`grid/directions`](#import-options) set to `none` | one animation per tag |
+| not animated, like a shadow, a prop or a tileset page | **Aseprite Texture** | a `Texture2D` of the canvas |
+
+The first two keep Aseprite's frame durations, loops and ping-pong and can drive an
+AnimationPlayer; the third is an image and carries none of that. A file nobody chose for lands on
+the first one; pick the other per file with **Import As** in the Import dock.
+
+Godot reimports a source file when its content changes, which it notices **when the Godot editor
+window regains focus** (or on a manual *Reimport*).
 
 - Each import starts Aseprite twice, however many directions and tags the file has: once to read its
   size, layers, tags and frame durations, and once to export every animation. Starting Aseprite is

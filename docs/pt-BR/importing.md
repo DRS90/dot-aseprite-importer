@@ -26,9 +26,20 @@ O addon registra dois `EditorImportPlugin`, e todo `.aseprite` usa um deles:
 | **Aseprite Top-Down Grid Animations** | `SpriteFrames` | animações, num AnimatedSprite2D |
 | **Aseprite Texture** | um `Texture2D` sem perdas | Sprite2D, TextureRect, uniform de shader, imagem-fonte de um TileSet |
 
-Um arquivo para o qual ninguém escolheu cai no primeiro; escolha o outro por arquivo com
-**Import As** no dock Import. O Godot reimporta um arquivo de origem quando o conteúdo dele muda, o
-que ele percebe **quando a janela do editor do Godot recupera o foco** (ou num *Reimport* manual).
+Qual deles um arquivo quer depende de duas perguntas: ele é animado, e ele olha para algum lado?
+
+| O sprite | Import As | Gera |
+|---|---|---|
+| animado, uma célula por direção | **Aseprite Top-Down Grid Animations** (o padrão) | uma animação por direção e tag |
+| animado, sem direção, como uma poeira de corrida ou uma faísca | o mesmo importador, com [`grid/directions`](#opções-de-importação) em `none` | uma animação por tag |
+| sem animação, como uma sombra, um prop ou uma página de tileset | **Aseprite Texture** | um `Texture2D` da tela |
+
+Os dois primeiros mantêm as durações de frame, os loops e o ping-pong do Aseprite, e conseguem
+dirigir um AnimationPlayer; o terceiro é uma imagem e não carrega nada disso. Um arquivo para o qual
+ninguém escolheu cai no primeiro; escolha o outro por arquivo com **Import As** no dock Import.
+
+O Godot reimporta um arquivo de origem quando o conteúdo dele muda, o que ele percebe **quando a
+janela do editor do Godot recupera o foco** (ou num *Reimport* manual).
 
 - Cada importação abre o Aseprite duas vezes, não importa quantas direções e tags o arquivo tenha:
   uma para ler o tamanho, as camadas, as tags e as durações dos frames, e outra para exportar todas

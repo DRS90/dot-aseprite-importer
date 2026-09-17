@@ -1,7 +1,8 @@
 shader_type canvas_item;
 
-// The .aseprite file is assigned straight to this uniform in main.tscn. Imported with
-// Import As: Aseprite Texture, it is an ordinary Texture2D, so a shader takes it like any other.
+// An .aseprite file goes straight into this uniform. Imported with Import As: Aseprite Texture it
+// is an ordinary Texture2D, so a shader takes it like any other. Put this material on a node and
+// pass examples/shadow.aseprite here to see it.
 // filter_nearest keeps the pixels crisp whatever the project default is.
 uniform sampler2D aseprite_texture : source_color, filter_nearest;
 uniform vec4 tint : source_color = vec4(0.35, 0.55, 1.0, 1.0);

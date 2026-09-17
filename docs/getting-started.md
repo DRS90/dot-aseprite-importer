@@ -126,6 +126,7 @@ AnimationPlayer. The sprite has ten tags (`walk_loop`, `slash`, `swim_loop`, ...
 down, left and right (climbing only up and down), with the diagonal cells empty.
 
 The same scene also shows the texture importer: `examples/shadow.aseprite` is imported with
-*Import As: Aseprite Texture* and used twice, once as the `texture` of a Sprite2D and once as a
-`sampler2D` uniform of `examples/shadow_tint.gdshader`, which recolours it from its alpha alone. The
-demo is only in the repository, not in the Asset Library download.
+*Import As: Aseprite Texture* and drawn by an ordinary Sprite2D. `examples/shadow_tint.gdshader` is
+there for the other half: put it on a node's material and pass the same file to its
+`aseprite_texture` uniform, and it recolours the shadow from its alpha alone. The demo is only in
+the repository, not in the Asset Library download.
