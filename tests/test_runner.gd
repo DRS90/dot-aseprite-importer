@@ -10,6 +10,9 @@ const ExportPlanner := preload("res://addons/aseprite_topdown_grid_animations/ex
 const SpriteFramesBuilder := preload(
 	"res://addons/aseprite_topdown_grid_animations/sprite_frames_builder.gd"
 )
+const TextureImporter := preload(
+	"res://addons/aseprite_topdown_grid_animations/texture_importer.gd"
+)
 
 const SOURCE := "res://examples/retro-top-down-character.aseprite"
 ## A second sprite, only used to prove the listing cache notices a file changing under it.
@@ -90,6 +93,104 @@ func _test_with_example_asset() -> void:
 	_test_directionless_export(cli, contents, frames)
 	_test_export_rejects_bad_input(cli)
 	_test_aseprite_source()
+	_test_texture(cli, contents, frames)
+
+
+## The texture importer's route: no grid, no tags, so one strip holds the whole canvas of every
+## frame. It has to agree pixel for pixel with the grid import of the same file, survive being
+## saved as a resource of its own, and refuse what it cannot represent.
+func _test_texture(cli: AsepriteCli, contents: Dictionary, grid_frames: SpriteFrames) -> void:
+	var planner := ExportPlanner.new()
+	var layers: PackedStringArray = contents.get("layers", PackedStringArray())
+	var options := {
+		"directions": ExportPlanner.MODE_NONE,
+		"cell_size": Vector2i.ZERO,
+		"layer": ExportPlanner.ALL_LAYERS,
+		"layer_exclude_pattern": "^_",
+	}
+	var jobs := planner.build_jobs(SPRITE_SIZE, layers, PackedStringArray(), options)
+	var strips_dir := _tmp_dir.path_join("texture")
+	var code := cli.export_strips(
+		ProjectSettings.globalize_path(SOURCE),
+		jobs,
+		planner.composed_layers,
+		planner.cell_size,
+		planner.cells_per_axis,
+		strips_dir
+	)
+	if not _check(
+		code == OK and cli.last_written.size() == 1,
+		"the texture route exports the whole canvas as one strip",
+		"%d written, %s" % [cli.last_written.size(), cli.last_error]
+	):
+		return
+	var strip := strips_dir.path_join(str(jobs[0]["relative_path"]))
+	var texture := SpriteFramesBuilder.load_strip_texture(strip, true)
+	var expected_width := SPRITE_SIZE.x * FRAME_COUNT
+	_check(
+		texture != null and texture.get_size() == Vector2(expected_width, SPRITE_SIZE.y),
+		"the strip is every frame of the timeline side by side",
+		str(texture.get_size()) if texture != null else "no texture"
+	)
+
+	# The same source through both importers has to agree on the pixels it shares.
+	var whole := texture.get_image()
+	whole.convert(Image.FORMAT_RGBA8)
+	var down := grid_frames.get_frame_texture(&"walk_down", 0).get_image()
+	down.convert(Image.FORMAT_RGBA8)
+	var cell := Rect2i(CELL_SIZE.x, CELL_SIZE.y * 2, CELL_SIZE.x, CELL_SIZE.y)
+	_check(
+		whole.get_region(cell).get_data() == down.get_data(),
+		"the down cell of the texture is the grid import's walk_down frame",
+		"%s vs %s" % [whole.get_size(), down.get_size()]
+	)
+
+	# Saved on its own, unlike the textures embedded in a SpriteFrames, and read back with pixels.
+	var path := "user://aseprite_texture_roundtrip.res"
+	_check(ResourceSaver.save(texture, path) == OK, "the texture saves as a resource of its own")
+	var reloaded := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE) as Texture2D
+	var back := reloaded.get_image() if reloaded != null else null
+	if back != null:
+		back.convert(Image.FORMAT_RGBA8)
+	_check(
+		reloaded != null and back != null and back.get_data() == whole.get_data(),
+		"the reloaded texture still holds its pixels",
+		str(reloaded)
+	)
+	DirAccess.remove_absolute(path)
+
+	# An empty cell writes nothing and still returns OK: the case the importer turns into a failure.
+	var empty_jobs: Array[Dictionary] = [
+		{
+			"direction": "left_up",
+			"tag": "walk_loop",
+			"animation": "empty",
+			"loop": false,
+			"relative_path": "empty.png",
+		}
+	]
+	code = cli.export_strips(
+		ProjectSettings.globalize_path(SOURCE),
+		empty_jobs,
+		layers,
+		CELL_SIZE,
+		3,
+		_tmp_dir.path_join("texture_empty")
+	)
+	_check(
+		code == OK and cli.last_written.is_empty(),
+		"a canvas with no pixels exports nothing without failing, so the importer must check",
+		"%d written" % cli.last_written.size()
+	)
+
+	_check(
+		(
+			not TextureImporter.exceeds_texture_width(SPRITE_SIZE.x, FRAME_COUNT)
+			and TextureImporter.exceeds_texture_width(SPRITE_SIZE.x, 114)
+		),
+		"a strip wider than a texture can be is refused",
+		str(TextureImporter.MAX_TEXTURE_WIDTH)
+	)
 
 
 ## The source shared by the importers: it verifies the executable, caches a listing by file content

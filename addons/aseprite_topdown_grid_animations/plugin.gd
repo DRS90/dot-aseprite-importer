@@ -1,14 +1,15 @@
 @tool
 extends EditorPlugin
-## Registers the Aseprite Top-Down Grid Animations importer, its settings, the AnimationPlayer
-## section of the AnimatedSprite2D inspector and the Project > Tools item, and keeps linked
-## AnimationPlayers in sync with their sprites.
+## Registers the addon's two importers (a SpriteFrames of the 3x3 grid of directions, and a plain
+## texture), its settings, the AnimationPlayer section of the AnimatedSprite2D inspector and the
+## Project > Tools item, and keeps linked AnimationPlayers in sync with their sprites.
 
 const AnimatedSpriteInspector := preload("animated_sprite_inspector.gd")
 const AnimationSync := preload("animation_sync.gd")
 const AsepriteSource := preload("aseprite_source.gd")
 const Importer := preload("importer.gd")
 const Settings := preload("settings.gd")
+const TextureImporter := preload("texture_importer.gd")
 
 const REIMPORT_ALL_MENU := "Aseprite Top-Down Grid Animations: Reimport all"
 const SOURCE_EXTENSIONS: Array[String] = ["aseprite", "ase"]
@@ -16,6 +17,7 @@ const SOURCE_EXTENSIONS: Array[String] = ["aseprite", "ase"]
 var _settings: Settings
 var _source: AsepriteSource
 var _importer: Importer
+var _texture_importer: TextureImporter
 var _inspector: AnimatedSpriteInspector
 var _sync := AnimationSync.new()
 
@@ -27,6 +29,8 @@ func _enter_tree() -> void:
 	_source = AsepriteSource.new(_settings.get_executable_path)
 	_importer = Importer.new(_settings, _source)
 	add_import_plugin(_importer)
+	_texture_importer = TextureImporter.new(_settings, _source)
+	add_import_plugin(_texture_importer)
 	_inspector = AnimatedSpriteInspector.new()
 	add_inspector_plugin(_inspector)
 	add_tool_menu_item(REIMPORT_ALL_MENU, _reimport_all)
@@ -43,6 +47,9 @@ func _exit_tree() -> void:
 	if _inspector != null:
 		remove_inspector_plugin(_inspector)
 		_inspector = null
+	if _texture_importer != null:
+		remove_import_plugin(_texture_importer)
+		_texture_importer = null
 	if _importer != null:
 		remove_import_plugin(_importer)
 		_importer = null
@@ -81,8 +88,8 @@ func _sync_edited_scene() -> void:
 		EditorInterface.mark_scene_as_unsaved()
 
 
-## Forces a reimport of every .aseprite/.ase file assigned to this importer, e.g. after the
-## executable path or a project default changed.
+## Forces a reimport of every .aseprite/.ase file assigned to one of this addon's importers, e.g.
+## after the executable path or a project default changed.
 func _reimport_all() -> void:
 	var file_system := EditorInterface.get_resource_filesystem()
 	if file_system.is_scanning():
@@ -92,7 +99,7 @@ func _reimport_all() -> void:
 		return
 	var sources := _find_sources(file_system.get_filesystem())
 	if sources.is_empty():
-		push_warning(AsepriteSource.LOG_PREFIX + "No .aseprite/.ase file uses this importer.")
+		push_warning(AsepriteSource.LOG_PREFIX + "No .aseprite/.ase file uses this addon.")
 		return
 	file_system.reimport_files(sources)
 
@@ -103,15 +110,17 @@ func _find_sources(directory: EditorFileSystemDirectory) -> PackedStringArray:
 		return sources
 	for index: int in directory.get_file_count():
 		var path := directory.get_file_path(index)
-		if SOURCE_EXTENSIONS.has(path.get_extension().to_lower()) and _uses_this_importer(path):
+		if SOURCE_EXTENSIONS.has(path.get_extension().to_lower()) and _uses_this_addon(path):
 			sources.append(path)
 	for index: int in directory.get_subdir_count():
 		sources.append_array(_find_sources(directory.get_subdir(index)))
 	return sources
 
 
-static func _uses_this_importer(path: String) -> bool:
+## True when [param path] is imported by this addon, whichever of its importers was chosen.
+static func _uses_this_addon(path: String) -> bool:
 	var config := ConfigFile.new()
 	if config.load(path + ".import") != OK:
 		return false
-	return str(config.get_value("remap", "importer", "")) == Importer.IMPORTER_NAME
+	var importer := str(config.get_value("remap", "importer", ""))
+	return importer == Importer.IMPORTER_NAME or importer == TextureImporter.IMPORTER_NAME
