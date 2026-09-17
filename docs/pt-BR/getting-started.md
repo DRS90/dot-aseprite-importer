@@ -132,7 +132,5 @@ desenhadas olhando para cima, para baixo, para a esquerda e para a direita (esca
 para baixo), com as células das diagonais vazias.
 
 A mesma cena também mostra o importador de textura: `examples/shadow.aseprite` é importado com
-*Import As: Aseprite Texture* e desenhado por um Sprite2D comum. O `examples/shadow_tint.gdshader`
-está ali para a outra metade: coloque-o no material de um nó e passe o mesmo arquivo para o uniform
-`aseprite_texture` dele, e ele recolore a sombra a partir do alpha. A demo só existe no repositório,
+*Import As: Aseprite Texture* e desenhado por um Sprite2D comum. A demo só existe no repositório,
 não no download da Asset Library.
