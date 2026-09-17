@@ -20,6 +20,18 @@ character.aseprite (144x192)              SpriteFrames (48x64 frames)
 A cell with no pixels in any frame of a tag produces no animation: a character drawn in six
 directions (without plain `left` and `right`) just leaves those cells empty.
 
+## Screenshots
+
+The example character in Aseprite: every frame is a 3x3 grid of directions (guides in blue), with
+the diagonal cells left empty, one tag per animation in the timeline and two layers.
+
+![The example character in Aseprite, drawn as a 3x3 grid of facing directions](screenshots/aseprite-character.png)
+
+The same file in Godot: the animations of its SpriteFrames in the bottom panel, and the
+**AnimationPlayer** section of the AnimatedSprite2D inspector on the right.
+
+![The imported file in the Godot editor, with its animations and the AnimationPlayer section](screenshots/godot-editor.png)
+
 ## Requirements
 
 - Godot **4.7** (tested with 4.7.1).

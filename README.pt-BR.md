@@ -22,6 +22,18 @@ direções (sem `left` e `right` puros) simplesmente deixa essas células vazias
 
 Os nomes de menus, painéis, docks, botões e opções aparecem como no editor em inglês.
 
+## Screenshots
+
+O personagem de exemplo no Aseprite: cada frame é uma grade 3x3 de direções (as guias em azul), com
+as células das diagonais vazias, uma tag por animação na timeline e duas camadas.
+
+![O personagem de exemplo no Aseprite, desenhado como uma grade 3x3 de direções](screenshots/aseprite-character.png)
+
+O mesmo arquivo no Godot: as animações do SpriteFrames no painel de baixo e a seção
+**AnimationPlayer** do inspetor do AnimatedSprite2D, à direita.
+
+![O arquivo importado no editor do Godot, com as animações e a seção AnimationPlayer](screenshots/godot-editor.png)
+
 ## Requisitos
 
 - Godot **4.7** (testado com 4.7.1).

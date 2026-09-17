@@ -33,7 +33,8 @@ the sync key, so a skipped sync never touches the disk.
   names) mirror it, and every docs change updates both languages in the same commit. Menu, panel and
   option names stay in English in the translation. The addon folder's `README.md` is the English
   one with its links pointed back at the repository root; regenerate it after any edit with
-  `sed -e 's#](docs/#](../../docs/#g' -e 's#](README.pt-BR.md)#](../../README.pt-BR.md)#g' README.md`.
+  `sed -e 's#](docs/#](../../docs/#g' -e 's#](screenshots/#](../../screenshots/#g'
+  -e 's#](README.pt-BR.md)#](../../README.pt-BR.md)#g' README.md`.
 - Pending work: `ROADMAP.md`. Read it before proposing anything.
 - Full plan and decision history: `plan/plan-aseprite-topdown-layers.md`. Section 9 ("Emendas")
   overrides the earlier sections. `plan/` is gitignored and local only.
