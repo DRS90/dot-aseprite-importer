@@ -19,9 +19,16 @@ Instalações pela Steam ficam em outro lugar, por exemplo
 
 ## Como funciona a importação automática
 
-O addon é um `EditorImportPlugin` comum. O Godot reimporta um arquivo de origem quando o conteúdo
-dele muda, o que ele percebe **quando a janela do editor do Godot recupera o foco** (ou num
-*Reimport* manual).
+O addon registra dois `EditorImportPlugin`, e todo `.aseprite` usa um deles:
+
+| Importador | Gera | Serve para |
+|---|---|---|
+| **Aseprite Top-Down Grid Animations** | `SpriteFrames` | animações, num AnimatedSprite2D |
+| **Aseprite Texture** | um `Texture2D` sem perdas | Sprite2D, TextureRect, uniform de shader, imagem-fonte de um TileSet |
+
+Um arquivo para o qual ninguém escolheu cai no primeiro; escolha o outro por arquivo com
+**Import As** no dock Import. O Godot reimporta um arquivo de origem quando o conteúdo dele muda, o
+que ele percebe **quando a janela do editor do Godot recupera o foco** (ou num *Reimport* manual).
 
 - Cada importação abre o Aseprite duas vezes, não importa quantas direções e tags o arquivo tenha:
   uma para ler o tamanho, as camadas, as tags e as durações dos frames, e outra para exportar todas
@@ -31,15 +38,17 @@ dele muda, o que ele percebe **quando a janela do editor do Godot recupera o foc
   no projeto, e exportar uma cena que usa o arquivo exporta as texturas junto.
 
 *Project > Tools > Aseprite Top-Down Grid Animations: Reimport all* força a reimportação de todos os
-arquivos que usam este importador, por exemplo depois de mudar o caminho do executável ou uma
-configuração padrão do projeto, ou depois de atualizar o addon.
+arquivos que usam qualquer um dos dois importadores, por exemplo depois de mudar o caminho do
+executável ou uma configuração padrão do projeto, ou depois de atualizar o addon.
 
 ## Opções de importação
 
-Todas as opções podem ser alteradas por arquivo no dock Import. Os padrões de
-`layers/exclude_pattern`, `tags/exclude_pattern`, `sprite_frames/animation_name` e
+As opções abaixo são do importador **Aseprite Top-Down Grid Animations**; o de textura tem as suas,
+[mais adiante](#importando-como-textura). Todas podem ser alteradas por arquivo no dock Import. Os
+padrões de `layers/exclude_pattern`, `tags/exclude_pattern`, `sprite_frames/animation_name` e
 `sprite_frames/loop_suffix` vêm de
-*Project Settings > Aseprite Top-Down Grid Animations > Defaults*.
+*Project Settings > Aseprite Top-Down Grid Animations > Defaults*; o `layers/exclude_pattern`
+alimenta os dois importadores.
 
 | Opção | Padrão | Descrição |
 |---|---|---|
@@ -71,11 +80,34 @@ mais (renomeada ou removida) faz a importação falhar com um erro e mantém as 
 escolha pode ser uma camada que casa com `layers/exclude_pattern`, então uma camada `_shadow` fica
 fora de `[all]` e ainda pode ser importada sozinha.
 
+## Importando como textura
+
+Coloque **Import As** em *Aseprite Texture* para receber um `Texture2D` simples em vez de animações.
+A tela inteira é exportada com todos os frames da timeline lado a lado, então um sprite de um frame
+gera exatamente a sua imagem, e um de vários gera o layout que `Sprite2D.hframes` e os tiles
+animados de um TileSet esperam. Arraste o arquivo em qualquer propriedade `Texture2D`.
+
+Tags, durações de frame e a grade de direções são **ignoradas** aqui: elas descrevem animações, e
+este importador gera uma imagem. As opções dele são só as de camada:
+
+| Opção | Padrão | Descrição |
+|---|---|---|
+| `layers/layer` | `[all]` | A mesma lista de cima: `[all]`, ou uma única camada ou grupo de nível superior. |
+| `layers/exclude_pattern` | `^_` | Expressão regular; as camadas que casam ficam fora de `[all]`. |
+| `layers/only_visible` | `false` | Usa só as camadas visíveis no Aseprite. |
+
+Um arquivo **usa um importador de cada vez**: um `.aseprite` gera um recurso, de um tipo só. Trocar
+o *Import As* substitui, não acrescenta, então uma cena que referenciava o arquivo como SpriteFrames
+precisa ser reapontada depois. Se você precisa da mesma arte nos dois formatos, mantenha dois
+arquivos `.aseprite`.
+
 ## Convivência com outros importadores de Aseprite
 
 Outros addons também registram importadores para `.aseprite`, e o Godot entrega um arquivo novo
-para o que declara a maior prioridade. Este addon declara **1.0**, o padrão do Godot, e não disputa
-arquivos: com outro importador de Aseprite instalado, a escolha é sua, arquivo por arquivo.
+para o que declara a maior prioridade. Este addon declara **1.0** no importador de SpriteFrames, o
+padrão do Godot, e **0.9** no *Aseprite Texture*, então o de textura nunca é escolhido sozinho. Ele
+também não disputa com outros addons: com outro importador de Aseprite instalado, a escolha é sua,
+arquivo por arquivo.
 
 O Aseprite Wizard declara **2.0** para o importador que estiver configurado como padrão dele, e de
 fábrica esse padrão é o **Aseprite (No Import)**. Num projeto com os dois addons, um `.aseprite`

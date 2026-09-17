@@ -39,7 +39,9 @@ Os passos supõem que o addon está [instalado e ativado](../../README.pt-BR.md#
    célula e clique em **Reimport**. Se o dock Import mostrar outro importador, escolha
    **Import As: Aseprite Top-Down Grid Animations**. Um sprite que não olha para lugar nenhum, como
    um efeito ou o brilho de um item, é importado com `grid/directions` em **none**: o frame inteiro
-   vira uma célula.
+   vira uma célula. Um sprite que não é animado de jeito nenhum, como uma sombra, um prop ou uma
+   página de tileset, fica melhor com *Import As: Aseprite Texture*, descrito em
+   [Importando como textura](importing.md#importando-como-textura).
 
 3. Problemas (Aseprite não encontrado, uma tag que gera um nome já usado e assim por diante)
    aparecem no painel **Output**, começando com `[Aseprite Top-Down Grid Animations]`.

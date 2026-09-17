@@ -18,8 +18,16 @@ or `~/.steam/steam/steamapps/common/Aseprite/aseprite`.
 
 ## How the automatic import works
 
-The addon is a regular `EditorImportPlugin`. Godot reimports a source file when its content changes,
-which it notices **when the Godot editor window regains focus** (or on a manual *Reimport*).
+The addon registers two `EditorImportPlugin`s, and every `.aseprite` uses one of them:
+
+| Importer | Produces | Used for |
+|---|---|---|
+| **Aseprite Top-Down Grid Animations** | `SpriteFrames` | animations, on an AnimatedSprite2D |
+| **Aseprite Texture** | a lossless `Texture2D` | Sprite2D, TextureRect, a shader uniform, the source image of a TileSet |
+
+A file nobody chose for lands on the first one; pick the other per file with **Import As** in the
+Import dock. Godot reimports a source file when its content changes, which it notices **when the
+Godot editor window regains focus** (or on a manual *Reimport*).
 
 - Each import starts Aseprite twice, however many directions and tags the file has: once to read its
   size, layers, tags and frame durations, and once to export every animation. Starting Aseprite is
@@ -29,14 +37,17 @@ which it notices **when the Godot editor window regains focus** (or on a manual 
   to the project, and exporting a scene that uses the file exports its textures with it.
 
 *Project > Tools > Aseprite Top-Down Grid Animations: Reimport all* forces a reimport of every file
-that uses this importer, e.g. after changing the executable path or a project default, or after
+that uses either importer, e.g. after changing the executable path or a project default, or after
 updating the addon.
 
 ## Import options
 
-All options can be changed per file in the Import dock. The defaults of `layers/exclude_pattern`,
-`tags/exclude_pattern`, `sprite_frames/animation_name` and `sprite_frames/loop_suffix` come from
-*Project Settings > Aseprite Top-Down Grid Animations > Defaults*.
+The options below belong to the **Aseprite Top-Down Grid Animations** importer; the texture importer
+has its own, [further down](#importing-as-a-texture). All of them can be changed per file in the
+Import dock. The defaults of `layers/exclude_pattern`, `tags/exclude_pattern`,
+`sprite_frames/animation_name` and `sprite_frames/loop_suffix` come from
+*Project Settings > Aseprite Top-Down Grid Animations > Defaults*; `layers/exclude_pattern` feeds
+both importers.
 
 | Option | Default | Description |
 |---|---|---|
@@ -66,11 +77,34 @@ Aseprite process. A chosen layer that no longer exists (renamed or removed) fail
 an error and keeps the previous animations. The choice may be a layer matched by
 `layers/exclude_pattern`, so a `_shadow` layer stays out of `[all]` and can still be imported alone.
 
+## Importing as a texture
+
+Set **Import As** to *Aseprite Texture* to get a plain `Texture2D` instead of animations. The whole
+canvas is exported with every frame of the timeline side by side, so a single-frame sprite gives
+exactly its image, and a multi-frame one gives the layout `Sprite2D.hframes` and animated TileSet
+tiles expect. Drag the file onto any `Texture2D` property.
+
+Tags, frame durations and the grid of directions are **ignored** here: they describe animations, and
+this importer produces an image. Its options are the layer ones alone:
+
+| Option | Default | Description |
+|---|---|---|
+| `layers/layer` | `[all]` | Same dropdown as above: `[all]`, or a single top-level layer or group. |
+| `layers/exclude_pattern` | `^_` | Regular expression; matching layers are left out of `[all]`. |
+| `layers/only_visible` | `false` | Use only layers visible in Aseprite. |
+
+A file **keeps one importer at a time**: one `.aseprite` produces one resource, of one type.
+Switching *Import As* replaces it rather than adding to it, so a scene that referenced the file as
+SpriteFrames has to be pointed at something else afterwards. If you need the same art as both, keep
+two `.aseprite` files.
+
 ## Coexistence with other Aseprite importers
 
 Other addons also register importers for `.aseprite`, and Godot hands a new file to the one that
-declares the highest priority. This addon declares **1.0**, Godot's default, and does not compete
-for files: with another Aseprite importer installed, the choice is yours to make per file.
+declares the highest priority. This addon declares **1.0** for its SpriteFrames importer, Godot's
+default, and **0.9** for *Aseprite Texture*, so the texture one is never picked on its own. It does
+not compete with other addons either: with another Aseprite importer installed, the choice is yours
+to make per file.
 
 Aseprite Wizard declares **2.0** for whichever of its importers is set as its default, and out of
 the box that default is **Aseprite (No Import)**. In a project with both addons, a newly added

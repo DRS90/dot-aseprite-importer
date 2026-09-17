@@ -27,6 +27,11 @@ All notable changes to this project are documented here. The format follows
 - `layers/layer` dropdown, filled with the file's top-level layers and groups, to import one of them
   instead of `[all]`.
 - Layer and tag exclusion patterns and `only_visible`.
+- A second importer, *Aseprite Texture*, picked per file with **Import As**: it exports the whole
+  canvas with every frame side by side and saves a lossless `Texture2D`, so an `.aseprite` can be
+  used in a Sprite2D, a TextureRect, a shader uniform or as the source image of a TileSet. Tags and
+  the grid are ignored by it, and it stays at a lower priority so a new file still lands on the
+  animations importer.
 - Textures embedded in the imported resource: nothing is written to the project, and exported scenes
   carry their textures.
 - AnimationPlayer section in the AnimatedSprite2D inspector: the sprite's animations are written to

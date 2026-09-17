@@ -1,6 +1,10 @@
 # Aseprite Top-Down Grid Animations — notes for Claude
 
-Godot 4 `EditorImportPlugin` for `.aseprite`/`.ase`. Every frame of the source is a 3x3 grid of
+Godot 4 addon with two `EditorImportPlugin`s for `.aseprite`/`.ase`. The main one (priority 1.0)
+imports animations; `texture_importer.gd` (0.9, picked with *Import As*) imports any file as a
+lossless `Texture2D` of the whole canvas with every frame side by side, reusing the planner with an
+empty tag list. Both share `aseprite_source.gd` (verified executable + listing cache).
+For the animations importer: every frame of the source is a 3x3 grid of
 facing directions (`left_up`, `up`, `right_up`, `left`, `right`, `left_down`, `down`, `right_down`;
 center ignored), or a single nameless cell with `grid/directions` set to `none`, for sprites that
 have no direction. The file imports as a **SpriteFrames** with one animation per direction × tag

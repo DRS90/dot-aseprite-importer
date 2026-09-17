@@ -16,6 +16,16 @@
 - Nothing happens when a `.aseprite` file is added to the project: another importer may declare a
   higher priority and be taking the file. Check **Import As** in the Import dock, described in
   [Importing](importing.md#coexistence-with-other-aseprite-importers).
+- *Aseprite Texture* produces the image only. It is not a `TileSet` resource with the tiles already
+  configured, and it has no mipmap, filter or compression options: texture filtering is a property
+  of the node or of the project, not of the resource.
+- A strip wider than 16384 pixels is refused, because the graphics drivers would not render it. That
+  is the canvas width times the frame count, e.g. 113 frames of a 144 px sprite.
+- A `.aseprite` uses one importer at a time and produces one resource. Switching *Import As* on a
+  file already used in a scene leaves that reference pointing at the wrong type.
+- *Make Unique* and *Save As* on an imported texture only keep its pixels because the addon asks the
+  texture to hold on to its compressed bytes; the textures inside an imported SpriteFrames do not,
+  so copying one of those out by hand gives an empty image.
 - Aseprite is required to import. The imported resources live in `.godot/`, which is usually not
   committed, so everyone who opens the project needs Aseprite.
 - Syncing an AnimationPlayer cannot be undone with *Undo*.

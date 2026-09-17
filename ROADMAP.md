@@ -21,6 +21,8 @@
       generated animations out of the scene; turn it off to keep them inside
 - [x] `grid/directions` = `3x3` | `none`: sprites with no direction (run dust, hit sparks) import
       with the frame as a single cell, so a top-down project needs no second Aseprite importer
+- [x] Second importer *Aseprite Texture* (*Import As*, priority 0.9): any `.aseprite` as a lossless
+      `Texture2D` of the whole canvas, for Sprite2D, TextureRect, shaders and TileSet source images
 
 ## Before publishing
 
@@ -48,6 +50,10 @@
 - [ ] Manual test in the editor of `grid/directions` = `none`: `no_directions.aseprite` from
       `tests/tools/build_cases.lua` gives one looping `run` animation, switching it back to `3x3`
       fails with a readable message, and the grid files still import unchanged
+- [ ] Manual test in the editor of *Aseprite Texture*: disable and re-enable the plugin first, then
+      *Import As* on `examples/shadow.aseprite`, drop it on a Sprite2D, a ShaderMaterial and a
+      TileSet source, save in Aseprite and see it update, and check that a new `.aseprite` still
+      lands on the animations importer and that *Reimport all* covers both
 - [ ] Make the repository public and tag `v0.1.0`
 - [ ] Submit to the Godot Asset Library (category Addon, Godot 4.7, MIT, commit hash of the tag)
 

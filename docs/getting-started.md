@@ -38,7 +38,9 @@ steps assume the addon is [installed and enabled](../README.md#installation) and
    size and click **Reimport**. If the Import dock shows another importer, pick
    **Import As: Aseprite Top-Down Grid Animations**. A sprite that faces nowhere, like an effect or
    a pickup shine, is imported with `grid/directions` set to **none** instead: the whole frame
-   becomes one cell.
+   becomes one cell. A sprite that is not animated at all, like a shadow, a prop or a tileset page,
+   is better off with *Import As: Aseprite Texture*, described in
+   [Importing as a texture](importing.md#importing-as-a-texture).
 
 3. Problems (Aseprite not found, a tag giving a name that is already taken, and so on) are reported
    in the **Output** panel, starting with `[Aseprite Top-Down Grid Animations]`.

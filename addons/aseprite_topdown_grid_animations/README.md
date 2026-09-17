@@ -5,7 +5,8 @@
 A Godot 4.7 editor addon that imports `.aseprite` / `.ase` sprites drawn as a **3x3 grid of facing
 directions** as a **SpriteFrames** resource: one animation per direction and tag, timed like in
 Aseprite. Assign the file to an AnimatedSprite2D, and optionally link an AnimationPlayer that gets
-the same animations.
+the same animations. Any `.aseprite` can also be imported as a plain **Texture2D**, for the sprites
+that are not animated at all.
 
 ```
 character.aseprite (144x192)              SpriteFrames (48x64 frames)

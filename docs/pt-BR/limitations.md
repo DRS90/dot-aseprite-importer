@@ -16,6 +16,17 @@
 - Nada acontece ao adicionar um `.aseprite` ao projeto: outro importador pode estar declarando uma
   prioridade maior e ficando com o arquivo. Confira o **Import As** no dock Import, descrito em
   [Importação](importing.md#convivência-com-outros-importadores-de-aseprite).
+- O *Aseprite Texture* gera só a imagem. Ele não é um recurso `TileSet` com os tiles já
+  configurados, e não tem opções de mipmap, filtro ou compressão: o filtro de textura é propriedade
+  do nó ou do projeto, não do recurso.
+- Uma tira com mais de 16384 pixels de largura é recusada, porque os drivers gráficos não a
+  renderizariam. É a largura da tela vezes a contagem de frames, por exemplo 113 frames de um sprite
+  de 144 px.
+- Um `.aseprite` usa um importador de cada vez e gera um recurso. Trocar o *Import As* de um arquivo
+  já usado numa cena deixa aquela referência apontando para o tipo errado.
+- *Make Unique* e *Save As* numa textura importada só preservam os pixels porque o addon pede que a
+  textura segure os bytes comprimidos; as texturas dentro de um SpriteFrames importado não fazem
+  isso, então copiar uma delas à mão gera uma imagem vazia.
 - O Aseprite é necessário para importar. Os recursos importados ficam em `.godot/`, que normalmente
   não vai para o controle de versão, então todo mundo que abre o projeto precisa do Aseprite.
 - Sincronizar um AnimationPlayer não pode ser desfeito com *Undo*.
