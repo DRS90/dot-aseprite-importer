@@ -1,7 +1,8 @@
 @tool
 extends EditorImportPlugin
-## Imports .aseprite/.ase files drawn as a 3x3 grid of directions as a SpriteFrames resource, with
-## one animation per direction and tag, timed like in Aseprite.
+## Imports .aseprite/.ase files as a SpriteFrames resource, with one animation per tag, timed like
+## in Aseprite. Frames drawn as a 3x3 grid of directions give one animation per direction and tag;
+## with grid/directions set to none the frame is one cell and the sprite has no direction.
 ##
 ## Aseprite exports one strip per animation to a cache folder, and the strips become textures
 ## embedded in the imported resource: nothing is written to the project, and exporting a scene that
@@ -21,6 +22,7 @@ const SAVE_EXTENSION := "res"
 const FORMAT_VERSION := 1
 const CACHE_FOLDER := "aseprite_topdown_grid_animations"
 
+const OPTION_DIRECTIONS := "grid/directions"
 const OPTION_CELL_SIZE := "grid/cell_size"
 const OPTION_LAYER := "layers/layer"
 const OPTION_LAYER_EXCLUDE := "layers/exclude_pattern"
@@ -91,6 +93,12 @@ func _get_option_visibility(_path: String, _option_name: StringName, _options: D
 
 func _get_import_options(path: String, _preset_index: int) -> Array[Dictionary]:
 	return [
+		{
+			"name": OPTION_DIRECTIONS,
+			"default_value": ExportPlanner.MODE_3X3,
+			"property_hint": PROPERTY_HINT_ENUM,
+			"hint_string": "%s,%s" % [ExportPlanner.MODE_3X3, ExportPlanner.MODE_NONE],
+		},
 		{"name": OPTION_CELL_SIZE, "default_value": Vector2i.ZERO},
 		{
 			"name": OPTION_LAYER,
@@ -160,7 +168,12 @@ func _import(
 		absolute_source.md5_text()
 	)
 	var export_error := cli.export_strips(
-		absolute_source, jobs, _planner.composed_layers, _planner.cell_size, strips_dir
+		absolute_source,
+		jobs,
+		_planner.composed_layers,
+		_planner.cell_size,
+		_planner.cells_per_axis,
+		strips_dir
 	)
 	if export_error != OK:
 		push_error(LOG_PREFIX + "%s: %s" % [source_file, cli.last_error])
@@ -211,6 +224,7 @@ func _list_contents(cli: AsepriteCli, source_file: String) -> Dictionary:
 
 func _planner_options(options: Dictionary) -> Dictionary:
 	return {
+		"directions": str(options.get(OPTION_DIRECTIONS, ExportPlanner.MODE_3X3)),
 		"cell_size": options.get(OPTION_CELL_SIZE, Vector2i.ZERO),
 		"layer": str(options.get(OPTION_LAYER, ExportPlanner.ALL_LAYERS)),
 		"layer_exclude_pattern": str(options.get(OPTION_LAYER_EXCLUDE, "")),

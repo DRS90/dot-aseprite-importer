@@ -5,8 +5,9 @@ extends RefCounted
 ## Has no editor dependency, so headless tests can use it. Every path passed in must be absolute
 ## (the caller globalizes res:// paths). Starting Aseprite costs about 200 ms while exporting a
 ## strip costs a few, so listing and exporting each run as a single process of aseprite_batch.lua,
-## whatever the number of strips. The script rejects unknown layer, tag or direction names and cells
-## that do not fit the sprite. Failures are described in [member last_error].
+## whatever the number of strips. The script rejects unknown layer or tag names, directions that do
+## not belong to the grid, and cells that do not fit the sprite. Failures are described in
+## [member last_error].
 
 const BATCH_SCRIPT := "aseprite_batch.lua"
 const JOBS_FILE := "jobs.txt"
@@ -86,20 +87,23 @@ func list_contents(aseprite_file: String) -> Dictionary:
 
 ## Exports every job built by ExportPlanner.build_jobs() in one Aseprite process. [param layers] are
 ## composed, and the job's direction cell ([param cell_size]) is cropped from every frame of its tag
-## into [param output_dir]/relative_path as a horizontal strip. The strips written end up in
-## [member last_written]; the job list is written to [param output_dir] as well.
+## into [param output_dir]/relative_path as a horizontal strip. [param cells_per_axis] is 3 for the
+## 3x3 grid of directions and 1 for a frame without directions; the script checks it against each
+## job's direction. The strips written end up in [member last_written]; the job list is written to
+## [param output_dir] as well.
 func export_strips(
 	aseprite_file: String,
 	jobs: Array[Dictionary],
 	layers: PackedStringArray,
 	cell_size: Vector2i,
+	cells_per_axis: int,
 	output_dir: String
 ) -> Error:
 	last_error = ""
 	last_written = PackedStringArray()
 	if jobs.is_empty():
 		return OK
-	var lines := _job_lines(jobs, layers, output_dir)
+	var lines := _job_lines(jobs, layers, cells_per_axis, output_dir)
 	if lines.is_empty():
 		return ERR_INVALID_PARAMETER
 	var jobs_path := output_dir.path_join(JOBS_FILE)
@@ -113,6 +117,7 @@ func export_strips(
 			"jobs=" + jobs_path,
 			"cell_width=%d" % cell_size.x,
 			"cell_height=%d" % cell_size.y,
+			"cells_per_axis=%d" % cells_per_axis,
 		]
 	)
 	var output := _run_batch(params)
@@ -156,8 +161,11 @@ static func _add_tag(
 ## Lines of the jobs file: the composed layers, then one strip per job. Empty, with
 ## [member last_error] set, when something cannot be passed to the script.
 func _job_lines(
-	jobs: Array[Dictionary], layers: PackedStringArray, output_dir: String
+	jobs: Array[Dictionary], layers: PackedStringArray, cells_per_axis: int, output_dir: String
 ) -> PackedStringArray:
+	if cells_per_axis != 1 and cells_per_axis != 3:
+		last_error = "Invalid grid of %d cells per axis; use 1 or 3." % cells_per_axis
+		return PackedStringArray()
 	if layers.is_empty():
 		last_error = "Refusing to export without layers."
 		return PackedStringArray()
