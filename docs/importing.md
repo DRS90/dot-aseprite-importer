@@ -68,6 +68,20 @@ an error and keeps the previous animations. The choice may be a layer matched by
 
 ## Coexistence with other Aseprite importers
 
-Other addons (e.g. Aseprite Wizard) also register importers for `.aseprite`. Godot uses the importer
-with the highest priority for new files; choose the importer per file with **Import As** in the
-Import dock. Switching importers keeps the source file untouched.
+Other addons also register importers for `.aseprite`, and Godot hands a new file to the one that
+declares the highest priority. This addon declares **1.0**, Godot's default, and does not compete
+for files: with another Aseprite importer installed, the choice is yours to make per file.
+
+Aseprite Wizard declares **2.0** for whichever of its importers is set as its default, and out of
+the box that default is **Aseprite (No Import)**. In a project with both addons, a newly added
+`.aseprite` is therefore imported by *Aseprite (No Import)* and produces nothing — with no error and
+no warning, which looks like a broken addon and is not.
+
+To import such a file with this addon:
+
+1. Select it in the FileSystem dock; several files at once works too.
+2. In the **Import** dock, set **Import As** to *Aseprite Top-Down Grid Animations*.
+3. Click **Reimport**.
+
+The choice is stored per file in its `.import` file, so it survives reimports, *Reimport all* and
+the next person to open the project. Switching importers never touches the source file.

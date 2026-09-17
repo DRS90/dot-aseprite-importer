@@ -13,6 +13,9 @@
   (`down`), ou uma única animação chamada `default` quando também não tem direções. Ela não fica em
   loop.
 - Nomes de camada com `,` ou `:` não aparecem na lista de `layers/layer`.
+- Nada acontece ao adicionar um `.aseprite` ao projeto: outro importador pode estar declarando uma
+  prioridade maior e ficando com o arquivo. Confira o **Import As** no dock Import, descrito em
+  [Importação](importing.md#convivência-com-outros-importadores-de-aseprite).
 - O Aseprite é necessário para importar. Os recursos importados ficam em `.godot/`, que normalmente
   não vai para o controle de versão, então todo mundo que abre o projeto precisa do Aseprite.
 - Sincronizar um AnimationPlayer não pode ser desfeito com *Undo*.

@@ -13,6 +13,9 @@
   direction (`down`), or a single animation named `default` when it has no directions either. It
   does not loop.
 - Layer names containing `,` or `:` are not offered in the `layers/layer` dropdown.
+- Nothing happens when a `.aseprite` file is added to the project: another importer may declare a
+  higher priority and be taking the file. Check **Import As** in the Import dock, described in
+  [Importing](importing.md#coexistence-with-other-aseprite-importers).
 - Aseprite is required to import. The imported resources live in `.godot/`, which is usually not
   committed, so everyone who opens the project needs Aseprite.
 - Syncing an AnimationPlayer cannot be undone with *Undo*.

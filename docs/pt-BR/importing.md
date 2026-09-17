@@ -73,6 +73,21 @@ fora de `[all]` e ainda pode ser importada sozinha.
 
 ## Convivência com outros importadores de Aseprite
 
-Outros addons (por exemplo, o Aseprite Wizard) também registram importadores para `.aseprite`. O
-Godot usa o importador de maior prioridade para arquivos novos; escolha o importador de cada arquivo
-com **Import As** no dock Import. Trocar de importador não altera o arquivo de origem.
+Outros addons também registram importadores para `.aseprite`, e o Godot entrega um arquivo novo
+para o que declara a maior prioridade. Este addon declara **1.0**, o padrão do Godot, e não disputa
+arquivos: com outro importador de Aseprite instalado, a escolha é sua, arquivo por arquivo.
+
+O Aseprite Wizard declara **2.0** para o importador que estiver configurado como padrão dele, e de
+fábrica esse padrão é o **Aseprite (No Import)**. Num projeto com os dois addons, um `.aseprite`
+recém-adicionado é portanto importado pelo *Aseprite (No Import)* e não gera nada — sem erro e sem
+aviso, o que parece um addon quebrado e não é.
+
+Para importar um arquivo desses com este addon:
+
+1. Selecione o arquivo no dock FileSystem; dá para selecionar vários de uma vez.
+2. No dock **Import**, coloque **Import As** em *Aseprite Top-Down Grid Animations*.
+3. Clique em **Reimport**.
+
+A escolha fica gravada no `.import` de cada arquivo, então ela sobrevive a reimportações, ao
+*Reimport all* e à próxima pessoa que abrir o projeto. Trocar de importador nunca altera o arquivo
+de origem.
