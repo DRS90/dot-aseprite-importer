@@ -74,9 +74,10 @@ func _initialize() -> void:
 	quit(0 if _failures == 0 else 1)
 
 
-## Every file the demo scene points at has to exist. Reads the text instead of loading the scene,
-## so it holds on a fresh clone, before anything has been imported, which is exactly when a file
-## that was left untracked shows up.
+## Every file the demo scene points at has to exist and to be in git. On disk is not enough: a file
+## added to examples/ but never committed works here and breaks for everyone else, which has now
+## happened twice. An .aseprite also needs its .import committed, or a fresh clone reimports it with
+## the default options instead of the ones the demo was built with.
 func _test_example_scene_files() -> void:
 	var scene := "res://examples/main.tscn"
 	var text := FileAccess.get_file_as_string(scene)
@@ -84,18 +85,51 @@ func _test_example_scene_files() -> void:
 		return
 	var pattern := RegEx.new()
 	pattern.compile('path="(res://[^"]+)"')
-	var missing := PackedStringArray()
-	var found := 0
+	var referenced := PackedStringArray()
 	for match: RegExMatch in pattern.search_all(text):
-		var path := match.get_string(1)
-		found += 1
+		referenced.append(match.get_string(1))
+
+	var missing := PackedStringArray()
+	for path: String in referenced:
 		if not FileAccess.file_exists(path):
 			missing.append(path)
 	_check(
-		found > 0 and missing.is_empty(),
+		not referenced.is_empty() and missing.is_empty(),
 		"every resource the demo scene references is on disk",
-		"%d referenced, missing: %s" % [found, missing]
+		"%d referenced, missing: %s" % [referenced.size(), missing]
 	)
+
+	var tracked := _tracked_files()
+	if tracked.is_empty():
+		print("SKIP: git has no file list here, so tracking is not checked")
+		return
+	var untracked := PackedStringArray()
+	for path: String in referenced:
+		var relative := path.trim_prefix("res://")
+		if not tracked.has(relative):
+			untracked.append(relative)
+		# The import options are part of the example: without them the file imports as anything.
+		var extension := path.get_extension().to_lower()
+		if extension in ["aseprite", "ase"] and not tracked.has(relative + ".import"):
+			untracked.append(relative + ".import")
+	_check(
+		untracked.is_empty(),
+		"every resource the demo scene references is committed",
+		"not in git: %s" % untracked
+	)
+
+
+## Paths git knows about, relative to the project, or empty when git cannot answer.
+func _tracked_files() -> Dictionary:
+	var root := ProjectSettings.globalize_path("res://")
+	var output: Array = []
+	if OS.execute("git", PackedStringArray(["-C", root, "ls-files"]), output) != 0:
+		return {}
+	var tracked := {}
+	var listing := str(output[0]) if not output.is_empty() else ""
+	for line: String in listing.replace("\r\n", "\n").split("\n", false):
+		tracked[line.strip_edges()] = true
+	return tracked
 
 
 func _missing_example_files() -> PackedStringArray:
