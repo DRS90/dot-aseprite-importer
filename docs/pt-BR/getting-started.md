@@ -132,5 +132,6 @@ desenhadas olhando para cima, para baixo, para a esquerda e para a direita (esca
 para baixo), com as células das diagonais vazias.
 
 A mesma cena também mostra o importador de textura: `examples/shadow.aseprite` é importado com
-*Import As: Aseprite Texture* e desenhado por um Sprite2D comum. A demo só existe no repositório,
-não no download da Asset Library.
+*Import As: Aseprite Texture* e desenhado por um Sprite2D comum, e o `examples/tileset.aseprite`,
+importado do mesmo jeito, é a textura de um TileSetAtlasSource cujos tiles são pintados num
+TileMapLayer. A demo só existe no repositório, não no download da Asset Library.

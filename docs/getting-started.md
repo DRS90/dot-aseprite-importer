@@ -125,6 +125,7 @@ The repository is itself a Godot project. Open its `project.godot` (with
 AnimationPlayer. The sprite has ten tags (`walk_loop`, `slash`, `swim_loop`, ...) drawn facing up,
 down, left and right (climbing only up and down), with the diagonal cells empty.
 
-The same scene also shows the texture importer: `examples/shadow.aseprite` is imported with
-*Import As: Aseprite Texture* and drawn by an ordinary Sprite2D. The demo is only in the
-repository, not in the Asset Library download.
+The same scene also shows the texture importer twice: `examples/shadow.aseprite` is imported with
+*Import As: Aseprite Texture* and drawn by an ordinary Sprite2D, and `examples/tileset.aseprite`,
+imported the same way, is the texture of a TileSetAtlasSource whose tiles are painted on a
+TileMapLayer. The demo is only in the repository, not in the Asset Library download.
