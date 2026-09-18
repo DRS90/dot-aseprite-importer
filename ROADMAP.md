@@ -47,13 +47,15 @@
       its sheets, both are tracked in git, and the tests compare the imported frames with the sheets
 - [x] Create the GitHub repository, private for now
       (<https://github.com/DRS90/godot-aseprite-topdown-grid-animations>), and push `main`
-- [ ] Manual test in the editor of `grid/directions` = `none`: `no_directions.aseprite` from
-      `tests/tools/build_cases.lua` gives one looping `run` animation, switching it back to `3x3`
-      fails with a readable message, and the grid files still import unchanged
-- [ ] Manual test in the editor of *Aseprite Texture*: disable and re-enable the plugin first, then
-      *Import As* on `examples/shadow.aseprite`, drop it on a Sprite2D, a ShaderMaterial and a
-      TileSet source, save in Aseprite and see it update, and check that a new `.aseprite` still
-      lands on the animations importer and that *Reimport all* covers both
+- [x] Manual test in the editor of `grid/directions` = `none`: a sprite with no directions and a
+      `_loop` tag imports as one looping animation with the suffix dropped from its name; a size
+      that is not a multiple of 3 fails with a message naming both ways out; a method track added
+      to a synced animation by hand survives the source being edited and reimported; and the grid
+      files still import unchanged
+- [x] Manual test in the editor of *Aseprite Texture*: `examples/shadow.aseprite` imported with
+      *Import As* drives a Sprite2D, a `sampler2D` uniform of a ShaderMaterial and the texture of a
+      TileSetAtlasSource painted on a TileMapLayer; editing it in Aseprite updates all of them; and
+      a newly added `.aseprite` still lands on the animations importer
 - [ ] Make the repository public and tag `v0.1.0`
 - [ ] Submit to the Godot Asset Library (category Addon, Godot 4.7, MIT, commit hash of the tag)
 
