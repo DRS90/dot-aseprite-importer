@@ -1,9 +1,11 @@
 -- Runs inside Aseprite: aseprite -b --script-param key=value ... --script aseprite_batch.lua
 --
--- Every frame is a 3x3 grid of cells named after the direction they face; the center is ignored:
+-- With cells_per_axis=3, every frame is a 3x3 grid of cells named after the direction they face
+-- and the center is ignored:
 --   left_up   | up   | right_up
 --   left      |      | right
 --   left_down | down | right_down
+-- With cells_per_axis=1 the frame is a single nameless cell, for sprites that have no direction.
 --
 -- Starting Aseprite costs about 200 ms while exporting one strip costs a few, so a whole import is
 -- served by one process per mode instead of one process per strip.
@@ -14,21 +16,24 @@
 --              "tag<TAB>name<TAB>from<TAB>to<TAB>direction" per tag (0-based frames; direction is
 --              forward, reverse, pingpong or pingpong_reverse), then
 --              "frame<TAB>index<TAB>duration_ms" per frame.
--- mode=export  params: file, jobs, cell_width, cell_height
+-- mode=export  params: file, jobs, cell_width, cell_height, cells_per_axis (3 or 1)
 --              jobs is a text file with "layer<TAB>name" lines (the layers composed into every
 --              strip) and "strip<TAB>output_png<TAB>tag<TAB>direction" lines. Each strip is the
 --              direction cell of every frame of the tag, left to right in timeline order; an empty
---              tag exports the whole timeline. Prints "written<TAB>output_png" per strip, or
+--              tag exports the whole timeline and an empty direction is the only cell of
+--              cells_per_axis=1. Prints "written<TAB>output_png" per strip, or
 --              "empty<TAB>output_png" when the cell has no pixels in any frame of the tag (nothing
 --              is saved then).
 --
--- Unknown layers, tags or directions and cells that do not fit the sprite raise an error instead of
--- silently exporting the wrong image.
+-- Unknown layers or tags, a direction that does not belong to the grid, and cells that do not fit
+-- the sprite raise an error instead of silently exporting the wrong image. Cropping outside the
+-- sprite raises nothing by itself, which is why the grid is checked here as well as in GDScript.
 -- Success ends with "done<TAB>count"; the caller treats a missing "done" line as a failure.
 
 local params = app.params
 
 local DIRECTIONS = {
+  [""] = { 0, 0 },
   left_up = { 0, 0 },
   up = { 1, 0 },
   right_up = { 2, 0 },
@@ -116,13 +121,22 @@ local function show_only(wanted)
   end
 end
 
-local function cell_size()
+local function cells_per_axis()
+  local cells = tonumber(params.cells_per_axis)
+  if cells ~= 1 and cells ~= 3 then
+    error("cells_per_axis must be 1 or 3, got '" .. tostring(params.cells_per_axis) .. "'")
+  end
+  return cells
+end
+
+local function cell_size(cells)
   local width = tonumber(params.cell_width)
   local height = tonumber(params.cell_height)
   if width == nil or height == nil or width < 1 or height < 1 or width % 1 ~= 0
-      or height % 1 ~= 0 or width * 3 > sprite.width or height * 3 > sprite.height then
+      or height % 1 ~= 0 or width * cells > sprite.width or height * cells > sprite.height then
     error("cell " .. tostring(params.cell_width) .. "x" .. tostring(params.cell_height)
-      .. " does not fit 3x3 times in the " .. sprite.width .. "x" .. sprite.height .. " sprite")
+      .. " does not fit " .. cells .. "x" .. cells .. " times in the "
+      .. sprite.width .. "x" .. sprite.height .. " sprite")
   end
   return width, height
 end
@@ -147,10 +161,16 @@ local function read_jobs()
 end
 
 -- Strips of the same tag share its rendered frames: group them, keeping the job order.
-local function group_by_tag(strips)
+local function group_by_tag(strips, cells)
   local order = {}
   local groups = {}
   for _, strip in ipairs(strips) do
+    -- The nameless cell belongs to a grid of one and only to it; naming a direction in a grid of
+    -- one, or leaving it out of a 3x3 grid, would crop a cell nobody asked for.
+    if (cells == 1) ~= (strip.direction == "") then
+      error("direction '" .. strip.direction .. "' does not belong to a grid of " .. cells .. "x"
+        .. cells .. " cells, for '" .. strip.output .. "'")
+    end
     if DIRECTIONS[strip.direction] == nil then
       error("unknown direction '" .. strip.direction .. "' for '" .. strip.output .. "'")
     end
@@ -215,10 +235,11 @@ local function export_tag(tag_name, strips, cell_width, cell_height)
 end
 
 local function export()
-  local cell_width, cell_height = cell_size()
+  local cells = cells_per_axis()
+  local cell_width, cell_height = cell_size(cells)
   local wanted, strips = read_jobs()
   show_only(wanted)
-  local order, groups = group_by_tag(strips)
+  local order, groups = group_by_tag(strips, cells)
   for _, tag_name in ipairs(order) do
     export_tag(tag_name, groups[tag_name], cell_width, cell_height)
   end

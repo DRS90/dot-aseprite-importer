@@ -9,6 +9,9 @@
 --   padded.aseprite            3x3 cells plus a 6 px column and an 8 px row: the default cell size
 --                              fails, grid/cell_size = cell size works and ignores the leftover
 --   untagged.aseprite          no tags: one strip per direction with the whole timeline
+--   no_directions.aseprite     16x16 with no grid at all, one "run_loop" tag: the directionless
+--                              companion of a top-down character, imported with
+--                              grid/directions = none
 --
 -- aseprite -b --script-param src=<grid.aseprite> --script-param out=<folder>
 --          --script tests/tools/build_cases.lua
@@ -164,8 +167,38 @@ local function build_untagged()
   save(sprite, "untagged.aseprite")
 end
 
+-- A run dust puff: no grid, no direction, the case grid/directions = none exists for. Built from
+-- scratch rather than from the source, which is a 3x3 grid by definition.
+local function build_no_directions()
+  local source = open_source()
+  local spec = source.spec
+  spec.width = 16
+  spec.height = 16
+  local sprite = Sprite(spec)
+  sprite:setPalette(source.palettes[1])
+  for frame = 2, 4 do
+    sprite:newEmptyFrame(frame)
+  end
+  local layer = sprite.layers[1]
+  layer.name = "dust"
+  local color = Color { r = 235, g = 225, b = 200, a = 255 }
+  for frame = 1, 4 do
+    local image = Image(sprite.spec)
+    -- The puff grows and drifts up as the frames go by, so a wrong frame order is visible.
+    local size = 2 + frame
+    image:clear(Rectangle(8 - size // 2, 13 - frame - size // 2, size, size), color)
+    sprite:newCel(layer, frame, image, Point(0, 0))
+    sprite.frames[frame].duration = 0.08
+  end
+  local tag = sprite:newTag(1, 4)
+  tag.name = "run_loop"
+  source:close()
+  save(sprite, "no_directions.aseprite")
+end
+
 build_layers()
 build_eight_directions()
 build_padded()
 build_untagged()
+build_no_directions()
 print("done")

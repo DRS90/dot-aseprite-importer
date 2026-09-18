@@ -6,7 +6,8 @@ Drag the `.aseprite` file from the FileSystem dock onto the **Sprite Frames** pr
 AnimatedSprite2D, then play its animations as usual: `$AnimatedSprite2D.play("walk_down")`.
 
 - Animations are named `{tag}_{direction}` without the loop suffix: the tag `idle_loop` gives
-  `idle_down`, `idle_left_up`, and so on.
+  `idle_down`, `idle_left_up`, and so on. A file imported with `grid/directions` at `none` has no
+  direction to add, so `idle_loop` gives `idle`.
 - The animation speed is 1 / the shortest frame of the tag, and every frame keeps its duration
   relative to it, so a `speed_scale` of 1 plays at the Aseprite speed.
 - A looping animation never emits `animation_finished`. Code can tell loops apart with

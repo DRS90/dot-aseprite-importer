@@ -5,7 +5,8 @@
 Um addon de editor para Godot 4.7 que importa sprites `.aseprite` / `.ase` desenhados como uma
 **grade 3x3 de direções** e gera um recurso **SpriteFrames**: uma animação por direção e tag, com o
 tempo igual ao do Aseprite. Atribua o arquivo a um AnimatedSprite2D e, se quiser, vincule um
-AnimationPlayer que recebe as mesmas animações.
+AnimationPlayer que recebe as mesmas animações. Qualquer `.aseprite` também pode ser importado como
+um **Texture2D** simples, para os sprites que não são animados.
 
 ```
 character.aseprite (144x192)              SpriteFrames (frames de 48x64)
@@ -19,6 +20,10 @@ character.aseprite (144x192)              SpriteFrames (frames de 48x64)
 
 Uma célula sem pixels em nenhum frame de uma tag não gera animação: um personagem desenhado em seis
 direções (sem `left` e `right` puros) simplesmente deixa essas células vazias.
+
+Os sprites de um jogo top-down que não olham para lugar nenhum — a poeira de corrida, a faísca de
+impacto, o brilho de um item — são importados pelo mesmo addon com `grid/directions` em `none`: o
+frame vira uma célula única e as animações recebem só o nome da tag.
 
 Os nomes de menus, painéis, docks, botões e opções aparecem como no editor em inglês.
 

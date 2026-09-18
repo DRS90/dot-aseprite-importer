@@ -1,15 +1,36 @@
-[gd_scene format=3 uid="uid://dqj4sk583v8v2"]
+[gd_scene format=4 uid="uid://dqj4sk583v8v2"]
 
 [ext_resource type="SpriteFrames" uid="uid://lwuejbnc1ubr" path="res://examples/retro-top-down-character.aseprite" id="1_d2j2t"]
+[ext_resource type="Texture2D" uid="uid://th28mo82irwl" path="res://examples/shadow.aseprite" id="1_oe2cu"]
+[ext_resource type="Texture2D" uid="uid://b5vuatxmqb2oj" path="res://examples/tileset.aseprite" id="1_pw243"]
 [ext_resource type="AnimationLibrary" uid="uid://b3hhqqqwhrk7o" path="res://examples/main_animations.tres" id="2_aqi44"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_w7hkg"]
+texture = ExtResource("1_pw243")
+0:0/0 = 0
+1:0/0 = 0
+2:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_tkm6i"]
+sources/0 = SubResource("TileSetAtlasSource_w7hkg")
 
 [node name="Main" type="Node2D" unique_id=1570837702]
 
+[node name="Camera2D" type="Camera2D" parent="." unique_id=126493622]
+zoom = Vector2(3, 3)
+
+[node name="TileMapLayer" type="TileMapLayer" parent="." unique_id=188614769]
+tile_map_data = PackedByteArray("AAD+/wAAAAAAAAAAAAD//wAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAABAAAAAAABAAEAAAAAAAAAAAAAAAEAAAAAAAAAAAD//wEAAAABAAAAAAD+/wEAAAAAAAAAAAD+////AAABAAAAAAD/////AAAAAAAAAAAAAP//AAAAAAAAAAABAP//AAAAAAAAAAABAAIAAAACAAAAAAAAAAIAAAACAAAAAAD//wIAAAACAAAAAAD+/wIAAAACAAAAAAD9/wIAAAACAAAAAAD9/wEAAAACAAAAAAD9/wAAAAACAAAAAAD9////AAACAAAAAAD9//7/AAACAAAAAAD+//7/AAACAAAAAAD///7/AAACAAAAAAAAAP7/AAACAAAAAAABAP7/AAACAAAAAAACAP7/AAACAAAAAAACAP//AAACAAAAAAACAAAAAAACAAAAAAACAAEAAAACAAAAAAACAAIAAAACAAAAAAA=")
+tile_set = SubResource("TileSet_tkm6i")
+
+[node name="Shadow" type="Sprite2D" parent="." unique_id=1275635387]
+texture = ExtResource("1_oe2cu")
+
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1244402466]
 sprite_frames = ExtResource("1_d2j2t")
-animation = &"carry_down"
-metadata/aseprite_topdown_grid_animations_player = NodePath("../AnimationPlayer")
-metadata/aseprite_topdown_grid_animations_sync_key = "1d9879a1532ebfa00ebf342123cc0721"
+animation = &"walk_down"
+metadata/_aseprite_topdown_grid_animations_player = NodePath("../AnimationPlayer")
+metadata/_aseprite_topdown_grid_animations_sync_key = "1d9879a1532ebfa00ebf342123cc0721"
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=141086055]
 root_node = NodePath("../AnimatedSprite2D")

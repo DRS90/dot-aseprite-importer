@@ -37,7 +37,12 @@ Os passos supõem que o addon está [instalado e ativado](../../README.pt-BR.md#
 2. Selecione o arquivo no dock FileSystem e abra o dock **Import**. `grid/cell_size` em `(0, 0)` usa
    um terço do canvas (32x32 aqui). Se o seu canvas não for múltiplo de 3, digite o tamanho da
    célula e clique em **Reimport**. Se o dock Import mostrar outro importador, escolha
-   **Import As: Aseprite Top-Down Grid Animations**.
+   **Import As: Aseprite Top-Down Grid Animations**. Um sprite que não olha para lugar nenhum, como
+   um efeito ou o brilho de um item, é importado com `grid/directions` em **none**: o frame inteiro
+   vira uma célula. Um sprite que não é animado de jeito nenhum, como uma sombra, um prop ou uma
+   página de tileset, fica melhor com *Import As: Aseprite Texture*, descrito em
+   [Importando como textura](importing.md#importando-como-textura).
+
 3. Problemas (Aseprite não encontrado, uma tag que gera um nome já usado e assim por diante)
    aparecem no painel **Output**, começando com `[Aseprite Top-Down Grid Animations]`.
 
@@ -124,5 +129,9 @@ O repositório é, ele mesmo, um projeto Godot. Abra o `project.godot` dele (com
 `examples/main.tscn` mostra `examples/retro-top-down-character.aseprite` andando para baixo,
 reproduzido pelo AnimationPlayer. O sprite tem dez tags (`walk_loop`, `slash`, `swim_loop`, ...)
 desenhadas olhando para cima, para baixo, para a esquerda e para a direita (escalar só para cima e
-para baixo), com as células das diagonais vazias. A demo só existe no repositório, não no download
-da Asset Library.
+para baixo), com as células das diagonais vazias.
+
+A mesma cena também mostra o importador de textura: `examples/shadow.aseprite` é importado com
+*Import As: Aseprite Texture* e desenhado por um Sprite2D comum, e o `examples/tileset.aseprite`,
+importado do mesmo jeito, é a textura de um TileSetAtlasSource cujos tiles são pintados num
+TileMapLayer. A demo só existe no repositório, não no download da Asset Library.

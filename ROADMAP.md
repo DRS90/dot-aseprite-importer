@@ -19,6 +19,10 @@
 - [x] The player's animation library is written to a resource file of its own (*External Library*
       and *Library Path* in Project Settings, `{scene_dir}/{scene}_animations.tres`), keeping the
       generated animations out of the scene; turn it off to keep them inside
+- [x] `grid/directions` = `3x3` | `none`: sprites with no direction (run dust, hit sparks) import
+      with the frame as a single cell, so a top-down project needs no second Aseprite importer
+- [x] Second importer *Aseprite Texture* (*Import As*, priority 0.9): any `.aseprite` as a lossless
+      `Texture2D` of the whole canvas, for Sprite2D, TextureRect, shaders and TileSet source images
 
 ## Before publishing
 
@@ -43,6 +47,15 @@
       its sheets, both are tracked in git, and the tests compare the imported frames with the sheets
 - [x] Create the GitHub repository, private for now
       (<https://github.com/DRS90/godot-aseprite-topdown-grid-animations>), and push `main`
+- [x] Manual test in the editor of `grid/directions` = `none`: a sprite with no directions and a
+      `_loop` tag imports as one looping animation with the suffix dropped from its name; a size
+      that is not a multiple of 3 fails with a message naming both ways out; a method track added
+      to a synced animation by hand survives the source being edited and reimported; and the grid
+      files still import unchanged
+- [x] Manual test in the editor of *Aseprite Texture*: `examples/shadow.aseprite` imported with
+      *Import As* drives a Sprite2D, a `sampler2D` uniform of a ShaderMaterial and the texture of a
+      TileSetAtlasSource painted on a TileMapLayer; editing it in Aseprite updates all of them; and
+      a newly added `.aseprite` still lands on the animations importer
 - [ ] Make the repository public and tag `v0.1.0`
 - [ ] Submit to the Godot Asset Library (category Addon, Godot 4.7, MIT, commit hash of the tag)
 
@@ -57,6 +70,9 @@
 ## Ideas (undecided)
 
 - Companion Aseprite Lua extension to export on save, without waiting for Godot to regain focus
-- Grids other than 3x3 (e.g. 4 or 16 directions), or directions from named slices
+- Grids other than 3x3 (e.g. 4 or 16 directions), or directions from named slices. `grid/directions`
+  = `none` does not commit to this: it exists because every top-down game has directionless
+  companion sprites, not as the first step of a configurable grid. The code shape (a divisor plus a
+  cell list per mode) would make 1x4 a small step, but nothing has been decided
 - Honor the tag repeat count (play N times, then stop)
 - Import without Aseprite for teammates, e.g. from a committed bake of the SpriteFrames

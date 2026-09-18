@@ -3,20 +3,21 @@ extends SceneTree
 ##   ASEPRITE_PATH=<aseprite> godot --headless --path . -s tests/test_runner.gd
 ## Prints one PASS/FAIL line per check and exits with 1 when any check fails.
 
-const AnimationLibraryStore := preload(
-	"res://addons/aseprite_topdown_grid_animations/animation_library_store.gd"
-)
-const AnimationSync := preload("res://addons/aseprite_topdown_grid_animations/animation_sync.gd")
+const AnimationSyncTests := preload("res://tests/animation_sync_tests.gd")
 const AsepriteCli := preload("res://addons/aseprite_topdown_grid_animations/aseprite_cli.gd")
+const AsepriteSource := preload("res://addons/aseprite_topdown_grid_animations/aseprite_source.gd")
 const ExportPlanner := preload("res://addons/aseprite_topdown_grid_animations/export_planner.gd")
 const SpriteFramesBuilder := preload(
 	"res://addons/aseprite_topdown_grid_animations/sprite_frames_builder.gd"
 )
+const TextureImporter := preload(
+	"res://addons/aseprite_topdown_grid_animations/texture_importer.gd"
+)
 
 const SOURCE := "res://examples/retro-top-down-character.aseprite"
-## Resources are written here: ResourceSaver needs a Godot path, not the native cache directory.
-const LIBRARY_DIR := "user://aseprite_topdown_grid_animations_tests"
-const LIBRARY_TEMPLATE := "{scene_dir}/{scene}_animations.tres"
+## A second sprite, only used to prove the listing cache notices a file changing under it.
+const SHADOW := "res://examples/shadow.aseprite"
+const SHADOW_SIZE := Vector2i(48, 48)
 const SHEETS_DIR := "res://examples/rpg-type-retro-top-down-playable-character-spritesheett"
 const SHEET := SHEETS_DIR + "/16x16-rpg-topdown-playable-character-template.png"
 const ATTACK_SHEET := SHEETS_DIR + "/48x48-attack.png"
@@ -65,17 +66,75 @@ func _initialize() -> void:
 	else:
 		print("SKIP: Aseprite checks, example files not found: %s" % ", ".join(missing))
 		print("SKIP: " + ASSET_HELP)
+	_test_example_scene_files()
 	_test_planner_edge_cases()
 	_test_builder()
-	_test_animation_sync()
-	_test_animation_library_store()
+	AnimationSyncTests.new(_check, get_root()).run()
 	print("%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(0 if _failures == 0 else 1)
 
 
+## Every file the demo scene points at has to exist and to be in git. On disk is not enough: a file
+## added to examples/ but never committed works here and breaks for everyone else, which has now
+## happened twice. An .aseprite also needs its .import committed, or a fresh clone reimports it with
+## the default options instead of the ones the demo was built with.
+func _test_example_scene_files() -> void:
+	var scene := "res://examples/main.tscn"
+	var text := FileAccess.get_file_as_string(scene)
+	if not _check(text != "", "the demo scene is readable", scene):
+		return
+	var pattern := RegEx.new()
+	pattern.compile('path="(res://[^"]+)"')
+	var referenced := PackedStringArray()
+	for match: RegExMatch in pattern.search_all(text):
+		referenced.append(match.get_string(1))
+
+	var missing := PackedStringArray()
+	for path: String in referenced:
+		if not FileAccess.file_exists(path):
+			missing.append(path)
+	_check(
+		not referenced.is_empty() and missing.is_empty(),
+		"every resource the demo scene references is on disk",
+		"%d referenced, missing: %s" % [referenced.size(), missing]
+	)
+
+	var tracked := _tracked_files()
+	if tracked.is_empty():
+		print("SKIP: git has no file list here, so tracking is not checked")
+		return
+	var untracked := PackedStringArray()
+	for path: String in referenced:
+		var relative := path.trim_prefix("res://")
+		if not tracked.has(relative):
+			untracked.append(relative)
+		# The import options are part of the example: without them the file imports as anything.
+		var extension := path.get_extension().to_lower()
+		if extension in ["aseprite", "ase"] and not tracked.has(relative + ".import"):
+			untracked.append(relative + ".import")
+	_check(
+		untracked.is_empty(),
+		"every resource the demo scene references is committed",
+		"not in git: %s" % untracked
+	)
+
+
+## Paths git knows about, relative to the project, or empty when git cannot answer.
+func _tracked_files() -> Dictionary:
+	var root := ProjectSettings.globalize_path("res://")
+	var output: Array = []
+	if OS.execute("git", PackedStringArray(["-C", root, "ls-files"]), output) != 0:
+		return {}
+	var tracked := {}
+	var listing := str(output[0]) if not output.is_empty() else ""
+	for line: String in listing.replace("\r\n", "\n").split("\n", false):
+		tracked[line.strip_edges()] = true
+	return tracked
+
+
 func _missing_example_files() -> PackedStringArray:
 	var missing := PackedStringArray()
-	for path: String in [SOURCE, SHEET, ATTACK_SHEET]:
+	for path: String in [SOURCE, SHADOW, SHEET, ATTACK_SHEET]:
 		if not FileAccess.file_exists(path):
 			missing.append(path)
 	return missing
@@ -89,8 +148,150 @@ func _test_with_example_asset() -> void:
 	var contents := _test_listing(cli)
 	var planner := ExportPlanner.new()
 	var jobs := _test_planner(planner, contents)
-	_test_sprite_frames(cli, planner, jobs, contents)
+	var frames := _test_sprite_frames(cli, planner, jobs, contents)
+	_test_directionless_export(cli, contents, frames)
 	_test_export_rejects_bad_input(cli)
+	_test_aseprite_source()
+	_test_texture(cli, contents, frames)
+
+
+## The texture importer's route: no grid, no tags, so one strip holds the whole canvas of every
+## frame. It has to agree pixel for pixel with the grid import of the same file, survive being
+## saved as a resource of its own, and refuse what it cannot represent.
+func _test_texture(cli: AsepriteCli, contents: Dictionary, grid_frames: SpriteFrames) -> void:
+	var planner := ExportPlanner.new()
+	var layers: PackedStringArray = contents.get("layers", PackedStringArray())
+	var options := {
+		"directions": ExportPlanner.MODE_NONE,
+		"cell_size": Vector2i.ZERO,
+		"layer": ExportPlanner.ALL_LAYERS,
+		"layer_exclude_pattern": "^_",
+	}
+	var jobs := planner.build_jobs(SPRITE_SIZE, layers, PackedStringArray(), options)
+	var strips_dir := _tmp_dir.path_join("texture")
+	var code := cli.export_strips(
+		ProjectSettings.globalize_path(SOURCE),
+		jobs,
+		planner.composed_layers,
+		planner.cell_size,
+		planner.cells_per_axis,
+		strips_dir
+	)
+	if not _check(
+		code == OK and cli.last_written.size() == 1,
+		"the texture route exports the whole canvas as one strip",
+		"%d written, %s" % [cli.last_written.size(), cli.last_error]
+	):
+		return
+	var strip := strips_dir.path_join(str(jobs[0]["relative_path"]))
+	var texture := SpriteFramesBuilder.load_strip_texture(strip, true)
+	var expected_width := SPRITE_SIZE.x * FRAME_COUNT
+	_check(
+		texture != null and texture.get_size() == Vector2(expected_width, SPRITE_SIZE.y),
+		"the strip is every frame of the timeline side by side",
+		str(texture.get_size()) if texture != null else "no texture"
+	)
+
+	# The same source through both importers has to agree on the pixels it shares.
+	var whole := texture.get_image()
+	whole.convert(Image.FORMAT_RGBA8)
+	var down := grid_frames.get_frame_texture(&"walk_down", 0).get_image()
+	down.convert(Image.FORMAT_RGBA8)
+	var cell := Rect2i(CELL_SIZE.x, CELL_SIZE.y * 2, CELL_SIZE.x, CELL_SIZE.y)
+	_check(
+		whole.get_region(cell).get_data() == down.get_data(),
+		"the down cell of the texture is the grid import's walk_down frame",
+		"%s vs %s" % [whole.get_size(), down.get_size()]
+	)
+
+	# Saved on its own, unlike the textures embedded in a SpriteFrames, and read back with pixels.
+	var path := "user://aseprite_texture_roundtrip.res"
+	_check(ResourceSaver.save(texture, path) == OK, "the texture saves as a resource of its own")
+	var reloaded := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE) as Texture2D
+	var back := reloaded.get_image() if reloaded != null else null
+	if back != null:
+		back.convert(Image.FORMAT_RGBA8)
+	_check(
+		reloaded != null and back != null and back.get_data() == whole.get_data(),
+		"the reloaded texture still holds its pixels",
+		str(reloaded)
+	)
+	DirAccess.remove_absolute(path)
+
+	# An empty cell writes nothing and still returns OK: the case the importer turns into a failure.
+	var empty_jobs: Array[Dictionary] = [
+		{
+			"direction": "left_up",
+			"tag": "walk_loop",
+			"animation": "empty",
+			"loop": false,
+			"relative_path": "empty.png",
+		}
+	]
+	code = cli.export_strips(
+		ProjectSettings.globalize_path(SOURCE),
+		empty_jobs,
+		layers,
+		CELL_SIZE,
+		3,
+		_tmp_dir.path_join("texture_empty")
+	)
+	_check(
+		code == OK and cli.last_written.is_empty(),
+		"a canvas with no pixels exports nothing without failing, so the importer must check",
+		"%d written" % cli.last_written.size()
+	)
+
+	_check(
+		(
+			not TextureImporter.exceeds_texture_width(SPRITE_SIZE.x, FRAME_COUNT)
+			and TextureImporter.exceeds_texture_width(SPRITE_SIZE.x, 114)
+		),
+		"a strip wider than a texture can be is refused",
+		str(TextureImporter.MAX_TEXTURE_WIDTH)
+	)
+
+
+## The source shared by the importers: it verifies the executable, caches a listing by file content
+## and hands out the layer dropdown. Headless, so the executable arrives as a Callable instead of
+## from the Editor Settings.
+func _test_aseprite_source() -> void:
+	var source := AsepriteSource.new(func() -> String: return OS.get_environment("ASEPRITE_PATH"))
+	var cli := source.verified_cli()
+	if not _check(cli != null, "the shared source verifies the executable", source.last_error):
+		return
+
+	var first := source.list(cli, SOURCE)
+	var second := source.list(cli, SOURCE)
+	_check(
+		is_same(first, second) and first.get("size", Vector2i.ZERO) == SPRITE_SIZE,
+		"listing the same file twice returns the cached dictionary",
+		str(first.get("size", Vector2i.ZERO))
+	)
+
+	# Keyed by content, not by path: a file replaced under the same name has to be listed again.
+	var copy := "user://aseprite_source_copy.aseprite"
+	DirAccess.copy_absolute(SOURCE, copy)
+	var before: Vector2i = source.list(cli, copy).get("size", Vector2i.ZERO)
+	DirAccess.copy_absolute(SHADOW, copy)
+	var after: Vector2i = source.list(cli, copy).get("size", Vector2i.ZERO)
+	DirAccess.remove_absolute(copy)
+	_check(
+		before == SPRITE_SIZE and after == SHADOW_SIZE,
+		"a file replaced under the same path is listed again",
+		"%s then %s" % [before, after]
+	)
+
+	_check(
+		source.layer_choices(SOURCE) == "[all],character,weapon",
+		"the layer dropdown offers [all] and the file's layers",
+		source.layer_choices(SOURCE)
+	)
+	_check(
+		source.layer_choices("") == "[all]",
+		"without a file the dropdown offers [all] alone",
+		source.layer_choices("")
+	)
 
 
 func _test_listing(cli: AsepriteCli) -> Dictionary:
@@ -160,13 +361,14 @@ func _test_planner(planner: ExportPlanner, contents: Dictionary) -> Array[Dictio
 ## give no animation, and every frame matches the CC0 sheets the example was built from.
 func _test_sprite_frames(
 	cli: AsepriteCli, planner: ExportPlanner, jobs: Array[Dictionary], contents: Dictionary
-) -> void:
+) -> SpriteFrames:
 	var strips_dir := _tmp_dir.path_join("strips")
 	var code := cli.export_strips(
 		ProjectSettings.globalize_path(SOURCE),
 		jobs,
 		planner.composed_layers,
 		planner.cell_size,
+		planner.cells_per_axis,
 		strips_dir
 	)
 	_check(
@@ -189,7 +391,7 @@ func _test_sprite_frames(
 	)
 	if not frames.has_animation(&"walk_down"):
 		_check(false, "SpriteFrames has walk_down", str(names))
-		return
+		return frames
 	_check(
 		(
 			frames.get_frame_count(&"walk_down") == 4
@@ -202,6 +404,94 @@ func _test_sprite_frames(
 		"walk_down loops with 4 frames at 10 fps, use_left has 8, slash_right does not loop"
 	)
 	_test_frames_match_sheets(frames, jobs, contents)
+	return frames
+
+
+## The same file imported without directions: one animation per tag, made of whole frames. The down
+## cell of those frames has to be the very image the 3x3 grid gives for walk_down, which is what
+## proves the crop starts at the top left corner.
+func _test_directionless_export(
+	cli: AsepriteCli, contents: Dictionary, grid_frames: SpriteFrames
+) -> void:
+	var whole := _build_without_directions(cli, contents, Vector2i.ZERO, "no_directions")
+	if whole == null:
+		return
+	var names := whole.get_animation_names()
+	var texture := whole.get_frame_texture(&"walk", 0) as AtlasTexture
+	var atlas_size := texture.atlas.get_size() if texture != null else Vector2.ZERO
+	_check(
+		(
+			names.size() == 10
+			and whole.has_animation(&"walk")
+			and whole.get_frame_count(&"walk") == 4
+			and whole.get_animation_loop(&"walk")
+			and atlas_size == Vector2(SPRITE_SIZE.x * 4, SPRITE_SIZE.y)
+		),
+		"10 animations of whole 144x144 frames, walk_loop still loops as walk",
+		"%s %s" % [names, atlas_size]
+	)
+	_check_down_cell_matches(whole, grid_frames, "the whole frame")
+
+	# A cell smaller than the sprite crops its top left corner, keeping the down cell in place.
+	var cropped := _build_without_directions(
+		cli, contents, Vector2i(SPRITE_SIZE.x * 2 / 3, SPRITE_SIZE.y), "no_directions_cropped"
+	)
+	if cropped != null:
+		_check_down_cell_matches(cropped, grid_frames, "a cell cropped to two thirds")
+
+
+## Exports the example with grid/directions = none and builds its SpriteFrames, or null on failure.
+func _build_without_directions(
+	cli: AsepriteCli, contents: Dictionary, cell: Vector2i, folder: String
+) -> SpriteFrames:
+	var options := DEFAULT_OPTIONS.duplicate()
+	options["directions"] = ExportPlanner.MODE_NONE
+	options["cell_size"] = cell
+	var planner := ExportPlanner.new()
+	var layers: PackedStringArray = contents.get("layers", PackedStringArray())
+	var tags: PackedStringArray = contents.get("tags", PackedStringArray())
+	var jobs := planner.build_jobs(SPRITE_SIZE, layers, tags, options)
+	var strips_dir := _tmp_dir.path_join(folder)
+	var code := cli.export_strips(
+		ProjectSettings.globalize_path(SOURCE),
+		jobs,
+		planner.composed_layers,
+		planner.cell_size,
+		planner.cells_per_axis,
+		strips_dir
+	)
+	if not _check(
+		code == OK and cli.last_written.size() == 10,
+		"export_strips writes one strip per tag for a %s cell" % planner.cell_size,
+		"%d written, %s" % [cli.last_written.size(), cli.last_error]
+	):
+		return null
+	var builder := SpriteFramesBuilder.new()
+	return builder.build(jobs, cli.last_written, strips_dir, contents, planner.cell_size)
+
+
+## Every frame of walk cut down to the down cell has to equal the walk_down frame of the 3x3 import.
+func _check_down_cell_matches(
+	whole: SpriteFrames, grid_frames: SpriteFrames, description: String
+) -> void:
+	if not whole.has_animation(&"walk") or not grid_frames.has_animation(&"walk_down"):
+		_check(false, "both imports have the walk animation", description)
+		return
+	var down := Rect2i(CELL_SIZE.x, CELL_SIZE.y * 2, CELL_SIZE.x, CELL_SIZE.y)
+	var matching := 0
+	var count := whole.get_frame_count(&"walk")
+	for index: int in count:
+		var frame := whole.get_frame_texture(&"walk", index).get_image()
+		var expected := grid_frames.get_frame_texture(&"walk_down", index).get_image()
+		frame.convert(Image.FORMAT_RGBA8)
+		expected.convert(Image.FORMAT_RGBA8)
+		if frame.get_region(down).get_data() == expected.get_data():
+			matching += 1
+	_check(
+		count == 4 and matching == count,
+		"the down cell of %s is the 3x3 walk_down frame" % description,
+		"%d of %d" % [matching, count]
+	)
 
 
 func _test_frames_match_sheets(
@@ -259,15 +549,46 @@ func _test_export_rejects_bad_input(cli: AsepriteCli) -> void:
 	var layers := PackedStringArray(["character"])
 	var ghost := PackedStringArray(["ghost"])
 	_expect_rejected(
-		cli, "an unknown layer", ghost, CELL_SIZE, "walk_loop", "up", "unknown layer 'ghost'"
-	)
-	_expect_rejected(cli, "an unknown tag", layers, CELL_SIZE, "nope", "up", "unknown tag 'nope'")
-	_expect_rejected(
-		cli, "an unknown direction", layers, CELL_SIZE, "walk_loop", "center", "unknown direction"
+		cli, "an unknown layer", ghost, CELL_SIZE, 3, "walk_loop", "up", "unknown layer 'ghost'"
 	)
 	_expect_rejected(
-		cli, "a cell too big", layers, Vector2i(50, 48), "walk_loop", "up", "does not fit"
+		cli, "an unknown tag", layers, CELL_SIZE, 3, "nope", "up", "unknown tag 'nope'"
 	)
+	_expect_rejected(
+		cli,
+		"an unknown direction",
+		layers,
+		CELL_SIZE,
+		3,
+		"walk_loop",
+		"center",
+		"unknown direction"
+	)
+	_expect_rejected(
+		cli, "a cell too big", layers, Vector2i(50, 48), 3, "walk_loop", "up", "does not fit"
+	)
+	# The grid and the direction have to agree, or a crop outside the sprite would pass silently.
+	_expect_rejected(
+		cli,
+		"a named direction without a grid",
+		layers,
+		SPRITE_SIZE,
+		1,
+		"walk_loop",
+		"up",
+		"does not belong to a grid of 1x1"
+	)
+	_expect_rejected(
+		cli,
+		"a nameless direction in a 3x3 grid",
+		layers,
+		CELL_SIZE,
+		3,
+		"walk_loop",
+		"",
+		"does not belong to a grid of 3x3"
+	)
+	_expect_rejected(cli, "a grid of 2", layers, CELL_SIZE, 2, "walk_loop", "up", "cells per axis")
 
 
 func _expect_rejected(
@@ -275,6 +596,7 @@ func _expect_rejected(
 	description: String,
 	layers: PackedStringArray,
 	cell: Vector2i,
+	cells_per_axis: int,
 	tag: String,
 	direction: String,
 	expected_error: String
@@ -289,7 +611,12 @@ func _expect_rejected(
 		}
 	]
 	var code := cli.export_strips(
-		ProjectSettings.globalize_path(SOURCE), jobs, layers, cell, _tmp_dir.path_join("rejected")
+		ProjectSettings.globalize_path(SOURCE),
+		jobs,
+		layers,
+		cell,
+		cells_per_axis,
+		_tmp_dir.path_join("rejected")
 	)
 	_check(
 		code != OK and cli.last_error.contains(expected_error),
@@ -326,16 +653,21 @@ func _test_planner_edge_cases() -> void:
 	options["animation_name"] = "{direction}"
 	jobs = planner.build_jobs(SPRITE_SIZE, layers, tags, options)
 	_check(
-		jobs.size() == 8 and planner.errors.size() == 72,
-		"animation names used twice are skipped and reported",
+		jobs.is_empty() and planner.failed and planner.errors.size() == 72,
+		"a name template without {tag} collides and fails the import",
 		"%d jobs, %d errors" % [jobs.size(), planner.errors.size()]
 	)
 
 	var same_names := PackedStringArray(["idle", "idle_loop"])
 	jobs = planner.build_jobs(SPRITE_SIZE, layers, same_names, DEFAULT_OPTIONS)
 	_check(
-		jobs.size() == 8 and planner.errors.size() == 8,
-		"idle and idle_loop give the same names: the second is reported",
+		(
+			jobs.is_empty()
+			and planner.failed
+			and planner.errors.size() == 8
+			and planner.errors[0].contains("already used by tag 'idle' (left_up)")
+		),
+		"idle and idle_loop give the same name: the import fails naming both tags",
 		str(planner.errors)
 	)
 
@@ -350,6 +682,84 @@ func _test_planner_edge_cases() -> void:
 	_test_loop_suffix(planner, layers)
 	_test_layer_choice(planner, layers, tags)
 	_test_cell_size(planner, layers, tags)
+	_test_directionless_planner(planner, layers, tags)
+
+
+func _test_directionless_planner(
+	planner: ExportPlanner, layers: PackedStringArray, tags: PackedStringArray
+) -> void:
+	var options := DEFAULT_OPTIONS.duplicate()
+	options["directions"] = ExportPlanner.MODE_NONE
+	var jobs := planner.build_jobs(SPRITE_SIZE, layers, tags, options)
+	var walk := _find_job(jobs, "walk")
+	_check(
+		(
+			jobs.size() == 10
+			and not planner.failed
+			and planner.cells_per_axis == 1
+			and planner.cell_size == SPRITE_SIZE
+			and walk.get("direction") == ""
+			and walk.get("loop") == true
+		),
+		"without directions the frame is one cell and each tag is one animation",
+		"%d jobs, cell %s, %s" % [jobs.size(), planner.cell_size, walk]
+	)
+
+	jobs = planner.build_jobs(SPRITE_SIZE, layers, PackedStringArray(["run__fast"]), options)
+	_check(
+		not _find_job(jobs, "run__fast").is_empty(),
+		"dropping {direction} leaves the separators inside a tag name alone",
+		str(jobs.map(func(job: Dictionary) -> String: return job["animation"]))
+	)
+
+	jobs = planner.build_jobs(SPRITE_SIZE, layers, PackedStringArray(), options)
+	_check(
+		jobs.size() == 1 and not _find_job(jobs, ExportPlanner.DEFAULT_ANIMATION).is_empty(),
+		"neither tags nor directions to name it after: one animation called default",
+		str(jobs)
+	)
+
+	jobs = planner.build_jobs(SPRITE_SIZE, layers, PackedStringArray(), DEFAULT_OPTIONS)
+	_check(
+		jobs.size() == 8 and _find_job(jobs, ExportPlanner.DEFAULT_ANIMATION).is_empty(),
+		"the fallback name never replaces a direction in a 3x3 grid",
+		str(jobs.map(func(job: Dictionary) -> String: return job["animation"]))
+	)
+
+	options["cell_size"] = Vector2i(200, 48)
+	jobs = planner.build_jobs(SPRITE_SIZE, layers, tags, options)
+	_check(
+		(
+			jobs.is_empty()
+			and planner.failed
+			and planner.cell_size == Vector2i.ZERO
+			and not planner.errors[0].contains("3x3")
+		),
+		"a cell bigger than the sprite fails without mentioning a 3x3 grid",
+		str(planner.errors)
+	)
+
+	options["cell_size"] = Vector2i.ZERO
+	jobs = planner.build_jobs(Vector2i(145, 144), layers, tags, options)
+	_check(
+		jobs.size() == 10 and not planner.failed and planner.cell_size == Vector2i(145, 144),
+		"a size that is not a multiple of 3 is fine without directions",
+		str(planner.cell_size)
+	)
+
+	options["directions"] = "4x4"
+	jobs = planner.build_jobs(SPRITE_SIZE, layers, tags, options)
+	_check(
+		(
+			jobs.is_empty()
+			and planner.failed
+			and planner.cells_per_axis == 0
+			and planner.errors.size() == 1
+			and planner.errors[0].contains("'4x4'")
+		),
+		"an unknown grid fails instead of falling back to 3x3",
+		str(planner.errors)
+	)
 
 
 func _test_loop_suffix(planner: ExportPlanner, layers: PackedStringArray) -> void:
@@ -452,8 +862,13 @@ func _test_cell_size(
 
 	jobs = planner.build_jobs(Vector2i(145, 144), layers, tags, DEFAULT_OPTIONS)
 	_check(
-		jobs.is_empty() and planner.failed,
-		"default cell needs a size multiple of 3",
+		(
+			jobs.is_empty()
+			and planner.failed
+			and planner.errors[0].contains("grid/cell_size")
+			and planner.errors[0].contains(ExportPlanner.MODE_NONE)
+		),
+		"a size that is not a multiple of 3 fails naming both ways out",
 		str(planner.errors)
 	)
 
@@ -525,310 +940,6 @@ func _test_builder_ping_pong() -> void:
 	)
 
 
-## A sprite and an AnimationPlayer side by side under one root in the scene tree. The player's
-## "idle_down" already has a user track on the sprite's modulate, and "old_down" only this sprite's
-## tracks from an earlier sync.
-func _test_animation_sync() -> void:
-	var root := Node2D.new()
-	var sprite := AnimatedSprite2D.new()
-	sprite.name = "Body"
-	root.add_child(sprite)
-	var player := AnimationPlayer.new()
-	root.add_child(player)
-	get_root().add_child(root)
-
-	var frames := SpriteFrames.new()
-	frames.remove_animation(&"default")
-	for animation: StringName in [&"idle_down", &"hit_down"]:
-		frames.add_animation(animation)
-		frames.set_animation_speed(animation, 10.0)
-		frames.set_animation_loop(animation, animation == &"idle_down")
-	var texture := PlaceholderTexture2D.new()
-	for duration: float in [1.0, 2.0, 1.0]:
-		frames.add_frame(&"idle_down", texture, duration)
-	for duration: float in [1.0, 1.0]:
-		frames.add_frame(&"hit_down", texture, duration)
-	sprite.sprite_frames = frames
-
-	var library := AnimationLibrary.new()
-	var user_animation := Animation.new()
-	var user_track := user_animation.add_track(Animation.TYPE_VALUE)
-	user_animation.track_set_path(user_track, "Body:modulate")
-	user_animation.track_insert_key(user_track, 0.0, Color.WHITE)
-	library.add_animation(&"idle_down", user_animation)
-	var old_animation := Animation.new()
-	var old_track := old_animation.add_track(Animation.TYPE_VALUE)
-	old_animation.track_set_path(old_track, "Body:frame")
-	library.add_animation(&"old_down", old_animation)
-	player.add_animation_library(&"", library)
-
-	var sync := AnimationSync.new()
-	var written := sync.sync(sprite, player)
-	written.sort()
-	_check(
-		sync.errors.is_empty() and written == PackedStringArray(["hit_down", "idle_down"]),
-		"sync writes one animation per SpriteFrames animation",
-		"%s %s" % [written, sync.errors]
-	)
-	_check_synced_idle(library)
-	_check(
-		not library.has_animation(&"old_down"),
-		"an animation left with only this sprite's old tracks is removed",
-		str(library.get_animation_list())
-	)
-	var hit := library.get_animation(&"hit_down")
-	_check(
-		hit.loop_mode == Animation.LOOP_NONE and is_equal_approx(hit.length, 0.2),
-		"a non-looping animation does not loop and lasts its frames",
-		"%s %s" % [hit.loop_mode, hit.length]
-	)
-
-	player.play(&"idle_down")
-	player.seek(0.15, true)
-	_check(
-		sprite.animation == &"idle_down" and sprite.frame == 1,
-		"the AnimationPlayer drives the sprite's animation and frame",
-		"%s %d" % [sprite.animation, sprite.frame]
-	)
-	player.stop()
-	_test_sync_linked(sync, sprite, player, library)
-	root.queue_free()
-
-
-func _check_synced_idle(library: AnimationLibrary) -> void:
-	var idle := library.get_animation(&"idle_down")
-	var frame_track := idle.find_track("Body:frame", Animation.TYPE_VALUE)
-	var times: Array[float] = []
-	var values: Array[int] = []
-	for key: int in idle.track_get_key_count(frame_track):
-		times.append(snappedf(idle.track_get_key_time(frame_track, key), 0.0001))
-		values.append(idle.track_get_key_value(frame_track, key))
-	var animation_track := idle.find_track("Body:animation", Animation.TYPE_VALUE)
-	_check(
-		(
-			idle.get_track_count() == 3
-			and idle.track_get_path(0) == NodePath("Body:modulate")
-			and animation_track == 1
-			and idle.track_get_key_value(animation_track, 0) == &"idle_down"
-			and times == [0.0, 0.1, 0.3]
-			and values == [0, 1, 2]
-			and is_equal_approx(idle.length, 0.4)
-			and idle.loop_mode == Animation.LOOP_LINEAR
-		),
-		"idle_down keeps the user track and gets frame keys at the Aseprite times",
-		(
-			"%d tracks, times %s, values %s, length %s"
-			% [idle.get_track_count(), times, values, idle.length]
-		)
-	)
-
-
-func _test_sync_linked(
-	sync: AnimationSync,
-	sprite: AnimatedSprite2D,
-	player: AnimationPlayer,
-	library: AnimationLibrary
-) -> void:
-	_check(not sync.sync_linked(sprite, false), "sync_linked does nothing without a linked player")
-	AnimationSync.link(sprite, player)
-	_check(
-		AnimationSync.linked_player(sprite) == player and sync.sync_linked(sprite, false),
-		"a linked player is synced the first time"
-	)
-	_check(not sync.sync_linked(sprite, false), "sync_linked skips an unchanged SpriteFrames")
-	sprite.sprite_frames.set_frame(&"idle_down", 1, PlaceholderTexture2D.new(), 3.0)
-	_check(sync.sync_linked(sprite, false), "sync_linked syncs again when a duration changes")
-	_check(
-		(
-			is_equal_approx(library.get_animation(&"idle_down").length, 0.5)
-			and library.get_animation(&"idle_down").get_track_count() == 3
-		),
-		"a second sync replaces its tracks instead of adding more",
-		str(library.get_animation(&"idle_down").get_track_count())
-	)
-	_check(sync.sync_linked(sprite, true), "force syncs even when nothing changed")
-
-
-func _test_animation_library_store() -> void:
-	_check(
-		(
-			AnimationLibraryStore.resolve_path(LIBRARY_TEMPLATE, "res://examples/main.tscn")
-			== "res://examples/main_animations.tres"
-		),
-		"resolve_path replaces {scene_dir} and {scene}"
-	)
-	_check(
-		AnimationLibraryStore.resolve_path("", "res://examples/main.tscn") == "",
-		"an empty template keeps the library built in"
-	)
-	_check(
-		AnimationLibraryStore.resolve_path(LIBRARY_TEMPLATE, "") == "",
-		"a scene that was never saved keeps the library built in"
-	)
-	_test_library_switch()
-	DirAccess.make_dir_recursive_absolute(LIBRARY_DIR)
-	_test_library_created()
-	_test_library_converted()
-	_test_library_keeps_work()
-	_test_sync_linked_writes_the_file()
-	_remove_library_dir()
-
-
-## The switch decides; the path only says where.
-func _test_library_switch() -> void:
-	var key := AnimationLibraryStore.LIBRARY_ENABLED_KEY
-	var previous: Variant = ProjectSettings.get_setting(key, true)
-	ProjectSettings.set_setting(key, false)
-	_check(
-		AnimationLibraryStore.configured_template() == "",
-		"the switch turned off keeps the library built in, whatever the path says"
-	)
-	ProjectSettings.set_setting(key, true)
-	_check(
-		AnimationLibraryStore.configured_template() == AnimationLibraryStore.DEFAULT_LIBRARY_PATH,
-		"the switch turned on uses the path template",
-		AnimationLibraryStore.configured_template()
-	)
-	ProjectSettings.set_setting(key, previous)
-
-
-func _test_library_created() -> void:
-	var store := AnimationLibraryStore.new()
-	var player := AnimationPlayer.new()
-	var built_in := store.library_for(player, "")
-	_check(
-		built_in.is_built_in() and player.has_animation_library(&"") and store.errors.is_empty(),
-		"an empty path leaves the library built in",
-		str(store.errors)
-	)
-	var path := LIBRARY_DIR + "/created.tres"
-	var created := store.library_for(player, path)
-	_check(
-		(
-			FileAccess.file_exists(path)
-			and not created.is_built_in()
-			and created.resource_path == path
-			and player.get_animation_library(&"") == created
-		),
-		"a missing library file is created and assigned to the player",
-		"%s %s" % [created.resource_path, store.errors]
-	)
-	var elsewhere := LIBRARY_DIR + "/elsewhere.tres"
-	var kept := store.library_for(player, elsewhere)
-	_check(
-		kept == created and not FileAccess.file_exists(elsewhere),
-		"a library that is already external is not moved",
-		kept.resource_path
-	)
-	player.free()
-
-
-func _test_library_converted() -> void:
-	var player := AnimationPlayer.new()
-	player.add_animation_library(&"", _library_with(&"idle_down", "Body:modulate"))
-	var path := LIBRARY_DIR + "/converted.tres"
-	var store := AnimationLibraryStore.new()
-	store.library_for(player, path)
-	# Fetched from the player: loading the saved file gives a different object.
-	var converted := player.get_animation_library(&"")
-	_check(
-		(
-			not converted.is_built_in()
-			and converted.has_animation(&"idle_down")
-			and converted.get_animation(&"idle_down").get_track_count() == 1
-			and FileAccess.file_exists(path)
-		),
-		"a built-in library moves to the file with its animations and tracks",
-		"%s %s" % [converted.resource_path, store.errors]
-	)
-	player.free()
-
-
-## The user must not lose work: adopting a file that already exists keeps what only the built-in
-## library had, and writes it, instead of dropping those animations.
-func _test_library_keeps_work() -> void:
-	var path := LIBRARY_DIR + "/converted.tres"
-	var player := AnimationPlayer.new()
-	player.add_animation_library(&"", _library_with(&"only_built_in", "Body:visible"))
-	var store := AnimationLibraryStore.new()
-	store.library_for(player, path)
-	var merged := player.get_animation_library(&"")
-	_check(
-		(
-			merged.has_animation(&"only_built_in")
-			and merged.has_animation(&"idle_down")
-			and store.errors.is_empty()
-		),
-		"animations only the built-in library had survive adopting an existing file",
-		"%s %s" % [merged.get_animation_list(), store.errors]
-	)
-	var from_disk := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE)
-	var reloaded := from_disk as AnimationLibrary
-	_check(
-		reloaded != null and reloaded.has_animation(&"only_built_in"),
-		"the kept animations are written to the file, not only held in memory",
-		"" if reloaded == null else str(reloaded.get_animation_list())
-	)
-	player.free()
-
-
-## A skipped sync must not create the file: the path is resolved before the key is compared.
-func _test_sync_linked_writes_the_file() -> void:
-	var previous: Variant = ProjectSettings.get_setting(
-		AnimationLibraryStore.LIBRARY_PATH_KEY, AnimationLibraryStore.DEFAULT_LIBRARY_PATH
-	)
-	ProjectSettings.set_setting(AnimationLibraryStore.LIBRARY_PATH_KEY, LIBRARY_TEMPLATE)
-	var root := Node2D.new()
-	root.scene_file_path = LIBRARY_DIR + "/scene.tscn"
-	var sprite := AnimatedSprite2D.new()
-	sprite.name = "Body"
-	root.add_child(sprite)
-	sprite.owner = root
-	var player := AnimationPlayer.new()
-	root.add_child(player)
-	player.owner = root
-	player.root_node = player.get_path_to(root)
-	var frames := SpriteFrames.new()
-	frames.add_animation(&"idle_down")
-	frames.add_frame(&"idle_down", PlaceholderTexture2D.new(), 1.0)
-	sprite.sprite_frames = frames
-	AnimationSync.link(sprite, player)
-
-	var path := LIBRARY_DIR + "/scene_animations.tres"
-	var sync := AnimationSync.new()
-	_check(
-		sync.sync_linked(sprite, false) and FileAccess.file_exists(path),
-		"sync_linked writes the library named by the setting",
-		str(sync.errors)
-	)
-	DirAccess.remove_absolute(path)
-	_check(
-		not sync.sync_linked(sprite, false) and not FileAccess.file_exists(path),
-		"a sync that is skipped never touches the file system"
-	)
-	ProjectSettings.set_setting(AnimationLibraryStore.LIBRARY_PATH_KEY, previous)
-	root.queue_free()
-
-
-func _library_with(animation_name: StringName, track_path: String) -> AnimationLibrary:
-	var library := AnimationLibrary.new()
-	var animation := Animation.new()
-	var track := animation.add_track(Animation.TYPE_VALUE)
-	animation.track_set_path(track, track_path)
-	animation.track_insert_key(track, 0.0, true)
-	library.add_animation(animation_name, animation)
-	return library
-
-
-func _remove_library_dir() -> void:
-	var directory := DirAccess.open(LIBRARY_DIR)
-	if directory == null:
-		return
-	for file: String in directory.get_files():
-		directory.remove(file)
-	DirAccess.remove_absolute(LIBRARY_DIR)
-
-
 func _find_job(jobs: Array[Dictionary], animation: String) -> Dictionary:
 	for job: Dictionary in jobs:
 		if job["animation"] == animation:
@@ -836,9 +947,11 @@ func _find_job(jobs: Array[Dictionary], animation: String) -> Dictionary:
 	return {}
 
 
-func _check(condition: bool, description: String, detail: String = "") -> void:
+## True when the check passed, so a test can stop instead of reporting the same failure again.
+func _check(condition: bool, description: String, detail: String = "") -> bool:
 	if condition:
 		print("PASS: " + description)
-		return
+		return true
 	_failures += 1
 	print("FAIL: %s (%s)" % [description, detail])
+	return false

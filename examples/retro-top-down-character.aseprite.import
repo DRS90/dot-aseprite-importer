@@ -13,6 +13,7 @@ dest_files=["res://.godot/imported/retro-top-down-character.aseprite-c00f126d57f
 
 [params]
 
+grid/directions="3x3"
 grid/cell_size=Vector2i(0, 0)
 layers/layer="[all]"
 layers/exclude_pattern="^_"

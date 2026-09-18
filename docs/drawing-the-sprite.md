@@ -14,3 +14,10 @@ How to lay out the Aseprite file. The Import dock options that read it are in
 - Use one tag per animation. Frame durations and the tag direction (forward, reverse, ping-pong,
   ping-pong reverse) are kept. End a tag with `_loop` (`idle_loop`) to make its animations loop.
 - Frames outside any tag are not imported unless the file has no tags.
+
+## Sprites without direction
+
+A top-down game also has sprites that face nowhere: a run dust puff, a hit spark, an item shine. Set
+`grid/directions` to `none` in the Import dock and the frame is a single cell, drawn edge to edge
+with no grid to stay inside. Tags, frame durations, the tag direction and the `_loop` suffix work
+just the same, and the animations are named after the tag alone: `run_loop` gives `run`.

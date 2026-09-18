@@ -14,6 +14,20 @@ const DEFAULT_DURATION_MS := 100
 var errors := PackedStringArray()
 
 
+## The strip written at [param path] as a lossless texture, or null when the file cannot be read.
+## [param keep_buffer] keeps the compressed bytes in memory: a texture that loses them survives
+## being embedded in an imported resource but comes back empty from Make Unique or Save As, so a
+## texture handed to the user as a resource of its own asks for it.
+static func load_strip_texture(path: String, keep_buffer := false) -> PortableCompressedTexture2D:
+	var image := Image.load_from_file(path)
+	if image == null:
+		return null
+	var texture := PortableCompressedTexture2D.new()
+	texture.keep_compressed_buffer = keep_buffer
+	texture.create_from_image(image, PortableCompressedTexture2D.COMPRESSION_MODE_LOSSLESS)
+	return texture
+
+
 ## Timeline frames (0-based) that a tag spanning [param first] to [param last] plays, in order.
 ## [param direction] is forward, reverse, pingpong or pingpong_reverse; ping-pong does not repeat
 ## the frames at both ends, so the sequence loops smoothly.
@@ -67,12 +81,10 @@ func build(
 		var relative_path: String = job["relative_path"]
 		if not written.has(relative_path):
 			continue
-		var image := Image.load_from_file(strips_dir.path_join(relative_path))
-		if image == null:
+		var texture := load_strip_texture(strips_dir.path_join(relative_path))
+		if texture == null:
 			errors.append("Cannot read the exported strip '%s'." % relative_path)
 			continue
-		var texture := PortableCompressedTexture2D.new()
-		texture.create_from_image(image, PortableCompressedTexture2D.COMPRESSION_MODE_LOSSLESS)
 		var tag: String = job["tag"]
 		var whole_timeline := {"from": 0, "to": durations.size() - 1, "direction": "forward"}
 		var tag_range: Dictionary = ranges.get(tag, whole_timeline)
