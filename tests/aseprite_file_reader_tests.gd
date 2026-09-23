@@ -253,12 +253,42 @@ func _test_missing_executable(executable: String) -> void:
 	var resolved := AsepriteCli.find_executable(executable)
 	var saved_path := OS.get_environment("PATH")
 	OS.set_environment("PATH", resolved.get_base_dir())
-	var found := AsepriteCli.find_executable(resolved.get_file().get_basename())
+	# Only a Windows extension goes: a Linux build may be named aseprite-1.3.18.
+	var bare_name := resolved.get_file()
+	if OS.get_name() == "Windows":
+		bare_name = bare_name.get_basename()
+	var found := AsepriteCli.find_executable(bare_name)
 	OS.set_environment("PATH", saved_path)
 	_check.call(
 		found != "" and FileAccess.file_exists(found),
 		"a bare name is found in the PATH",
 		"%s in %s" % [found, resolved.get_base_dir()]
+	)
+	_test_did_not_run()
+
+
+## A run that never started is told from a Lua error by its output, on each platform. Checked on
+## made-up outputs: a real failed start prints an engine error on Windows.
+func _test_did_not_run() -> void:
+	var lua_error := "batch.lua:1: unknown layer 'x'"
+	# [exit code, output, on Windows, expected]
+	var cases := [
+		[-1, "", true, true],
+		[0, "", true, true],
+		[-1, lua_error, true, false],
+		[127, "sh: 1: aseprite: not found", false, true],
+		[126, "sh: 1: ./aseprite: Permission denied", false, true],
+		[127, lua_error, false, false],
+		[1, "sh: not the shell's own failure", false, false],
+	]
+	var wrong := PackedStringArray()
+	for case: Array in cases:
+		if AsepriteCli.did_not_run(case[0], case[1], case[2]) != case[3]:
+			wrong.append(str(case))
+	_check.call(
+		wrong.is_empty(),
+		"a run that never started is told from a script error by its output",
+		", ".join(wrong)
 	)
 
 

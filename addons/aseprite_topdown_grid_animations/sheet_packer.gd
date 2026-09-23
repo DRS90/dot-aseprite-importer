@@ -111,13 +111,14 @@ static func best_layout(sizes: Array[Vector2i]) -> Dictionary:
 	var side := sqrt(float(area))
 	for step: int in WIDTH_STEPS:
 		widths.append(ceili(side * step / 10.0))
-	# The widest a sheet may be: what fits when the steps give a sheet too tall or too wide.
+	# The widest a sheet may be: what fits when the steps give a sheet too tall.
 	widths.append(MAX_TEXTURE_SIZE)
 	var best := {}
 	var tried := {}
 	for candidate: int in widths:
-		# Never narrower than the widest region, which could not be placed at all.
-		var width := maxi(widest, candidate)
+		# Within the limit, since a wider sheet is refused anyway, but never narrower than the
+		# widest region, which could not be placed at all (and is refused when past the limit).
+		var width := maxi(widest, mini(candidate, MAX_TEXTURE_SIZE))
 		if tried.has(width):
 			continue
 		tried[width] = true

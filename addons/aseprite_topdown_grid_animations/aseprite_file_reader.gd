@@ -49,14 +49,22 @@ var last_error := ""
 ## What [param path] holds, as AsepriteCli.list_contents() describes it, or an empty dictionary
 ## with [member last_error] set when the file cannot be read or is not an Aseprite file.
 func read(path: String) -> Dictionary:
+	var bytes := load_bytes(path)
+	if bytes.is_empty():
+		return {}
+	return parse(bytes, path)
+
+
+## The bytes of [param path], or none with [member last_error] saying why.
+func load_bytes(path: String) -> PackedByteArray:
+	last_error = ""
 	var bytes := FileAccess.get_file_as_bytes(path)
 	if bytes.is_empty():
 		var open_error := FileAccess.get_open_error()
 		last_error = "cannot read '%s' (%s)." % [path, error_string(open_error)]
 		if open_error == OK:
 			last_error = "'%s' is empty." % path
-		return {}
-	return parse(bytes, path)
+	return bytes
 
 
 ## [method read] for the [param bytes] of a file already loaded, [param path] only naming it in

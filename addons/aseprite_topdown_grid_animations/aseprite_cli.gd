@@ -266,19 +266,30 @@ func _run_batch(params: PackedStringArray) -> PackedStringArray:
 	for line: String in lines:
 		if code == 0 and line.begins_with(DONE_PREFIX):
 			return lines
-	# The exit code cannot tell a process that never started from a script error: Aseprite exits
-	# with 127 on a Lua error, which OS.execute() reports as -1 on Windows, the same as a failed
-	# start. The output can: a script error always prints its message.
-	if code != 0 and text.strip_edges() == "":
+	if did_not_run(code, text, OS.get_name() == "Windows"):
 		last_error = (
-			"Aseprite at '%s' did not run (exit %d, no output). %s"
-			% [_executable, code, _where_to_set()]
+			"Aseprite at '%s' did not run (exit %d): %s %s"
+			% [_executable, code, text.strip_edges().right(MAX_LOGGED_OUTPUT), _where_to_set()]
 		)
 		return PackedStringArray()
 	last_error = (
 		"Aseprite failed (exit %d): %s" % [code, text.strip_edges().right(MAX_LOGGED_OUTPUT)]
 	)
 	return PackedStringArray()
+
+
+## True when a batch run that did not finish never ran Aseprite at all, rather than failing inside
+## it. The exit code cannot tell: Aseprite exits with 127 on a Lua error, which OS.execute() reports
+## as -1 on Windows, like a process it could not start. The output can. On Windows, a process that
+## never started prints nothing, while a script error always prints its message; nothing at all,
+## whatever the exit code, also means the executable is not Aseprite. Elsewhere OS.execute() runs
+## the command through sh, which reports a missing or non-executable file itself ("sh: ...", exit
+## 127 or 126).
+static func did_not_run(code: int, output: String, windows: bool) -> bool:
+	var text := output.strip_edges()
+	if text == "":
+		return true
+	return not windows and (code == 126 or code == 127) and text.begins_with("sh:")
 
 
 static func _is_single_field(text: String) -> bool:
