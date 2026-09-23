@@ -906,23 +906,25 @@ func _test_builder_ping_pong() -> void:
 	var builder := SpriteFramesBuilder.new()
 	var written := PackedStringArray(["strip_000.png"])
 	var frames := builder.build(jobs, written, strips_dir, contents, Vector2i(4, 4))
-	var regions: Array[float] = []
+	var textures: Array[Texture2D] = []
 	var durations: Array[float] = []
 	for index: int in frames.get_frame_count(&"bounce_up"):
-		var atlas := frames.get_frame_texture(&"bounce_up", index) as AtlasTexture
-		regions.append(atlas.region.position.x)
+		textures.append(frames.get_frame_texture(&"bounce_up", index))
 		durations.append(frames.get_frame_duration(&"bounce_up", index))
 	_check(
 		(
 			builder.errors.is_empty()
-			and regions == [0.0, 4.0, 8.0, 4.0]
-			and frames.get_frame_texture(&"bounce_up", 0).get_size() == Vector2(4, 4)
+			and textures.size() == 4
+			and is_same(textures[1], textures[3])
+			and not is_same(textures[0], textures[1])
+			and not is_same(textures[1], textures[2])
+			and textures[0].get_size() == Vector2(4, 4)
 			and durations == [1.0, 1.0, 2.0, 1.0]
 			and frames.get_animation_loop(&"bounce_up")
 			and is_equal_approx(frames.get_animation_speed(&"bounce_up"), 10.0)
 		),
 		"ping-pong animation reuses cells with Aseprite durations",
-		"%s %s %s" % [regions, durations, builder.errors]
+		"%s %s %s" % [textures, durations, builder.errors]
 	)
 
 

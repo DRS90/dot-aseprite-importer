@@ -1,7 +1,7 @@
 [remap]
 
 importer="aseprite_topdown_grid_animations.importer"
-importer_version=2
+importer_version=3
 type="SpriteFrames"
 uid="uid://lwuejbnc1ubr"
 path="res://.godot/imported/retro-top-down-character.aseprite-c00f126d57f9b6e7c42710ad58b6f89d.res"
