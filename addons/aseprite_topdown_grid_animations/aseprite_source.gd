@@ -49,12 +49,20 @@ func verified_cli() -> AsepriteCli:
 ## not cached, so the next call tries again.
 func list(source_file: String) -> Dictionary:
 	last_error = ""
-	var md5 := FileAccess.get_md5(source_file)
+	# Read once: hashed for the cache, and parsed on a miss.
+	var bytes := FileAccess.get_file_as_bytes(source_file)
+	if bytes.is_empty():
+		last_error = "cannot read '%s'." % source_file
+		return {}
+	var hashing := HashingContext.new()
+	hashing.start(HashingContext.HASH_MD5)
+	hashing.update(bytes)
+	var md5 := hashing.finish().hex_encode()
 	var cached: Dictionary = _cache.get(source_file, {})
 	if not cached.is_empty() and cached["md5"] == md5:
 		var contents: Dictionary = cached["contents"]
 		return contents
-	var listed := _reader.read(source_file)
+	var listed := _reader.parse(bytes, source_file)
 	if listed.is_empty():
 		last_error = _reader.last_error
 	else:

@@ -49,7 +49,6 @@ var last_error := ""
 ## What [param path] holds, as AsepriteCli.list_contents() describes it, or an empty dictionary
 ## with [member last_error] set when the file cannot be read or is not an Aseprite file.
 func read(path: String) -> Dictionary:
-	last_error = ""
 	var bytes := FileAccess.get_file_as_bytes(path)
 	if bytes.is_empty():
 		var open_error := FileAccess.get_open_error()
@@ -57,6 +56,13 @@ func read(path: String) -> Dictionary:
 		if open_error == OK:
 			last_error = "'%s' is empty." % path
 		return {}
+	return parse(bytes, path)
+
+
+## [method read] for the [param bytes] of a file already loaded, [param path] only naming it in
+## [member last_error].
+func parse(bytes: PackedByteArray, path: String) -> Dictionary:
+	last_error = ""
 	if bytes.size() < HEADER_SIZE or bytes.decode_u16(4) != FILE_MAGIC:
 		last_error = "'%s' is not an Aseprite file." % path
 		return {}
@@ -77,13 +83,15 @@ func read(path: String) -> Dictionary:
 		var frame_end := frame_start + bytes.decode_u32(frame_start)
 		if frame_end < frame_start + FRAME_HEADER_SIZE or frame_end > bytes.size():
 			return _fail(path, "frame %d does not fit in the file" % frame, frame_start)
-		var duration := bytes.decode_u16(frame_start + 8)
-		durations.append(duration if duration > 0 else default_duration)
-		# Like Aseprite, a frame without its magic number keeps its place but gives no chunks.
+		# Like Aseprite's decoder, a frame without its magic number keeps its place but gives
+		# neither its own duration nor its chunks.
+		var duration := 0
 		if bytes.decode_u16(frame_start + 4) == FRAME_MAGIC:
+			duration = bytes.decode_u16(frame_start + 8)
 			var problem := _read_chunks(bytes, frame_start, frame_end, contents)
 			if problem != "":
 				return _fail(path, "frame %d: %s" % [frame, problem], frame_start)
+		durations.append(duration if duration > 0 else default_duration)
 		frame_start = frame_end
 	contents["frame_durations"] = durations
 	return contents

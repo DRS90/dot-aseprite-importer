@@ -145,8 +145,9 @@ func _missing_example_files() -> PackedStringArray:
 
 func _test_with_example_asset() -> void:
 	var cli := AsepriteCli.new(OS.get_environment("ASEPRITE_PATH"))
-	_check(cli.is_available(), "Aseprite executable available", cli.get_executable())
-	if not cli.is_available():
+	var found := AsepriteCli.find_executable(cli.get_executable()) != ""
+	_check(found, "Aseprite executable available", cli.get_executable())
+	if not found:
 		return
 	var contents := _test_listing(cli)
 	var planner := ExportPlanner.new()

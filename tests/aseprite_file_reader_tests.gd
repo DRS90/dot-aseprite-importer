@@ -161,22 +161,24 @@ func _test_damaged() -> void:
 		refused.append("chunk of size 0")
 	_check.call(refused.is_empty(), "damaged files are refused with a message", ", ".join(refused))
 
-	# A frame duration of 0 means the header's; a frame without its magic number keeps its place.
+	# A frame duration of 0 means the header's, and so does a frame without its magic number, which
+	# keeps its place. The header's speed is set apart from the example's 100 ms to tell them apart.
 	var old_style := bytes.duplicate()
+	var header_speed := 77
+	old_style.encode_u16(AsepriteFileReader.HEADER_SPEED, header_speed)
 	var first_frame := AsepriteFileReader.HEADER_SIZE
 	old_style.encode_u16(first_frame + 8, 0)
 	var second_frame := first_frame + old_style.decode_u32(first_frame)
 	old_style.encode_u16(second_frame + 4, 0)
 	var read := _read_copy(old_style)
 	var durations: PackedInt32Array = read.get("frame_durations", PackedInt32Array())
-	var original_durations: PackedInt32Array = original.get("frame_durations", PackedInt32Array())
-	var header_speed := bytes.decode_u16(AsepriteFileReader.HEADER_SPEED)
+	var expected := (
+		(original.get("frame_durations", PackedInt32Array()) as PackedInt32Array).duplicate()
+	)
+	expected[0] = header_speed
+	expected[1] = header_speed
 	_check.call(
-		(
-			durations.size() == original_durations.size()
-			and durations[0] == header_speed
-			and read.get("layers") == original.get("layers")
-		),
+		durations == expected and read.get("layers") == original.get("layers"),
 		"a frame of 0 ms takes the header's duration, and a frame without its magic is skipped",
 		"%s (header %d) %s" % [durations, header_speed, _reader.last_error]
 	)
@@ -248,14 +250,15 @@ func _test_missing_executable(executable: String) -> void:
 	)
 
 	# A bare name is looked up in the PATH, as the OS would.
+	var resolved := AsepriteCli.find_executable(executable)
 	var saved_path := OS.get_environment("PATH")
-	OS.set_environment("PATH", executable.get_base_dir())
-	var found := AsepriteCli.find_executable(executable.get_file().get_basename())
+	OS.set_environment("PATH", resolved.get_base_dir())
+	var found := AsepriteCli.find_executable(resolved.get_file().get_basename())
 	OS.set_environment("PATH", saved_path)
 	_check.call(
 		found != "" and FileAccess.file_exists(found),
 		"a bare name is found in the PATH",
-		"%s in %s" % [found, executable.get_base_dir()]
+		"%s in %s" % [found, resolved.get_base_dir()]
 	)
 
 

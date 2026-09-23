@@ -87,8 +87,9 @@ func pack(strips: Array[Dictionary], cell_size: Vector2i) -> Dictionary:
 
 
 ## Where to put regions of [param sizes] in shelves: {"size": Vector2i, "positions":
-## Array[Vector2i]} (one per size, in the same order), trying several shelf widths and keeping the
-## smallest sheet, then the squarest.
+## Array[Vector2i]} (one per size, in the same order), trying several shelf widths and keeping a
+## sheet within [constant MAX_TEXTURE_SIZE] on both axes when one is found, then the smallest, then
+## the squarest.
 static func best_layout(sizes: Array[Vector2i]) -> Dictionary:
 	var order: Array[int] = []
 	var widest := 0
@@ -106,12 +107,17 @@ static func best_layout(sizes: Array[Vector2i]) -> Dictionary:
 				return sizes[a].x > sizes[b].x
 			return a < b
 	)
-	var best := {}
-	var tried := {}
+	var widths: Array[int] = []
 	var side := sqrt(float(area))
 	for step: int in WIDTH_STEPS:
+		widths.append(ceili(side * step / 10.0))
+	# The widest a sheet may be: what fits when the steps give a sheet too tall or too wide.
+	widths.append(MAX_TEXTURE_SIZE)
+	var best := {}
+	var tried := {}
+	for candidate: int in widths:
 		# Never narrower than the widest region, which could not be placed at all.
-		var width := maxi(widest, ceili(side * step / 10.0))
+		var width := maxi(widest, candidate)
 		if tried.has(width):
 			continue
 		tried[width] = true
@@ -158,25 +164,23 @@ func _cut(key: String, image: Image, cell_size: Vector2i) -> Array[Dictionary]:
 
 
 ## Places [param sizes] in [param order] on shelves [param width] wide: each region goes on the
-## first shelf with room for it, or opens a new one below. Taller regions come first, so a shelf is
-## always at least as tall as what lands on it later.
+## first shelf with room for it, or opens a new one below. [param order] is tallest first, so a
+## shelf, as tall as its first region, always holds the height of what lands on it later.
 static func _shelves(sizes: Array[Vector2i], order: Array[int], width: int) -> Dictionary:
 	var positions: Array[Vector2i] = []
 	positions.resize(sizes.size())
-	# Top, height and filled width of each shelf.
+	# Top and filled width of each shelf.
 	var tops := PackedInt32Array()
-	var heights := PackedInt32Array()
 	var filled := PackedInt32Array()
 	var height := 0
 	var used_width := 0
 	for index: int in order:
 		var size := sizes[index]
 		var shelf := 0
-		while shelf < tops.size() and (filled[shelf] + size.x > width or size.y > heights[shelf]):
+		while shelf < tops.size() and filled[shelf] + size.x > width:
 			shelf += 1
 		if shelf == tops.size():
 			tops.append(height)
-			heights.append(size.y)
 			filled.append(0)
 			height += size.y
 		positions[index] = Vector2i(filled[shelf], tops[shelf])
@@ -186,8 +190,14 @@ static func _shelves(sizes: Array[Vector2i], order: Array[int], width: int) -> D
 
 
 static func _is_better(size: Vector2i, than: Vector2i) -> bool:
+	if _fits(size) != _fits(than):
+		return _fits(size)
 	var area := size.x * size.y
 	var other := than.x * than.y
 	if area != other:
 		return area < other
 	return absi(size.x - size.y) < absi(than.x - than.y)
+
+
+static func _fits(size: Vector2i) -> bool:
+	return size.x <= MAX_TEXTURE_SIZE and size.y <= MAX_TEXTURE_SIZE

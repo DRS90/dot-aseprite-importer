@@ -87,6 +87,29 @@ func run() -> void:
 		str(packed)
 	)
 	_test_sheet_packer_limit(packer)
+	_test_layout_limit()
+
+
+## The layout alone, on sizes, so sheets near the limit need no image that big. Shelves pile up
+## past the limit when nothing narrower fits, and a width within the limit is chosen over a smaller
+## sheet that passes it.
+func _test_layout_limit() -> void:
+	var limit := SheetPacker.MAX_TEXTURE_SIZE
+	var stacked: Array[Vector2i] = []
+	for index: int in 3:
+		stacked.append(Vector2i(limit, limit / 2))
+	var tall: Vector2i = SheetPacker.best_layout(stacked)["size"]
+	# 250 squares of 1000 px: the smallest sheets of the tried widths are 15 squares wide (17 rows,
+	# too tall) or 17 wide (too wide); 16 per row, 16000 px each way, is within the limit.
+	var squares: Array[Vector2i] = []
+	for index: int in 250:
+		squares.append(Vector2i(1000, 1000))
+	var fitted: Vector2i = SheetPacker.best_layout(squares)["size"]
+	_check.call(
+		tall == Vector2i(limit, limit / 2 * 3) and fitted.x <= limit and fitted.y <= limit,
+		"shelves pile up past the limit, and a layout within the limit wins over a smaller one",
+		"%s %s" % [tall, fitted]
+	)
 
 
 ## Rows of 8x8 cells: "walk" with pixels in different places and an empty middle frame, "opaque"

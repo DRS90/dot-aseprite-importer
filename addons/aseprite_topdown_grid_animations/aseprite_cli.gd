@@ -42,16 +42,6 @@ func _init(executable_path: String) -> void:
 	)
 
 
-## True when the configured executable exists and answers --version.
-func is_available() -> bool:
-	if _executable.strip_edges() == "":
-		return false
-	if _executable.is_absolute_path() and not FileAccess.file_exists(_executable):
-		return false
-	var output: Array = []
-	return OS.execute(_executable, PackedStringArray(["--version"]), output) == 0
-
-
 func get_executable() -> String:
 	return _executable
 
@@ -67,8 +57,10 @@ static func find_executable(executable: String) -> String:
 		return path if FileAccess.file_exists(path) else ""
 	var windows := OS.get_name() == "Windows"
 	var suffixes := PackedStringArray([""])
+	# Only what CreateProcess starts by itself: a .bat or .cmd wrapper would be found and then fail
+	# to run.
 	if windows and path.get_extension() == "":
-		suffixes = PackedStringArray([".exe", ".com", ".bat", ".cmd"])
+		suffixes = PackedStringArray([".exe", ".com"])
 	for folder: String in OS.get_environment("PATH").split(";" if windows else ":", false):
 		for suffix: String in suffixes:
 			var candidate := folder.strip_edges().path_join(path + suffix)
@@ -79,9 +71,13 @@ static func find_executable(executable: String) -> String:
 
 ## Why [param executable] cannot be used, with where to set it.
 static func not_found_message(executable: String) -> String:
+	return "Aseprite not found at '%s'. %s" % [executable, _where_to_set()]
+
+
+static func _where_to_set() -> String:
 	return (
-		"Aseprite not found at '%s'. Set Editor Settings > %s or the %s variable."
-		% [executable, Settings.EXECUTABLE_KEY, Settings.EXECUTABLE_ENV]
+		"Set Editor Settings > %s or the %s variable to the Aseprite executable."
+		% [Settings.EXECUTABLE_KEY, Settings.EXECUTABLE_ENV]
 	)
 
 
@@ -272,9 +268,12 @@ func _run_batch(params: PackedStringArray) -> PackedStringArray:
 			return lines
 	# The exit code cannot tell a process that never started from a script error: Aseprite exits
 	# with 127 on a Lua error, which OS.execute() reports as -1 on Windows, the same as a failed
-	# start. Whether the executable is still there can.
-	if find_executable(_executable) == "":
-		last_error = not_found_message(_executable)
+	# start. The output can: a script error always prints its message.
+	if code != 0 and text.strip_edges() == "":
+		last_error = (
+			"Aseprite at '%s' did not run (exit %d, no output). %s"
+			% [_executable, code, _where_to_set()]
+		)
 		return PackedStringArray()
 	last_error = (
 		"Aseprite failed (exit %d): %s" % [code, text.strip_edges().right(MAX_LOGGED_OUTPUT)]
