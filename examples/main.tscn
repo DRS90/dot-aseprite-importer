@@ -25,6 +25,7 @@ tile_map_data = PackedByteArray("AAD+/wAAAAAAAAAAAAD//wAAAAAAAAAAAAAAAAAAAAAAAAA
 tile_set = SubResource("TileSet_tkm6i")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1244402466 node_paths=PackedStringArray("animation_player")]
+z_index = 1
 sprite_frames = ExtResource("1_d2j2t")
 animation = &"walk_down"
 script = ExtResource("3_move")
@@ -34,9 +35,11 @@ metadata/_aseprite_topdown_grid_animations_sync_key = "1d9879a1532ebfa00ebf34212
 
 [node name="Shadow" type="Sprite2D" parent="AnimatedSprite2D" unique_id=1275635387]
 show_behind_parent = true
+z_index = -1
 texture = ExtResource("1_oe2cu")
 
 [node name="SecondCharacter" type="AnimatedSprite2D" parent="." unique_id=1873402518]
+z_index = 1
 position = Vector2(32, 0)
 sprite_frames = ExtResource("1_d2j2t")
 animation = &"walk_down"
@@ -44,6 +47,7 @@ autoplay = "walk_down"
 
 [node name="Shadow" type="Sprite2D" parent="SecondCharacter" unique_id=1648205731]
 show_behind_parent = true
+z_index = -1
 texture = ExtResource("1_oe2cu")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=141086055]
