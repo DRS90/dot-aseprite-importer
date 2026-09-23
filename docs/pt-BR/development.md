@@ -12,8 +12,12 @@ ASEPRITE_PATH=<aseprite> godot --headless --path . --import
 ```
 
 `tests/test_runner.gd` roda todas as verificações e imprime uma linha `PASS`/`FAIL` para cada uma;
-as verificações de sincronização com o AnimationPlayer ficam em `tests/animation_sync_tests.gd` e as
-do empacotamento da folha em `tests/sheet_packer_tests.gd`, e ele chama as duas.
+as verificações de sincronização com o AnimationPlayer ficam em `tests/animation_sync_tests.gd`, as
+do empacotamento da folha em `tests/sheet_packer_tests.gd` e as da listagem em
+`tests/aseprite_file_reader_tests.gd`, e ele chama as três. As da listagem comparam o que o addon lê
+de um arquivo com o que o próprio Aseprite lista, nos exemplos e em sprites que
+`tests/tools/build_reader_cases.lua` gera a cada execução (grupos aninhados, camadas ocultas, todas
+as direções de tag, um nome de tag repetido, um nome de camada com acento).
 
 `tests/tools/build_grid.lua` converte para o formato de grade um sprite desenhado com uma camada de
 nível superior por direção (camadas com os nomes das células da grade):

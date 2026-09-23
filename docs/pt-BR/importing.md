@@ -41,12 +41,14 @@ ninguém escolheu cai no primeiro; escolha o outro por arquivo com **Import As**
 O Godot reimporta um arquivo de origem quando o conteúdo dele muda, o que ele percebe **quando a
 janela do editor do Godot recupera o foco** (ou num *Reimport* manual).
 
-- Cada importação abre o Aseprite duas vezes, não importa quantas direções e tags o arquivo tenha:
-  uma para ler o tamanho, as camadas, as tags e as durações dos frames, e outra para exportar todas
-  as animações. O que custa tempo é abrir o Aseprite (cerca de 200 ms), não as animações.
+- Cada importação abre o Aseprite uma vez só, não importa quantas direções e tags o arquivo tenha,
+  para exportar todas as animações. O tamanho, as camadas, as tags e as durações dos frames são
+  lidos do próprio arquivo em poucos milissegundos. O que custa tempo é abrir o Aseprite e o
+  arquivo (cerca de 200 ms mais o tempo de abrir o arquivo), não as animações.
 - O Aseprite exporta uma tira por animação para uma pasta de cache fora do projeto. O addon junta
-  as tiras numa folha por arquivo, uma animação por linha, cada uma cortada aos pixels que ela usa,
-  e embute a folha como uma única textura sem perda no recurso importado (em `.godot/imported/`).
+  todos os frames numa folha por arquivo, cada frame cortado aos próprios pixels e frames repetidos
+  guardados uma vez só, e embute a folha como uma única textura sem perda no recurso importado (em
+  `.godot/imported/`).
   Cada frame mantém o tamanho da célula, então o sprite não se desloca, e todos os sprites que usam
   o arquivo desenham a mesma textura. Nada é gravado no projeto, e exportar uma cena que usa o
   arquivo exporta a textura junto.
@@ -87,10 +89,10 @@ propósito: descartar a segunda animação substituiria as que ainda funcionavam
 incompleto, enquanto uma importação que falha mantém as animações anteriores até os nomes serem
 corrigidos.
 
-A lista de `layers/layer` é preenchida perguntando ao Aseprite as camadas do arquivo quando o dock
-Import mostra o arquivo. A listagem fica em cache pelo conteúdo do arquivo e é reaproveitada pela
-importação, então não abre nenhum processo extra do Aseprite. Uma camada escolhida que não existe
-mais (renomeada ou removida) faz a importação falhar com um erro e mantém as animações anteriores. A
+A lista de `layers/layer` é preenchida com as camadas do arquivo, lidas do próprio arquivo quando o
+dock Import o mostra, então funciona antes mesmo de o Aseprite estar configurado. Uma camada
+escolhida que não existe mais (renomeada ou removida) faz a importação falhar com um erro e mantém
+as animações anteriores. A
 escolha pode ser uma camada que casa com `layers/exclude_pattern`, então uma camada `_shadow` fica
 fora de `[all]` e ainda pode ser importada sozinha.
 

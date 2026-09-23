@@ -9,9 +9,9 @@ All notable changes to this project are documented here. The format follows
 ### Added
 
 - `EditorImportPlugin` that imports `.aseprite` / `.ase` sprites drawn as a 3x3 grid of facing
-  directions as SpriteFrames, with one animation per direction and tag. Aseprite runs twice per
-  import whatever the number of animations: once to read the size, layers, tags and frame
-  durations, once to export every animation through a bundled Lua script.
+  directions as SpriteFrames, with one animation per direction and tag. Aseprite runs once per
+  import whatever the number of animations, to export every animation through a bundled Lua
+  script; the size, layers, tags and frame durations are read from the file itself.
 - Aseprite timing: the animation speed comes from the shortest frame of the tag and every frame
   keeps its relative duration; reverse, ping-pong and ping-pong reverse tags reorder the frames.
 - Animation names from `sprite_frames/animation_name` (default `{tag}_{direction}`), and loops from
@@ -25,15 +25,17 @@ All notable changes to this project are documented here. The format follows
 - Two tags that give the same animation name fail the import instead of dropping the second one, so
   the animations that still worked are kept until the names are fixed.
 - `layers/layer` dropdown, filled with the file's top-level layers and groups, to import one of them
-  instead of `[all]`.
+  instead of `[all]`. The layers are read from the file, so the dropdown works before Aseprite is
+  configured.
 - Layer and tag exclusion patterns and `only_visible`.
 - A second importer, *Aseprite Texture*, picked per file with **Import As**: it exports the whole
   canvas with every frame side by side and saves a lossless `Texture2D`, so an `.aseprite` can be
   used in a Sprite2D, a TextureRect, a shader uniform or as the source image of a TileSet. Tags and
   the grid are ignored by it, and it stays at a lower priority so a new file still lands on the
   animations importer.
-- One texture per file, embedded in the imported resource: the animations are packed into one
-  sheet, each cut to the pixels it uses, so every sprite using the file draws the same texture.
+- One texture per file, embedded in the imported resource: every frame is packed into one sheet,
+  cut to its own pixels, with repeated frames stored once, so every sprite using the file draws the
+  same texture.
   Nothing is written to the project, and exported scenes carry their textures.
 - AnimationPlayer section in the AnimatedSprite2D inspector: the sprite's animations are written to
   the linked player and synced again on reimport and when a scene is opened, keeping the tracks

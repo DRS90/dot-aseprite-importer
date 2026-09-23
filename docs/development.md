@@ -11,8 +11,11 @@ ASEPRITE_PATH=<aseprite> godot --headless --path . --import
 ```
 
 `tests/test_runner.gd` runs every check and prints one `PASS`/`FAIL` line each; the AnimationPlayer
-sync checks live in `tests/animation_sync_tests.gd` and the sheet packing checks in
-`tests/sheet_packer_tests.gd`, both called by it.
+sync checks live in `tests/animation_sync_tests.gd`, the sheet packing checks in
+`tests/sheet_packer_tests.gd`, and the listing checks in `tests/aseprite_file_reader_tests.gd`, all
+called by it. The listing checks compare what the addon reads from a file with what Aseprite itself
+lists, on the examples and on sprites that `tests/tools/build_reader_cases.lua` builds on each run
+(nested groups, hidden layers, every tag direction, a repeated tag name, a non-ASCII layer name).
 
 `tests/tools/build_grid.lua` turns a sprite drawn with one top-level layer per direction (layers
 named like the grid cells) into the grid format:
