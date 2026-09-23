@@ -69,7 +69,7 @@
       `slash_*` animation does not shift it, every frame shows 48x48 in the SpriteFrames panel,
       opening the scene leaves it and `main_animations.tres` unchanged, and *Draw Calls* with both
       characters in different animations drops from 4 (one texture per strip) to 3
-- [ ] Manual test in the editor of the per-frame sheet: `examples/main.tscn` reimported after the
+- [x] Manual test in the editor of the per-frame sheet: `examples/main.tscn` reimported after the
       format bump to 3, the character does not move against its shadow, `flip_h` does not shift
       it, every frame shows 48x48 in the SpriteFrames panel, *Draw Calls* as before, and the layer
       dropdown lists the layers with the executable path cleared
