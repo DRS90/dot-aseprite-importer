@@ -60,11 +60,11 @@
       *Import As* drives a Sprite2D, a `sampler2D` uniform of a ShaderMaterial and the texture of a
       TileSetAtlasSource painted on a TileMapLayer; editing it in Aseprite updates all of them; and
       a newly added `.aseprite` still lands on the animations importer
-- [ ] Manual test in the editor of the single sheet: `examples/main.tscn` reimported after the
+- [x] Manual test in the editor of the single sheet: `examples/main.tscn` reimported after the
       format bump, the character does not move against its shadow while walking, `flip_h` on a
       `slash_*` animation does not shift it, every frame shows 48x48 in the SpriteFrames panel,
       opening the scene leaves it and `main_animations.tres` unchanged, and *Draw Calls* with both
-      characters in different animations is compared with the one-texture-per-strip version
+      characters in different animations drops from 4 (one texture per strip) to 3
 - [ ] Make the repository public and tag `v0.1.0`
 - [ ] Submit to the Godot Asset Library (category Addon, Godot 4.7, MIT, commit hash of the tag)
 
