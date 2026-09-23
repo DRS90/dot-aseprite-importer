@@ -4,6 +4,7 @@ extends SceneTree
 ## Prints one PASS/FAIL line per check and exits with 1 when any check fails.
 
 const AnimationSyncTests := preload("res://tests/animation_sync_tests.gd")
+const AsepriteFileReaderTests := preload("res://tests/aseprite_file_reader_tests.gd")
 const SheetPackerTests := preload("res://tests/sheet_packer_tests.gd")
 const AsepriteCli := preload("res://addons/aseprite_topdown_grid_animations/aseprite_cli.gd")
 const AsepriteSource := preload("res://addons/aseprite_topdown_grid_animations/aseprite_source.gd")
@@ -153,7 +154,7 @@ func _test_with_example_asset() -> void:
 	var frames := _test_sprite_frames(cli, planner, jobs, contents)
 	_test_directionless_export(cli, contents, frames)
 	_test_export_rejects_bad_input(cli)
-	_test_aseprite_source()
+	AsepriteFileReaderTests.new(_check, _tmp_dir.path_join("reader")).run(cli)
 	_test_texture(cli, contents, frames)
 
 
@@ -250,48 +251,6 @@ func _test_texture(cli: AsepriteCli, contents: Dictionary, grid_frames: SpriteFr
 		),
 		"a strip wider than a texture can be is refused",
 		str(TextureImporter.MAX_TEXTURE_WIDTH)
-	)
-
-
-## The source shared by the importers: it verifies the executable, caches a listing by file content
-## and hands out the layer dropdown. Headless, so the executable arrives as a Callable instead of
-## from the Editor Settings.
-func _test_aseprite_source() -> void:
-	var source := AsepriteSource.new(func() -> String: return OS.get_environment("ASEPRITE_PATH"))
-	var cli := source.verified_cli()
-	if not _check(cli != null, "the shared source verifies the executable", source.last_error):
-		return
-
-	var first := source.list(cli, SOURCE)
-	var second := source.list(cli, SOURCE)
-	_check(
-		is_same(first, second) and first.get("size", Vector2i.ZERO) == SPRITE_SIZE,
-		"listing the same file twice returns the cached dictionary",
-		str(first.get("size", Vector2i.ZERO))
-	)
-
-	# Keyed by content, not by path: a file replaced under the same name has to be listed again.
-	var copy := "user://aseprite_source_copy.aseprite"
-	DirAccess.copy_absolute(SOURCE, copy)
-	var before: Vector2i = source.list(cli, copy).get("size", Vector2i.ZERO)
-	DirAccess.copy_absolute(SHADOW, copy)
-	var after: Vector2i = source.list(cli, copy).get("size", Vector2i.ZERO)
-	DirAccess.remove_absolute(copy)
-	_check(
-		before == SPRITE_SIZE and after == SHADOW_SIZE,
-		"a file replaced under the same path is listed again",
-		"%s then %s" % [before, after]
-	)
-
-	_check(
-		source.layer_choices(SOURCE) == "[all],character,weapon",
-		"the layer dropdown offers [all] and the file's layers",
-		source.layer_choices(SOURCE)
-	)
-	_check(
-		source.layer_choices("") == "[all]",
-		"without a file the dropdown offers [all] alone",
-		source.layer_choices("")
 	)
 
 

@@ -7,8 +7,10 @@
 --   left_down | down | right_down
 -- With cells_per_axis=1 the frame is a single nameless cell, for sprites that have no direction.
 --
--- Starting Aseprite costs about 200 ms while exporting one strip costs a few, so a whole import is
--- served by one process per mode instead of one process per strip.
+-- Starting Aseprite costs about 200 ms, plus the time it takes to open the file, while exporting
+-- one strip costs a few, so a whole import is served by one export process instead of one process
+-- per strip. Imports read what a file holds from its bytes (aseprite_file_reader.gd); mode=list
+-- lists the same through Aseprite and is what the tests compare that reader with.
 --
 -- mode=list    params: file
 --              Prints "size<TAB>width<TAB>height", then "layer<TAB>name<TAB>visible" ("true" or

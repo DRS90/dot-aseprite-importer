@@ -25,7 +25,7 @@ var _sync := AnimationSync.new()
 func _enter_tree() -> void:
 	_settings = Settings.new()
 	_settings.register()
-	# One source for every importer: the executable is checked once and a file listed once.
+	# One source for every importer: a file is read once per content, whichever importer asks.
 	_source = AsepriteSource.new(_settings.get_executable_path)
 	_importer = Importer.new(_settings, _source)
 	add_import_plugin(_importer)
