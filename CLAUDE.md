@@ -11,9 +11,11 @@ have no direction. The file imports as a **SpriteFrames** with one animation per
 (`sprite_frames/animation_name`, default `{tag}_{direction}`), timed like in Aseprite (speed = 1 /
 shortest frame, relative durations, reverse/ping-pong), looping when the tag ends with
 `sprite_frames/loop_suffix` (default `_loop`, removed from the name). Cells with no pixels in a tag
-give no animation. Aseprite exports strips to the OS cache only; they become lossless
-`PortableCompressedTexture2D` textures embedded in the imported resource, so nothing is written to
-`res://`. `layers/layer` is a dropdown filled from the file's layers (`[all]` = every layer but
+give no animation. Aseprite exports strips to the OS cache only; `sheet_packer.gd` packs them into
+one sheet per file (one animation per row, each row cut to the union of its frames' used rects),
+embedded as a single lossless `PortableCompressedTexture2D` that every frame's `AtlasTexture`
+shares, with a `margin` giving the cut space back so frames keep the cell size. Nothing is written
+to `res://`. `layers/layer` is a dropdown filled from the file's layers (`[all]` = every layer but
 `^_`); the listing is cached by the file's MD5 and shared with `_import`.
 
 An inspector section on AnimatedSprite2D links an AnimationPlayer: each SpriteFrames animation
@@ -25,12 +27,14 @@ changed, and can be forced with a button. The library goes to its own file when
 the sync key, so a skipped sync never touches the disk.
 
 - Code: `addons/aseprite_topdown_grid_animations/`: `plugin.gd`, `importer.gd`, `settings.gd`,
-  `aseprite_cli.gd`, `export_planner.gd` (pure), `sprite_frames_builder.gd` (no editor),
+  `aseprite_cli.gd`, `export_planner.gd` (pure), `sheet_packer.gd` +
+  `sprite_frames_builder.gd` (no editor),
   `animation_sync.gd` + `animation_library_store.gd` (no editor),
   `animated_sprite_inspector.gd` + `animation_player_panel.gd`
   (editor UI), and `aseprite_batch.lua` (runs inside Aseprite: `mode=list` and `mode=export`).
 - Tests: `tests/test_runner.gd`, plus `tests/animation_sync_tests.gd` (the AnimationPlayer sync
-  checks, which build their nodes by hand and never call Aseprite). Demo: `examples/`.
+  checks, which build their nodes by hand and never call Aseprite) and `tests/sheet_packer_tests.gd`
+  (synthetic strips). Demo: `examples/`.
   `tests/tools/build_grid.lua` turns a layer-per-direction sprite into the grid format;
   `tests/tools/build_cases.lua` builds sprites for manual tests into the folder passed as `out=`.
 - Docs: `README.md` keeps only the overview, install, quick start and links; the details live in
@@ -98,6 +102,9 @@ the sync key, so a skipped sync never touches the disk.
 - Rename or move the addon folder only with the Godot editor **closed**. A running editor that loses
   the importer rewrites the `.import` files using it to `importer="keep"` (dropping params and uid)
   or leaves them with `valid=false`, and *Reimport all* then finds no file.
+- `AtlasTexture.get_image()` ignores `margin`, so a trimmed frame comes back smaller than its cell:
+  tests rebuild the cell with `SheetPackerTests.frame_image()`. A `region` of size 0 means "the
+  whole atlas", which is why the packer refuses a strip with no pixels instead of emitting one.
 - Metadata names starting with `_` are **saved** — verified headless for a node in a `.tscn` and a
   resource in both `.tres` and binary `.res`. The `_` only hides the entry from the inspector's
   Metadata list, which is what the docs mean by "editor-only". The sprite's link and sync key use

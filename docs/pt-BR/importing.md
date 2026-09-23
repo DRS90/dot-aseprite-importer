@@ -44,9 +44,12 @@ janela do editor do Godot recupera o foco** (ou num *Reimport* manual).
 - Cada importação abre o Aseprite duas vezes, não importa quantas direções e tags o arquivo tenha:
   uma para ler o tamanho, as camadas, as tags e as durações dos frames, e outra para exportar todas
   as animações. O que custa tempo é abrir o Aseprite (cerca de 200 ms), não as animações.
-- O Aseprite exporta uma tira por animação para uma pasta de cache fora do projeto. As tiras viram
-  texturas sem perda embutidas no recurso importado (em `.godot/imported/`), então nada é gravado
-  no projeto, e exportar uma cena que usa o arquivo exporta as texturas junto.
+- O Aseprite exporta uma tira por animação para uma pasta de cache fora do projeto. O addon junta
+  as tiras numa folha por arquivo, uma animação por linha, cada uma cortada aos pixels que ela usa,
+  e embute a folha como uma única textura sem perda no recurso importado (em `.godot/imported/`).
+  Cada frame mantém o tamanho da célula, então o sprite não se desloca, e todos os sprites que usam
+  o arquivo desenham a mesma textura. Nada é gravado no projeto, e exportar uma cena que usa o
+  arquivo exporta a textura junto.
 
 *Project > Tools > Aseprite Top-Down Grid Animations: Reimport all* força a reimportação de todos os
 arquivos que usam qualquer um dos dois importadores, por exemplo depois de mudar o caminho do

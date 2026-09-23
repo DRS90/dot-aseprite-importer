@@ -12,8 +12,8 @@ ASEPRITE_PATH=<aseprite> godot --headless --path . --import
 ```
 
 `tests/test_runner.gd` roda todas as verificações e imprime uma linha `PASS`/`FAIL` para cada uma;
-as verificações de sincronização com o AnimationPlayer ficam em `tests/animation_sync_tests.gd`, que
-ele chama.
+as verificações de sincronização com o AnimationPlayer ficam em `tests/animation_sync_tests.gd` e as
+do empacotamento da folha em `tests/sheet_packer_tests.gd`, e ele chama as duas.
 
 `tests/tools/build_grid.lua` converte para o formato de grade um sprite desenhado com uma camada de
 nível superior por direção (camadas com os nomes das células da grade):

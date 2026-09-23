@@ -43,9 +43,12 @@ window regains focus** (or on a manual *Reimport*).
 - Each import starts Aseprite twice, however many directions and tags the file has: once to read its
   size, layers, tags and frame durations, and once to export every animation. Starting Aseprite is
   what costs time (about 200 ms), not the animations.
-- Aseprite exports one strip per animation to a cache folder outside the project. The strips become
-  lossless textures embedded in the imported resource (in `.godot/imported/`), so nothing is written
-  to the project, and exporting a scene that uses the file exports its textures with it.
+- Aseprite exports one strip per animation to a cache folder outside the project. The addon packs
+  them into one sheet per file, one animation per row, each cut to the pixels that animation uses,
+  and embeds the sheet as a single lossless texture in the imported resource (in
+  `.godot/imported/`). Every frame keeps the size of its cell, so the sprite does not move, and
+  every sprite using the file draws the same texture. Nothing is written to the project, and
+  exporting a scene that uses the file exports the texture with it.
 
 *Project > Tools > Aseprite Top-Down Grid Animations: Reimport all* forces a reimport of every file
 that uses either importer, e.g. after changing the executable path or a project default, or after

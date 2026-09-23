@@ -32,8 +32,9 @@ All notable changes to this project are documented here. The format follows
   used in a Sprite2D, a TextureRect, a shader uniform or as the source image of a TileSet. Tags and
   the grid are ignored by it, and it stays at a lower priority so a new file still lands on the
   animations importer.
-- Textures embedded in the imported resource: nothing is written to the project, and exported scenes
-  carry their textures.
+- One texture per file, embedded in the imported resource: the animations are packed into one
+  sheet, each cut to the pixels it uses, so every sprite using the file draws the same texture.
+  Nothing is written to the project, and exported scenes carry their textures.
 - AnimationPlayer section in the AnimatedSprite2D inspector: the sprite's animations are written to
   the linked player and synced again on reimport and when a scene is opened, keeping the tracks
   added to them.
