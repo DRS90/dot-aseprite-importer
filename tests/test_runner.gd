@@ -72,6 +72,7 @@ func _initialize() -> void:
 	_test_planner_edge_cases()
 	_test_builder()
 	SheetPackerTests.new(_check).run()
+	AsepriteFileReaderTests.new(_check, _tmp_dir.path_join("reader")).run_without_aseprite()
 	AnimationSyncTests.new(_check, get_root()).run()
 	print("%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(0 if _failures == 0 else 1)

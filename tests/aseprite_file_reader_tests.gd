@@ -39,12 +39,20 @@ func _init(check: Callable, folder: String) -> void:
 	_folder = folder
 
 
+## The checks that need Aseprite.
 func run(cli: AsepriteCli) -> void:
 	if _build_cases(cli):
 		_test_same_as_aseprite(cli)
 		_test_mixed_case(cli)
-	_test_damaged()
 	_test_aseprite_source(cli.get_executable())
+
+
+## The checks that run without Aseprite, so CI covers them whatever it has installed.
+func run_without_aseprite() -> void:
+	_test_did_not_run()
+	if FileAccess.file_exists(EXAMPLES[0]):
+		DirAccess.make_dir_recursive_absolute(_folder)
+		_test_damaged()
 
 
 ## Runs build_reader_cases.lua once; false after reporting why it failed.
@@ -264,7 +272,6 @@ func _test_missing_executable(executable: String) -> void:
 		"a bare name is found in the PATH",
 		"%s in %s" % [found, resolved.get_base_dir()]
 	)
-	_test_did_not_run()
 
 
 ## A run that never started is told from a Lua error by its output, on each platform. Checked on

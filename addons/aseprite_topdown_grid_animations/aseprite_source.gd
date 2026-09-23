@@ -50,17 +50,22 @@ func verified_cli() -> AsepriteCli:
 func list(source_file: String) -> Dictionary:
 	last_error = ""
 	# Hashed as a stream, so the common case, a file that has not changed, never holds it whole
-	# in memory. Only a changed file is read again, to parse it.
-	var md5 := FileAccess.get_md5(source_file)
+	# in memory.
 	var cached: Dictionary = _cache.get(source_file, {})
-	if md5 != "" and not cached.is_empty() and cached["md5"] == md5:
+	if not cached.is_empty() and cached["md5"] == FileAccess.get_md5(source_file):
 		var contents: Dictionary = cached["contents"]
 		return contents
-	var listed := _reader.read(source_file)
+	# A changed file is read whole, and the hash kept is the one of the bytes parsed, so a file
+	# saved again between the two reads is never cached under the other content.
+	var bytes := _reader.load_bytes(source_file)
+	var listed := {} if bytes.is_empty() else _reader.parse(bytes, source_file)
 	if listed.is_empty():
 		last_error = _reader.last_error
-	else:
-		_cache[source_file] = {"md5": md5, "contents": listed}
+		return listed
+	var hashing := HashingContext.new()
+	hashing.start(HashingContext.HASH_MD5)
+	hashing.update(bytes)
+	_cache[source_file] = {"md5": hashing.finish().hex_encode(), "contents": listed}
 	return listed
 
 

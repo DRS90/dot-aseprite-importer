@@ -267,9 +267,17 @@ func _run_batch(params: PackedStringArray) -> PackedStringArray:
 		if code == 0 and line.begins_with(DONE_PREFIX):
 			return lines
 	if did_not_run(code, text, OS.get_name() == "Windows"):
+		var said := text.strip_edges().right(MAX_LOGGED_OUTPUT)
+		# Nothing at all can also be an Aseprite that crashed before the script printed anything,
+		# so the message does not claim the path is wrong.
+		var why := (
+			"'%s'" % said
+			if said != ""
+			else "no output: it may not be Aseprite, or it stopped before running the script"
+		)
 		last_error = (
-			"Aseprite at '%s' did not run (exit %d): %s %s"
-			% [_executable, code, text.strip_edges().right(MAX_LOGGED_OUTPUT), _where_to_set()]
+			"Aseprite at '%s' did not run the export (exit %d, %s). %s"
+			% [_executable, code, why, _where_to_set()]
 		)
 		return PackedStringArray()
 	last_error = (
@@ -278,13 +286,12 @@ func _run_batch(params: PackedStringArray) -> PackedStringArray:
 	return PackedStringArray()
 
 
-## True when a batch run that did not finish never ran Aseprite at all, rather than failing inside
-## it. The exit code cannot tell: Aseprite exits with 127 on a Lua error, which OS.execute() reports
-## as -1 on Windows, like a process it could not start. The output can. On Windows, a process that
-## never started prints nothing, while a script error always prints its message; nothing at all,
-## whatever the exit code, also means the executable is not Aseprite. Elsewhere OS.execute() runs
-## the command through sh, which reports a missing or non-executable file itself ("sh: ...", exit
-## 127 or 126).
+## True when a batch run that did not finish never got to run the script, rather than failing
+## inside it. The exit code cannot tell: Aseprite exits with 127 on a Lua error, which OS.execute()
+## reports as -1 on Windows, like a process it could not start. The output can. A script error
+## always prints its message, while nothing at all means the process did not start, is not
+## Aseprite, or stopped before the script said anything. Elsewhere OS.execute() runs the command
+## through sh, which reports a missing or non-executable file itself ("sh: ...", exit 127 or 126).
 static func did_not_run(code: int, output: String, windows: bool) -> bool:
 	var text := output.strip_edges()
 	if text == "":
