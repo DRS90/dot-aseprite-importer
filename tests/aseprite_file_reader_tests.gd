@@ -44,15 +44,18 @@ func run(cli: AsepriteCli) -> void:
 	if _build_cases(cli):
 		_test_same_as_aseprite(cli)
 		_test_mixed_case(cli)
-	_test_aseprite_source(cli.get_executable())
+	_test_executable(cli.get_executable())
 
 
 ## The checks that run without Aseprite, so CI covers them whatever it has installed.
 func run_without_aseprite() -> void:
 	_test_did_not_run()
-	if FileAccess.file_exists(EXAMPLES[0]):
+	_test_missing_script()
+	if FileAccess.file_exists(EXAMPLES[0]) and FileAccess.file_exists(SHADOW):
 		DirAccess.make_dir_recursive_absolute(_folder)
 		_test_damaged()
+		_test_source_cache()
+		_test_missing_executable()
 
 
 ## Runs build_reader_cases.lua once; false after reporting why it failed.
@@ -195,12 +198,19 @@ func _test_damaged() -> void:
 ## The source shared by the importers: it finds the executable without starting it, reads and
 ## caches a listing by file content and hands out the layer dropdown. Headless, so the executable
 ## arrives as a Callable instead of from the Editor Settings.
-func _test_aseprite_source(executable: String) -> void:
+func _test_executable(executable: String) -> void:
 	var source := AsepriteSource.new(func() -> String: return executable)
 	_check.call(
 		source.verified_cli() != null, "the shared source finds the executable", source.last_error
 	)
+	_test_path_lookup(executable)
 
+
+## The listing cache and the dropdown, which need no Aseprite. A hit compares the MD5 streamed from
+## the file with the one hashed from the bytes parsed on the miss, so a cached dictionary coming
+## back proves both are spelled alike.
+func _test_source_cache() -> void:
+	var source := AsepriteSource.new(func() -> String: return "")
 	var first := source.list(SOURCE)
 	var second := source.list(SOURCE)
 	_check.call(
@@ -232,11 +242,10 @@ func _test_aseprite_source(executable: String) -> void:
 		"without a file the dropdown offers [all] alone",
 		source.layer_choices("")
 	)
-	_test_missing_executable(executable)
 
 
 ## A missing executable is found out without starting a process, and the file is still read.
-func _test_missing_executable(executable: String) -> void:
+func _test_missing_executable() -> void:
 	var missing_name := "no-such-aseprite-anywhere"
 	var bare := AsepriteSource.new(func() -> String: return missing_name)
 	var absent_path := _folder.path_join("missing/Aseprite.exe")
@@ -257,7 +266,9 @@ func _test_missing_executable(executable: String) -> void:
 		bare.layer_choices(SOURCE)
 	)
 
-	# A bare name is looked up in the PATH, as the OS would.
+
+## A bare name is looked up in the PATH, as the OS would.
+func _test_path_lookup(executable: String) -> void:
 	var resolved := AsepriteCli.find_executable(executable)
 	var saved_path := OS.get_environment("PATH")
 	OS.set_environment("PATH", resolved.get_base_dir())
@@ -271,6 +282,24 @@ func _test_missing_executable(executable: String) -> void:
 		found != "" and FileAccess.file_exists(found),
 		"a bare name is found in the PATH",
 		"%s in %s" % [found, resolved.get_base_dir()]
+	)
+
+
+## Aseprite exits without a word for a script that is not there, so the wrapper checks for it
+## first and names it, instead of blaming the executable. Nothing is started.
+func _test_missing_script() -> void:
+	var cli := AsepriteCli.new("unused")
+	cli._batch_script = _folder.path_join("moved/aseprite_batch.lua")
+	var job := {
+		"direction": "", "tag": "", "animation": "a", "loop": false, "relative_path": "a.png"
+	}
+	var jobs: Array[Dictionary] = [job]
+	var layers := PackedStringArray(["layer"])
+	var error := cli.export_strips("x.aseprite", jobs, layers, Vector2i.ONE, 1, _folder)
+	_check.call(
+		error != OK and cli.last_error.contains("moved/aseprite_batch.lua"),
+		"a missing batch script is named instead of the executable being blamed",
+		cli.last_error
 	)
 
 

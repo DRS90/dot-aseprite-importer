@@ -258,6 +258,14 @@ func _run_batch(params: PackedStringArray) -> PackedStringArray:
 	# Every --script-param must come before --script.
 	args.append("--script")
 	args.append(_batch_script)
+	# Aseprite exits silently for a script that is not there, which would read as a wrong
+	# executable: e.g. the addon folder moved while the editor was open.
+	if not FileAccess.file_exists(_batch_script):
+		last_error = (
+			"The addon's script '%s' is missing; restart the editor or reinstall the addon."
+			% _batch_script
+		)
+		return PackedStringArray()
 	var output: Array = []
 	# stderr is read as well, so a Lua error ends up in last_error.
 	var code := OS.execute(_executable, args, output, true)
@@ -276,7 +284,7 @@ func _run_batch(params: PackedStringArray) -> PackedStringArray:
 			else "no output: it may not be Aseprite, or it stopped before running the script"
 		)
 		last_error = (
-			"Aseprite at '%s' did not run the export (exit %d, %s). %s"
+			"Aseprite at '%s' did not run the script (exit %d, %s). %s"
 			% [_executable, code, why, _where_to_set()]
 		)
 		return PackedStringArray()

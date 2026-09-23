@@ -42,7 +42,7 @@ const TAG_DIRECTION := 4
 ## Bytes of the tags chunk before its first tag: the count (a WORD) and 8 reserved bytes.
 const TAGS_OFFSET := 10
 
-## Why the last [method read] call returned an empty dictionary.
+## Why the last call returned nothing: [method read], [method load_bytes] or [method parse].
 var last_error := ""
 
 
