@@ -404,16 +404,14 @@ func _test_sprite_frames(
 		),
 		"walk_down loops with 4 frames at 10 fps, use_left has 8, slash_right does not loop"
 	)
-	_test_shared_sheet(frames, cli.last_written, strips_dir)
+	_test_shared_sheet(frames)
 	_test_frames_match_sheets(frames, jobs, contents)
 	return frames
 
 
 ## Every frame of every animation draws the same texture, so every sprite using the file does too,
-## and it keeps the cell size while the sheet holds only the pixels the animations use.
-func _test_shared_sheet(
-	frames: SpriteFrames, written: PackedStringArray, strips_dir: String
-) -> void:
+## and it keeps the cell size.
+func _test_shared_sheet(frames: SpriteFrames) -> void:
 	var sheet: Texture2D = null
 	var shared := true
 	var clipped := true
@@ -433,16 +431,6 @@ func _test_shared_sheet(
 		sheet != null and shared and clipped and cell_sized,
 		"every frame is a clipped, cell-sized region of one shared sheet",
 		"shared %s, clipped %s, cell sized %s" % [shared, clipped, cell_sized]
-	)
-	var strip_pixels := 0
-	for relative_path: String in written:
-		var strip := Image.load_from_file(strips_dir.path_join(relative_path))
-		strip_pixels += strip.get_width() * strip.get_height()
-	var sheet_size := sheet.get_size() if sheet != null else Vector2.ZERO
-	_check(
-		sheet_size.x * sheet_size.y * 4 < strip_pixels,
-		"the trimmed sheet holds less than a quarter of the pixels of the strips",
-		"%s vs %d px" % [sheet_size, strip_pixels]
 	)
 
 

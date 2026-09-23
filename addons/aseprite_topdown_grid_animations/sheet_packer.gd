@@ -6,7 +6,9 @@ extends RefCounted
 ## in the order given, with one column per frame. A row is cut to the union of the used rects of
 ## its frames, so every frame of an animation keeps the same size and offset; the margin returned
 ## for each frame gives back the space cut away, so an AtlasTexture built from it is the size of the
-## cell and draws its pixels where the cell had them.
+## cell and draws its pixels where the cell had them. A strip with no visible pixel is left out, as
+## Aseprite leaves out an empty cell: Aseprite calls a cell empty only when its raw pixels are zero,
+## so a cell of fully transparent pixels with color under them still reaches the packer.
 
 ## Largest texture side the renderers accept.
 const MAX_TEXTURE_SIZE := 16384
@@ -17,8 +19,8 @@ var errors := PackedStringArray()
 
 ## [param strips] holds {"key": String, "image": Image} entries, each image a strip of cells of
 ## [param cell_size] side by side. Returns {"sheet": Image, "cells": {key: Array of {"region":
-## Rect2i, "margin": Rect2i}}}, one entry per cell of the strip, or an empty dictionary when
-## [member errors] is not empty. "sheet" is null when there is nothing to pack.
+## Rect2i, "margin": Rect2i}}}, one entry per cell of each strip that has a visible pixel, or an
+## empty dictionary when [member errors] is not empty. "sheet" is null when nothing is visible.
 func pack(strips: Array[Dictionary], cell_size: Vector2i) -> Dictionary:
 	errors = PackedStringArray()
 	var rows: Array[Dictionary] = []
@@ -30,6 +32,9 @@ func pack(strips: Array[Dictionary], cell_size: Vector2i) -> Dictionary:
 		if row.is_empty():
 			continue
 		var used: Rect2i = row["used"]
+		# A region of size 0 means "the whole atlas" to an AtlasTexture: never hand one out.
+		if not used.has_area():
+			continue
 		var count: int = row["count"]
 		row["y"] = sheet_size.y
 		sheet_size = Vector2i(maxi(sheet_size.x, used.size.x * count), sheet_size.y + used.size.y)
@@ -68,7 +73,8 @@ func pack(strips: Array[Dictionary], cell_size: Vector2i) -> Dictionary:
 
 
 ## {"key", "image" (RGBA8), "count" (cells), "used" (union of the used rects, in cell space)} for
-## one strip, or an empty dictionary after reporting why it cannot be packed.
+## one strip, "used" having no area when no pixel is visible, or an empty dictionary after reporting
+## why the strip cannot be packed.
 func _measure(key: String, image: Image, cell_size: Vector2i) -> Dictionary:
 	if (
 		image == null
@@ -90,8 +96,4 @@ func _measure(key: String, image: Image, cell_size: Vector2i) -> Dictionary:
 		var frame_used := cell.get_used_rect()
 		if frame_used.has_area():
 			used = frame_used if not used.has_area() else used.merge(frame_used)
-	# A region of size 0 means "the whole atlas" to an AtlasTexture: never hand one out.
-	if not used.has_area():
-		errors.append("The strip '%s' has no pixels." % key)
-		return {}
 	return {"key": key, "image": rgba, "count": count, "used": used}

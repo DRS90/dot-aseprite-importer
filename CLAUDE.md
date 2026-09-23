@@ -104,7 +104,10 @@ the sync key, so a skipped sync never touches the disk.
   or leaves them with `valid=false`, and *Reimport all* then finds no file.
 - `AtlasTexture.get_image()` ignores `margin`, so a trimmed frame comes back smaller than its cell:
   tests rebuild the cell with `SheetPackerTests.frame_image()`. A `region` of size 0 means "the
-  whole atlas", which is why the packer refuses a strip with no pixels instead of emitting one.
+  whole atlas", so the packer leaves out a strip with no visible pixel instead of emitting one.
+  Such strips do reach it: Lua's `Image:isEmpty()` compares raw pixels with 0, while Godot's
+  `get_used_rect()` looks at alpha, so a cell of alpha-0 pixels with color under them (common in
+  art pasted from PNG sheets) is exported and must give no animation, not fail the import.
 - Metadata names starting with `_` are **saved** — verified headless for a node in a `.tscn` and a
   resource in both `.tres` and binary `.res`. The `_` only hides the entry from the inspector's
   Metadata list, which is what the docs mean by "editor-only". The sprite's link and sync key use

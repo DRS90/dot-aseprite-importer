@@ -3,6 +3,12 @@ extends RefCounted
 ## [param check] is the runner's own reporting function, so one run counts every failure.
 
 const SheetPacker := preload("res://addons/aseprite_topdown_grid_animations/sheet_packer.gd")
+const SpriteFramesBuilder := preload(
+	"res://addons/aseprite_topdown_grid_animations/sprite_frames_builder.gd"
+)
+
+## Decoded sheets by texture, so comparing hundreds of frames decodes each sheet once.
+static var _decoded := {}
 
 var _check: Callable
 
@@ -67,15 +73,20 @@ func run() -> void:
 		"%d of 5" % rebuilt
 	)
 
-	var blank: Array[Dictionary] = [
-		{"key": "blank", "image": Image.create_empty(16, 8, false, Image.FORMAT_RGBA8)}
+	# Color under alpha 0: Aseprite does not call it empty, but nothing of it is visible.
+	var invisible := Image.create_empty(16, 8, false, Image.FORMAT_RGBA8)
+	invisible.fill(Color(1.0, 0.0, 0.0, 0.0))
+	var with_invisible: Array[Dictionary] = [
+		{"key": "invisible", "image": invisible}, {"key": "walk", "image": walk}
 	]
-	packed = packer.pack(blank, cell)
+	packed = packer.pack(with_invisible, cell)
+	cells = packed.get("cells", {})
 	_check.call(
-		packed.is_empty() and packer.errors.size() == 1 and packer.errors[0].contains("no pixels"),
-		"a strip with no pixels is refused instead of becoming a whole-atlas region",
-		str(packer.errors)
+		packer.errors.is_empty() and cells.keys() == ["walk"] and packed.get("sheet") != null,
+		"a strip with no visible pixel is left out, never a whole-atlas region",
+		"%s %s" % [packer.errors, cells.keys()]
 	)
+	_test_builder_skips_invisible(invisible)
 	var crooked: Array[Dictionary] = [
 		{"key": "crooked", "image": Image.create_empty(10, 8, false, Image.FORMAT_RGBA8)}
 	]
@@ -129,6 +140,37 @@ func _test_sheet_packer_limit(packer: SheetPacker) -> void:
 	)
 
 
+## The only strip of a file holds no visible pixel: the import gives no animation and no error, as
+## when Aseprite finds the cell empty, instead of failing the whole file.
+func _test_builder_skips_invisible(invisible: Image) -> void:
+	var strips_dir := OS.get_cache_dir().path_join(
+		"aseprite_topdown_grid_animations_tests/invisible"
+	)
+	DirAccess.make_dir_recursive_absolute(strips_dir)
+	invisible.save_png(strips_dir.path_join("invisible.png"))
+	var jobs: Array[Dictionary] = [
+		{
+			"direction": "up",
+			"tag": "ghost",
+			"animation": "ghost_up",
+			"loop": false,
+			"relative_path": "invisible.png",
+		}
+	]
+	var contents := {
+		"tag_ranges": {"ghost": {"from": 0, "to": 1, "direction": "forward"}},
+		"frame_durations": PackedInt32Array([100, 100]),
+	}
+	var builder := SpriteFramesBuilder.new()
+	var written := PackedStringArray(["invisible.png"])
+	var frames := builder.build(jobs, written, strips_dir, contents, Vector2i(8, 8))
+	_check.call(
+		builder.errors.is_empty() and frames.get_animation_names().is_empty(),
+		"a strip with no visible pixel gives no animation and does not fail the import",
+		"%s %s" % [builder.errors, frames.get_animation_names()]
+	)
+
+
 ## A frame as the sprite draws it. An AtlasTexture's image leaves its margin out, so the cell is
 ## rebuilt with the region placed where the margin puts it.
 static func frame_image(texture: Texture2D) -> Image:
@@ -137,8 +179,11 @@ static func frame_image(texture: Texture2D) -> Image:
 		var image := texture.get_image()
 		image.convert(Image.FORMAT_RGBA8)
 		return image
-	var sheet := atlas.atlas.get_image()
-	sheet.convert(Image.FORMAT_RGBA8)
+	if not _decoded.has(atlas.atlas):
+		var decoded := atlas.atlas.get_image()
+		decoded.convert(Image.FORMAT_RGBA8)
+		_decoded[atlas.atlas] = decoded
+	var sheet: Image = _decoded[atlas.atlas]
 	return recompose(sheet, Rect2i(atlas.region), Rect2i(atlas.margin))
 
 

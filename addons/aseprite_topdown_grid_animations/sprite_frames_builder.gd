@@ -88,17 +88,21 @@ func build(
 		if image == null:
 			errors.append("Cannot read the exported strip '%s'." % relative_path)
 			continue
+		image.convert(Image.FORMAT_RGBA8)
 		strips.append({"key": relative_path, "image": image})
 		built_jobs.append(job)
 	var packer := SheetPacker.new()
 	var packed := packer.pack(strips, cell_size)
 	errors.append_array(packer.errors)
-	if not errors.is_empty() or built_jobs.is_empty():
+	if not errors.is_empty() or packed["sheet"] == null:
 		return frames
 	# One texture for the whole file, shared by every frame of every animation.
 	var texture := _lossless_texture(packed["sheet"], false)
 	var cells: Dictionary = packed["cells"]
 	for job: Dictionary in built_jobs:
+		# Left out by the packer: no visible pixel, like a cell Aseprite found empty.
+		if not cells.has(job["relative_path"]):
+			continue
 		var tag: String = job["tag"]
 		var whole_timeline := {"from": 0, "to": durations.size() - 1, "direction": "forward"}
 		var tag_range: Dictionary = ranges.get(tag, whole_timeline)
