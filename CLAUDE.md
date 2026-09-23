@@ -80,7 +80,7 @@ the sync key, so a skipped sync never touches the disk.
 - Never take names from Aseprite's stdout: on Windows `OS.execute()` hands non-ASCII output back
   garbled (`ação` arrives as `aÃ§Ã£o`). And the exit code cannot tell a failed start from a Lua
   error: Aseprite exits 127 on a script error, which `OS.execute()` reports as -1 on Windows, like a
-  process that never started. `AsepriteCli` checks whether the executable exists instead.
+  process that never started. The output tells them apart: a script error always prints its message.
 - The nameless cell of `grid/directions` = `none` and `left_up` are both at (0, 0), so checking
   that a direction exists is not enough: `aseprite_batch.lua` requires `cells_per_axis == 1` to
   match an empty direction exactly, or a 3x3 job with no direction would export the `left_up` cell
