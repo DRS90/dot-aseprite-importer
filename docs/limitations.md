@@ -23,8 +23,8 @@
   is the canvas width times the frame count, e.g. 113 frames of a 144 px sprite.
 - The animations importer packs a file into one sheet, which may not pass 16384 pixels on either
   side: past that the import fails with a message and the previous import is kept. The sheet only
-  holds the pixels each animation uses, so this takes a very large file; split its tags into more
-  files if it happens.
+  holds the pixels of each frame, once per distinct frame, so this takes a very large file; split
+  its tags into more files if it happens.
 - A `.aseprite` uses one importer at a time and produces one resource. Switching *Import As* on a
   file already used in a scene leaves that reference pointing at the wrong type.
 - *Make Unique* and *Save As* on an imported texture only keep its pixels because the addon asks the

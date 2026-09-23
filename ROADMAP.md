@@ -27,6 +27,10 @@
       pixels the animation uses, with `AtlasTexture` margins keeping the frame size and the pivot,
       so every sprite using the file draws the same texture (the example's sheet is 132x535, 82%
       fewer pixels, and ~62 ms → ~19 ms)
+- [x] One Aseprite process per import: the size, layers, tags and durations are read from the
+      `.aseprite` file itself (the layer dropdown no longer needs Aseprite, and non-ASCII layer names
+      work), and the sheet is packed per frame with repeated frames stored once (the example's sheet
+      132x535 → 166x128 px; a 48x48 benchmark sprite imports in ~330 ms instead of ~750 ms)
 
 ## Before publishing
 
@@ -65,6 +69,10 @@
       `slash_*` animation does not shift it, every frame shows 48x48 in the SpriteFrames panel,
       opening the scene leaves it and `main_animations.tres` unchanged, and *Draw Calls* with both
       characters in different animations drops from 4 (one texture per strip) to 3
+- [x] Manual test in the editor of the per-frame sheet: `examples/main.tscn` reimported after the
+      format bump to 3, the character does not move against its shadow, `flip_h` does not shift
+      it, every frame shows 48x48 in the SpriteFrames panel, *Draw Calls* as before, and the layer
+      dropdown lists the layers with the executable path cleared
 - [ ] Make the repository public and tag `v0.1.0`
 - [ ] Submit to the Godot Asset Library (category Addon, Godot 4.7, MIT, commit hash of the tag)
 

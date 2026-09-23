@@ -24,8 +24,8 @@
   de 144 px.
 - O importador de animações junta o arquivo numa folha só, que não pode passar de 16384 pixels em
   nenhum dos lados: acima disso a importação falha com uma mensagem e a importação anterior é
-  mantida. A folha guarda só os pixels que cada animação usa, então isso exige um arquivo muito
-  grande; se acontecer, divida as tags dele em mais arquivos.
+  mantida. A folha guarda só os pixels de cada frame, uma vez por frame diferente, então isso exige
+  um arquivo muito grande; se acontecer, divida as tags dele em mais arquivos.
 - Um `.aseprite` usa um importador de cada vez e gera um recurso. Trocar o *Import As* de um arquivo
   já usado numa cena deixa aquela referência apontando para o tipo errado.
 - *Make Unique* e *Save As* numa textura importada só preservam os pixels porque o addon pede que a

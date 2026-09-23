@@ -3,11 +3,15 @@ extends RefCounted
 ## Wrapper around the Aseprite executable.
 ##
 ## Has no editor dependency, so headless tests can use it. Every path passed in must be absolute
-## (the caller globalizes res:// paths). Starting Aseprite costs about 200 ms while exporting a
-## strip costs a few, so listing and exporting each run as a single process of aseprite_batch.lua,
-## whatever the number of strips. The script rejects unknown layer or tag names, directions that do
-## not belong to the grid, and cells that do not fit the sprite. Failures are described in
+## (the caller globalizes res:// paths). Starting Aseprite costs about 200 ms, plus the time it
+## takes to open the file, while exporting a strip costs a few, so an import exports every strip in
+## a single process of aseprite_batch.lua. What a file holds is read from its bytes by
+## AsepriteFileReader instead; [method list_contents] lists the same through Aseprite and is kept
+## as the tests' reference. The script rejects unknown layer or tag names, directions that do not
+## belong to the grid, and cells that do not fit the sprite. Failures are described in
 ## [member last_error].
+
+const Settings := preload("settings.gd")
 
 const BATCH_SCRIPT := "aseprite_batch.lua"
 const JOBS_FILE := "jobs.txt"
@@ -38,26 +42,52 @@ func _init(executable_path: String) -> void:
 	)
 
 
-## True when the configured executable exists and answers --version.
-func is_available() -> bool:
-	if _executable.strip_edges() == "":
-		return false
-	if _executable.is_absolute_path() and not FileAccess.file_exists(_executable):
-		return false
-	var output: Array = []
-	return OS.execute(_executable, PackedStringArray(["--version"]), output) == 0
-
-
 func get_executable() -> String:
 	return _executable
 
 
-## What the file holds, in file order:
+## [param executable] as a file that exists, or "" when it cannot be found. A bare name such as
+## "aseprite" is looked up in the PATH, as the OS would, so a missing executable is found out
+## without starting a process: a failed start prints an engine error on Windows.
+static func find_executable(executable: String) -> String:
+	var path := executable.strip_edges()
+	if path == "":
+		return ""
+	if path.is_absolute_path() or path.contains("/") or path.contains("\\"):
+		return path if FileAccess.file_exists(path) else ""
+	var windows := OS.get_name() == "Windows"
+	var suffixes := PackedStringArray([""])
+	# Only what CreateProcess starts by itself: a .bat or .cmd wrapper would be found and then fail
+	# to run.
+	if windows and path.get_extension() == "":
+		suffixes = PackedStringArray([".exe", ".com"])
+	for folder: String in OS.get_environment("PATH").split(";" if windows else ":", false):
+		for suffix: String in suffixes:
+			var candidate := folder.strip_edges().path_join(path + suffix)
+			if FileAccess.file_exists(candidate):
+				return candidate
+	return ""
+
+
+## Why [param executable] cannot be used, with where to set it.
+static func not_found_message(executable: String) -> String:
+	return "Aseprite not found at '%s'. %s" % [executable, _where_to_set()]
+
+
+static func _where_to_set() -> String:
+	return (
+		"Set Editor Settings > %s or the %s variable to the Aseprite executable."
+		% [Settings.EXECUTABLE_KEY, Settings.EXECUTABLE_ENV]
+	)
+
+
+## What the file holds, listed by Aseprite itself, in file order:
 ## {"size": Vector2i, "layers": PackedStringArray (top-level layers and groups),
 ## "visible_layers": PackedStringArray, "tags": PackedStringArray,
 ## "tag_ranges": {name: {"from": int, "to": int, "direction": String}} (0-based frames, first tag
 ## of a repeated name), "frame_durations": PackedInt32Array (milliseconds)}.
-## Empty when Aseprite failed.
+## Empty when Aseprite failed. Imports read the same from the file with AsepriteFileReader; this is
+## the reference the tests compare it with.
 func list_contents(aseprite_file: String) -> Dictionary:
 	var lines := _run_batch(PackedStringArray(["mode=list", "file=" + aseprite_file]))
 	if lines.is_empty():
@@ -75,9 +105,9 @@ func list_contents(aseprite_file: String) -> Dictionary:
 		if line.begins_with(SIZE_PREFIX) and fields.size() == 3:
 			contents["size"] = Vector2i(fields[1].to_int(), fields[2].to_int())
 		elif line.begins_with(LAYER_PREFIX) and fields.size() == 3:
-			_add_layer(contents, fields[1], fields[2] == "true")
+			add_layer(contents, fields[1], fields[2] == "true")
 		elif line.begins_with(TAG_PREFIX) and fields.size() == 5:
-			_add_tag(contents, fields[1], fields[2].to_int(), fields[3].to_int(), fields[4])
+			add_tag(contents, fields[1], fields[2].to_int(), fields[3].to_int(), fields[4])
 		elif line.begins_with(FRAME_PREFIX) and fields.size() == 3:
 			var durations: PackedInt32Array = contents["frame_durations"]
 			durations.append(fields[2].to_int())
@@ -137,7 +167,9 @@ func export_strips(
 	return OK
 
 
-static func _add_layer(contents: Dictionary, layer: String, visible: bool) -> void:
+## Appends [param layer] to the "layers" of a listing, and to its "visible_layers" when
+## [param visible].
+static func add_layer(contents: Dictionary, layer: String, visible: bool) -> void:
 	var layers: PackedStringArray = contents["layers"]
 	layers.append(layer)
 	contents["layers"] = layers
@@ -147,7 +179,9 @@ static func _add_layer(contents: Dictionary, layer: String, visible: bool) -> vo
 		contents["visible_layers"] = visible_layers
 
 
-static func _add_tag(
+## Appends [param tag] to the "tags" of a listing. A name already listed keeps its first range,
+## the one aseprite_batch.lua exports for that name.
+static func add_tag(
 	contents: Dictionary, tag: String, from: int, to: int, direction: String
 ) -> void:
 	var tags: PackedStringArray = contents["tags"]
@@ -224,6 +258,14 @@ func _run_batch(params: PackedStringArray) -> PackedStringArray:
 	# Every --script-param must come before --script.
 	args.append("--script")
 	args.append(_batch_script)
+	# Aseprite exits silently for a script that is not there, which would read as a wrong
+	# executable: e.g. the addon folder moved while the editor was open.
+	if not FileAccess.file_exists(_batch_script):
+		last_error = (
+			"The addon's script '%s' is missing; restart the editor or reinstall the addon."
+			% _batch_script
+		)
+		return PackedStringArray()
 	var output: Array = []
 	# stderr is read as well, so a Lua error ends up in last_error.
 	var code := OS.execute(_executable, args, output, true)
@@ -232,10 +274,37 @@ func _run_batch(params: PackedStringArray) -> PackedStringArray:
 	for line: String in lines:
 		if code == 0 and line.begins_with(DONE_PREFIX):
 			return lines
+	if did_not_run(code, text, OS.get_name() == "Windows"):
+		var said := text.strip_edges().right(MAX_LOGGED_OUTPUT)
+		# Nothing at all can also be an Aseprite that crashed before the script printed anything,
+		# so the message does not claim the path is wrong.
+		var why := (
+			"'%s'" % said
+			if said != ""
+			else "no output: it may not be Aseprite, or it stopped before running the script"
+		)
+		last_error = (
+			"Aseprite at '%s' did not run the script (exit %d, %s). %s"
+			% [_executable, code, why, _where_to_set()]
+		)
+		return PackedStringArray()
 	last_error = (
 		"Aseprite failed (exit %d): %s" % [code, text.strip_edges().right(MAX_LOGGED_OUTPUT)]
 	)
 	return PackedStringArray()
+
+
+## True when a batch run that did not finish never got to run the script, rather than failing
+## inside it. The exit code cannot tell: Aseprite exits with 127 on a Lua error, which OS.execute()
+## reports as -1 on Windows, like a process it could not start. The output can. A script error
+## always prints its message, while nothing at all means the process did not start, is not
+## Aseprite, or stopped before the script said anything. Elsewhere OS.execute() runs the command
+## through sh, which reports a missing or non-executable file itself ("sh: ...", exit 127 or 126).
+static func did_not_run(code: int, output: String, windows: bool) -> bool:
+	var text := output.strip_edges()
+	if text == "":
+		return true
+	return not windows and (code == 126 or code == 127) and text.begins_with("sh:")
 
 
 static func _is_single_field(text: String) -> bool:

@@ -3,10 +3,12 @@ extends RefCounted
 ## Builds the SpriteFrames of an import from the strips Aseprite exported.
 ##
 ## Has no editor dependency, so headless tests can use it. Each strip holds its tag's frames left to
-## right in timeline order, one cell per frame. SheetPacker packs the strips into one sheet, trimmed
-## per animation, which becomes one lossless texture embedded in the SpriteFrames: every frame is an
-## AtlasTexture region of it, with a margin that gives back the trimmed space, so frames keep the
-## cell size and every sprite using the file draws the same texture. Timing follows Aseprite:
+## right in timeline order, one cell per frame. SheetPacker packs the strips into one sheet, each
+## frame trimmed to its pixels and repeated frames stored once, which becomes one lossless texture
+## embedded in the SpriteFrames: every frame is an AtlasTexture region of it, with a margin that
+## gives back the trimmed space, so frames keep the cell size and every sprite using the file draws
+## the same texture. Frames with the same region and margin share one AtlasTexture, in whichever
+## animation they are. Timing follows Aseprite:
 ## the animation speed is 1 / the shortest frame duration, and each frame keeps its duration
 ## relative to it. Reverse and ping-pong tags reorder the frames.
 
@@ -99,6 +101,7 @@ func build(
 	# One texture for the whole file, shared by every frame of every animation.
 	var texture := _lossless_texture(packed["sheet"], false)
 	var cells: Dictionary = packed["cells"]
+	var shared_regions := {}
 	for job: Dictionary in built_jobs:
 		# Left out by the packer: no visible pixel, like a cell Aseprite found empty.
 		if not cells.has(job["relative_path"]):
@@ -116,7 +119,7 @@ func build(
 				)
 			)
 			continue
-		_add_animation(frames, job, texture, strip_cells, tag_range, durations)
+		_add_animation(frames, job, texture, strip_cells, tag_range, durations, shared_regions)
 	return frames
 
 
@@ -133,7 +136,8 @@ static func _add_animation(
 	texture: Texture2D,
 	cells: Array[Dictionary],
 	tag_range: Dictionary,
-	durations: PackedInt32Array
+	durations: PackedInt32Array,
+	shared_regions: Dictionary
 ) -> void:
 	var first: int = tag_range["from"]
 	var last: int = tag_range["to"]
@@ -152,20 +156,20 @@ static func _add_animation(
 	frames.add_animation(animation)
 	frames.set_animation_speed(animation, speed)
 	frames.set_animation_loop(animation, loop)
-	# Ping-pong plays some cells twice: they share one region.
-	var regions := {}
 	for index: int in sequence.size():
-		var frame := sequence[index]
-		if not regions.has(frame):
-			var cell: Dictionary = cells[frame - first]
+		var cell: Dictionary = cells[sequence[index] - first]
+		# Ping-pong plays some cells twice, and repeated frames share a region: one AtlasTexture
+		# per region and margin in the whole file, [param shared_regions] keyed by both.
+		var key := [cell["region"], cell["margin"]]
+		if not shared_regions.has(key):
 			var region := AtlasTexture.new()
 			region.atlas = texture
 			region.region = Rect2(cell["region"])
 			region.margin = Rect2(cell["margin"])
 			# Trimmed frames touch their neighbours in the sheet: a linear filter would bleed them.
 			region.filter_clip = true
-			regions[frame] = region
-		var atlas: AtlasTexture = regions[frame]
+			shared_regions[key] = region
+		var atlas: AtlasTexture = shared_regions[key]
 		frames.add_frame(animation, atlas, relative[index])
 
 

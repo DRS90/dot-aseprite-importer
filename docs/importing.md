@@ -16,6 +16,10 @@ The path is resolved in this order:
 Steam installs live elsewhere, e.g. `C:\Program Files (x86)\Steam\steamapps\common\Aseprite\Aseprite.exe`
 or `~/.steam/steam/steamapps/common/Aseprite/aseprite`.
 
+The path has to name the executable itself: a `.bat` or `.cmd` wrapper cannot be started. A bare
+name such as `aseprite` is looked up in the `PATH`. A path that leads nowhere is reported when the
+file is imported, without starting anything.
+
 ## How the automatic import works
 
 The addon registers two `EditorImportPlugin`s, and every `.aseprite` uses one of them:
@@ -40,12 +44,13 @@ the first one; pick the other per file with **Import As** in the Import dock.
 Godot reimports a source file when its content changes, which it notices **when the Godot editor
 window regains focus** (or on a manual *Reimport*).
 
-- Each import starts Aseprite twice, however many directions and tags the file has: once to read its
-  size, layers, tags and frame durations, and once to export every animation. Starting Aseprite is
-  what costs time (about 200 ms), not the animations.
+- Each import starts Aseprite once, however many directions and tags the file has, to export every
+  animation. The size, layers, tags and frame durations are read from the file itself in a few
+  milliseconds. Starting Aseprite and opening the file is what costs time (about 200 ms plus the
+  time the file takes to open), not the animations.
 - Aseprite exports one strip per animation to a cache folder outside the project. The addon packs
-  them into one sheet per file, one animation per row, each cut to the pixels that animation uses,
-  and embeds the sheet as a single lossless texture in the imported resource (in
+  every frame into one sheet per file, each frame cut to its own pixels and repeated frames stored
+  once, and embeds the sheet as a single lossless texture in the imported resource (in
   `.godot/imported/`). Every frame keeps the size of its cell, so the sprite does not move, and
   every sprite using the file draws the same texture. Nothing is written to the project, and
   exporting a scene that uses the file exports the texture with it.
@@ -85,9 +90,9 @@ them. When two tags give the same name — `idle` and `idle_loop`, or two tags n
 the second animation would replace the ones that still worked with an incomplete resource, while a
 failed import keeps the previous animations until the names are fixed.
 
-The `layers/layer` dropdown is filled by asking Aseprite for the file's layers when the Import dock
-shows the file. The listing is cached by file content and reused by the import, so it adds no
-Aseprite process. A chosen layer that no longer exists (renamed or removed) fails the import with
+The `layers/layer` dropdown is filled with the file's layers, read from the file itself when the
+Import dock shows it, so it works before Aseprite is even configured. A chosen layer that no longer
+exists (renamed or removed) fails the import with
 an error and keeps the previous animations. The choice may be a layer matched by
 `layers/exclude_pattern`, so a `_shadow` layer stays out of `[all]` and can still be imported alone.
 

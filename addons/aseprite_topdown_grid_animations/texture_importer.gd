@@ -139,9 +139,9 @@ func _import(
 ## after reporting why it could not. Failing instead of saving something wrong is what keeps the
 ## previously imported texture in place.
 func _export_strip(cli: AsepriteCli, source_file: String, options: Dictionary) -> String:
-	var contents := _source.list(cli, source_file)
+	var contents := _source.list(source_file)
 	if contents.is_empty():
-		_report(source_file, cli.last_error)
+		_report(source_file, _source.last_error)
 		return ""
 	var only_visible: bool = options.get(OPTION_ONLY_VISIBLE, false)
 	var layers: PackedStringArray = contents["visible_layers" if only_visible else "layers"]

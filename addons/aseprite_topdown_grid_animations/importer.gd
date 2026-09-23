@@ -4,9 +4,11 @@ extends EditorImportPlugin
 ## in Aseprite. Frames drawn as a 3x3 grid of directions give one animation per direction and tag;
 ## with grid/directions set to none the frame is one cell and the sprite has no direction.
 ##
-## Aseprite exports one strip per animation to a cache folder, and the strips are packed into one
-## sheet, trimmed per animation, embedded in the imported resource as a single texture: nothing is
-## written to the project, and exporting a scene that uses the file exports the texture with it.
+## Layers, tags and frame durations are read from the file itself, so Aseprite runs once per
+## import, to export one strip per animation to a cache folder. The strips are packed into one
+## sheet, each frame trimmed and repeated frames stored once, embedded in the imported resource as
+## a single texture: nothing is written to the project, and exporting a scene that uses the file
+## exports the texture with it.
 ## The sheet cannot be imported as a project texture instead: append_import_external_resource()
 ## fails for files created during the import itself.
 
@@ -20,7 +22,7 @@ const VISIBLE_NAME := "Aseprite Top-Down Grid Animations"
 const LOG_PREFIX := AsepriteSource.LOG_PREFIX
 const SAVE_EXTENSION := "res"
 ## Bumped when the imported resource changes, so Godot reimports every file using this importer.
-const FORMAT_VERSION := 2
+const FORMAT_VERSION := 3
 const CACHE_FOLDER := "aseprite_topdown_grid_animations"
 
 const OPTION_DIRECTIONS := "grid/directions"
@@ -138,9 +140,9 @@ func _import(
 		push_error(LOG_PREFIX + _source.last_error)
 		return ERR_UNCONFIGURED
 
-	var contents := _source.list(cli, source_file)
+	var contents := _source.list(source_file)
 	if contents.is_empty():
-		push_error(LOG_PREFIX + "%s: %s" % [source_file, cli.last_error])
+		push_error(LOG_PREFIX + "%s: %s" % [source_file, _source.last_error])
 		return FAILED
 	var only_visible: bool = options.get(OPTION_ONLY_VISIBLE, false)
 	var sprite_size: Vector2i = contents["size"]
@@ -172,7 +174,9 @@ func _import(
 		push_error(LOG_PREFIX + "%s: %s" % [source_file, message])
 	if not _builder.errors.is_empty():
 		return FAILED
-	return ResourceSaver.save(frames, "%s.%s" % [save_path, SAVE_EXTENSION])
+	# Compressed: the frames' AtlasTextures take a third of the space, and it loads as fast.
+	var path := "%s.%s" % [save_path, SAVE_EXTENSION]
+	return ResourceSaver.save(frames, path, ResourceSaver.FLAG_COMPRESS)
 
 
 func _project_default(key: String) -> String:

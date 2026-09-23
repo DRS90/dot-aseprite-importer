@@ -3,7 +3,7 @@
 Godot 4 addon with two `EditorImportPlugin`s for `.aseprite`/`.ase`. The main one (priority 1.0)
 imports animations; `texture_importer.gd` (0.9, picked with *Import As*) imports any file as a
 lossless `Texture2D` of the whole canvas with every frame side by side, reusing the planner with an
-empty tag list. Both share `aseprite_source.gd` (verified executable + listing cache).
+empty tag list. Both share `aseprite_source.gd` (executable lookup + listing cache).
 For the animations importer: every frame of the source is a 3x3 grid of
 facing directions (`left_up`, `up`, `right_up`, `left`, `right`, `left_down`, `down`, `right_down`;
 center ignored), or a single nameless cell with `grid/directions` set to `none`, for sprites that
@@ -11,12 +11,13 @@ have no direction. The file imports as a **SpriteFrames** with one animation per
 (`sprite_frames/animation_name`, default `{tag}_{direction}`), timed like in Aseprite (speed = 1 /
 shortest frame, relative durations, reverse/ping-pong), looping when the tag ends with
 `sprite_frames/loop_suffix` (default `_loop`, removed from the name). Cells with no pixels in a tag
-give no animation. Aseprite exports strips to the OS cache only; `sheet_packer.gd` packs them into
-one sheet per file (one animation per row, each row cut to the union of its frames' used rects),
-embedded as a single lossless `PortableCompressedTexture2D` that every frame's `AtlasTexture`
-shares, with a `margin` giving the cut space back so frames keep the cell size. Nothing is written
-to `res://`. `layers/layer` is a dropdown filled from the file's layers (`[all]` = every layer but
-`^_`); the listing is cached by the file's MD5 and shared with `_import`.
+give no animation. Aseprite exports strips to the OS cache only; `sheet_packer.gd` packs every frame
+into one sheet per file (each frame cut to its used rect, frames with the same size and bytes
+stored once, shelf-packed), embedded as a single lossless `PortableCompressedTexture2D` that every
+frame's `AtlasTexture` shares, with a `margin` giving the cut space back so frames keep the cell
+size and pivot. Nothing is written to `res://`. Size, layers, tags and durations are read from the
+file's bytes by `aseprite_file_reader.gd` (no Aseprite process); `layers/layer` is a dropdown filled
+from them (`[all]` = every layer but `^_`), cached by the file's MD5 and shared with `_import`.
 
 An inspector section on AnimatedSprite2D links an AnimationPlayer: each SpriteFrames animation
 becomes an animation in the player's global library with discrete `animation` and `frame` tracks.
@@ -27,14 +28,17 @@ changed, and can be forced with a button. The library goes to its own file when
 the sync key, so a skipped sync never touches the disk.
 
 - Code: `addons/aseprite_topdown_grid_animations/`: `plugin.gd`, `importer.gd`, `settings.gd`,
-  `aseprite_cli.gd`, `export_planner.gd` (pure), `sheet_packer.gd` +
+  `aseprite_cli.gd`, `aseprite_source.gd`, `aseprite_file_reader.gd` + `export_planner.gd` (pure),
+  `sheet_packer.gd` +
   `sprite_frames_builder.gd` (no editor),
   `animation_sync.gd` + `animation_library_store.gd` (no editor),
   `animated_sprite_inspector.gd` + `animation_player_panel.gd`
-  (editor UI), and `aseprite_batch.lua` (runs inside Aseprite: `mode=list` and `mode=export`).
+  (editor UI), and `aseprite_batch.lua` (runs inside Aseprite: `mode=export`, and `mode=list`, which
+  only the tests use as the reference for the file reader).
 - Tests: `tests/test_runner.gd`, plus `tests/animation_sync_tests.gd` (the AnimationPlayer sync
-  checks, which build their nodes by hand and never call Aseprite) and `tests/sheet_packer_tests.gd`
-  (synthetic strips). Demo: `examples/`.
+  checks, which build their nodes by hand and never call Aseprite), `tests/sheet_packer_tests.gd`
+  (synthetic strips) and `tests/aseprite_file_reader_tests.gd` (reader vs Aseprite's listing, on
+  sprites built by `tests/tools/build_reader_cases.lua`, plus the source). Demo: `examples/`.
   `tests/tools/build_grid.lua` turns a layer-per-direction sprite into the grid format;
   `tests/tools/build_cases.lua` builds sprites for manual tests into the folder passed as `out=`.
 - Docs: `README.md` keeps only the overview, install, quick start and links; the details live in
@@ -69,9 +73,18 @@ the sync key, so a skipped sync never touches the disk.
 
 ## Known gotchas
 
-- Performance: each Aseprite process costs ~200 ms to start (even `--version`); a strip costs a few
-  ms. Never add per-strip or per-layer processes: an import is one `list` + one `export` run of
-  `aseprite_batch.lua` (30 strips: ~0.3 s vs ~6 s with one CLI call per strip).
+- Performance: each Aseprite process costs ~200 ms to start (even `--version`) plus the time to open
+  the file (~570 ms for 320 frames of 128x128: every cel is decompressed); a strip costs a few ms.
+  Never add per-strip, per-layer or listing processes: an import is one `export` run of
+  `aseprite_batch.lua`, and what the file holds comes from `aseprite_file_reader.gd`.
+- Never take names from Aseprite's stdout: on Windows `OS.execute()` hands non-ASCII output back
+  garbled (`ação` arrives as `aÃ§Ã£o`). And the exit code cannot tell a failed start from a Lua
+  error: Aseprite exits 127 on a script error, which `OS.execute()` reports as -1 on Windows, like a
+  process that never started. The output tells them apart (`AsepriteCli.did_not_run()`): on Windows
+  a failed start prints nothing, while elsewhere `OS.execute()` goes through `sh`, which prints
+  `sh: ...` and exits 126/127 for a missing or non-executable file. A missing `--script` file also
+  exits 127 with no output (e.g. the addon folder moved with the editor open), so `_run_batch`
+  checks that `aseprite_batch.lua` exists before starting Aseprite.
 - The nameless cell of `grid/directions` = `none` and `left_up` are both at (0, 0), so checking
   that a direction exists is not enough: `aseprite_batch.lua` requires `cells_per_axis == 1` to
   match an empty direction exactly, or a 3x3 job with no direction would export the `left_up` cell

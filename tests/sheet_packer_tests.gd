@@ -17,68 +17,52 @@ func _init(check: Callable) -> void:
 	_check = check
 
 
-## Synthetic strips through the packer: each row cut to the union of its frames, margins that give
-## the cells back, and what it has to refuse.
+## Synthetic strips through the packer: each frame cut to its own pixels, repeated frames stored
+## once, margins that give the cells back, and what it has to refuse.
 func run() -> void:
 	var cell := Vector2i(8, 8)
-	# Three frames with pixels in different places, the middle one empty: the union is (2, 3) 4x4.
-	var walk := Image.create_empty(24, 8, false, Image.FORMAT_RGBA8)
-	walk.fill_rect(Rect2i(2, 3, 2, 2), Color.RED)
-	walk.fill_rect(Rect2i(16 + 5, 6, 1, 1), Color.BLUE)
-	# No alpha channel: every pixel is used, so nothing is cut.
-	var opaque := Image.create_empty(16, 8, false, Image.FORMAT_RGB8)
-	opaque.fill(Color.GREEN)
-	var strips: Array[Dictionary] = [
-		{"key": "walk", "image": walk}, {"key": "opaque", "image": opaque}
-	]
+	var strips := _strips()
 	var packer := SheetPacker.new()
 	var packed := packer.pack(strips, cell)
 	var sheet: Image = packed.get("sheet")
 	var cells: Dictionary = packed.get("cells", {})
 	if not _check.call(
-		packer.errors.is_empty() and sheet != null and cells.size() == 2,
-		"the packer packs two strips",
+		packer.errors.is_empty() and sheet != null and cells.size() == strips.size(),
+		"the packer packs four strips",
 		str(packer.errors)
 	):
 		return
-	var walk_cells: Array[Dictionary] = cells["walk"]
-	var opaque_cells: Array[Dictionary] = cells["opaque"]
-	_check.call(
-		(
-			sheet.get_size() == Vector2i(16, 12)
-			and sheet.get_format() == Image.FORMAT_RGBA8
-			and walk_cells.size() == 3
-			and walk_cells[1]["region"] == Rect2i(4, 0, 4, 4)
-			and walk_cells[1]["margin"] == Rect2i(2, 3, 4, 4)
-			and opaque_cells.size() == 2
-			and opaque_cells[1]["region"] == Rect2i(8, 4, 8, 8)
-			and opaque_cells[1]["margin"] == Rect2i()
-		),
-		"one row per strip, cut to the union of its frames, the widest row setting the width",
-		"%s %s %s" % [sheet.get_size(), walk_cells, opaque_cells]
-	)
+	_test_trimmed_cells(cells)
+	_test_repeated_cells(cells, sheet)
 	var rebuilt := 0
-	for key: String in ["walk", "opaque"]:
-		var strip := (walk if key == "walk" else opaque).duplicate() as Image
-		strip.convert(Image.FORMAT_RGBA8)
-		var entries: Array[Dictionary] = cells[key]
+	var total := 0
+	for strip: Dictionary in strips:
+		var image := (strip["image"] as Image).duplicate() as Image
+		image.convert(Image.FORMAT_RGBA8)
+		var entries: Array[Dictionary] = cells[strip["key"]]
 		for index: int in entries.size():
-			var original := strip.get_region(Rect2i(Vector2i(index * cell.x, 0), cell))
+			var original := image.get_region(Rect2i(Vector2i(index * cell.x, 0), cell))
 			var entry := entries[index]
+			total += 1
 			if recompose(sheet, entry["region"], entry["margin"]).get_data() == original.get_data():
 				rebuilt += 1
 	_check.call(
-		rebuilt == 5,
+		rebuilt == total and total == 9,
 		"region and margin give every cell back, the empty frame included",
-		"%d of 5" % rebuilt
+		"%d of %d" % [rebuilt, total]
+	)
+	var again := packer.pack(strips, cell)
+	var same_sheet := (again.get("sheet") as Image).get_data() == sheet.get_data()
+	_check.call(
+		same_sheet and str(again.get("cells")) == str(cells),
+		"the same strips give the same sheet",
+		str(again.get("cells"))
 	)
 
 	# Color under alpha 0: Aseprite does not call it empty, but nothing of it is visible.
 	var invisible := Image.create_empty(16, 8, false, Image.FORMAT_RGBA8)
 	invisible.fill(Color(1.0, 0.0, 0.0, 0.0))
-	var with_invisible: Array[Dictionary] = [
-		{"key": "invisible", "image": invisible}, {"key": "walk", "image": walk}
-	]
+	var with_invisible: Array[Dictionary] = [{"key": "invisible", "image": invisible}, strips[0]]
 	packed = packer.pack(with_invisible, cell)
 	cells = packed.get("cells", {})
 	_check.call(
@@ -103,39 +87,144 @@ func run() -> void:
 		str(packed)
 	)
 	_test_sheet_packer_limit(packer)
+	_test_layout_limit()
 
 
-## The sheet may reach the texture limit on either axis, and not one pixel past it.
-func _test_sheet_packer_limit(packer: SheetPacker) -> void:
-	var cell := Vector2i(4, 4)
-	var limit_cells := SheetPacker.MAX_TEXTURE_SIZE / cell.x
-	var results := PackedStringArray()
-	for cells_past: int in [0, 1]:
-		var wide := Image.create_empty(
-			cell.x * (limit_cells + cells_past), cell.y, false, Image.FORMAT_RGBA8
-		)
-		wide.fill(Color.WHITE)
-		var wide_strips: Array[Dictionary] = [{"key": "wide", "image": wide}]
-		var wide_packed := packer.pack(wide_strips, cell)
-		results.append("wide+%d:%s" % [cells_past, "ok" if packer.errors.is_empty() else "refused"])
-		var cell_image := Image.create_empty(cell.x, cell.y, false, Image.FORMAT_RGBA8)
-		cell_image.fill(Color.WHITE)
-		var tall_strips: Array[Dictionary] = []
-		for index: int in limit_cells + cells_past:
-			tall_strips.append({"key": "row_%d" % index, "image": cell_image})
-		var tall_packed := packer.pack(tall_strips, cell)
-		results.append("tall+%d:%s" % [cells_past, "ok" if packer.errors.is_empty() else "refused"])
-		if cells_past == 1 and not (wide_packed.is_empty() and tall_packed.is_empty()):
-			results.append("a refused sheet was still returned")
+## The layout alone, on sizes, so sheets near the limit need no image that big. Shelves pile up
+## past the limit when nothing narrower fits, and a width within the limit is chosen over a smaller
+## sheet that passes it.
+func _test_layout_limit() -> void:
+	var limit := SheetPacker.MAX_TEXTURE_SIZE
+	var stacked: Array[Vector2i] = []
+	for index: int in 3:
+		stacked.append(Vector2i(limit, limit / 2))
+	var tall: Vector2i = SheetPacker.best_layout(stacked)["size"]
+	# 250 squares of 1000 px: the smallest sheets of the tried widths are 15 squares wide (17 rows,
+	# too tall) or 17 wide (too wide); 16 per row, 16000 px each way, is within the limit.
+	var squares: Array[Vector2i] = []
+	for index: int in 250:
+		squares.append(Vector2i(1000, 1000))
+	var fitted: Vector2i = SheetPacker.best_layout(squares)["size"]
+	_check.call(
+		tall == Vector2i(limit, limit / 2 * 3) and fitted.x <= limit and fitted.y <= limit,
+		"shelves pile up past the limit, and a layout within the limit wins over a smaller one",
+		"%s %s" % [tall, fitted]
+	)
+
+
+## Rows of 8x8 cells: "walk" with pixels in different places and an empty middle frame, "opaque"
+## with no alpha channel (every pixel used, twice the same), "repeat" with walk's first frame in
+## its place and moved, and "shape" with two solid rects of the same bytes but different sizes.
+static func _strips() -> Array[Dictionary]:
+	var walk := Image.create_empty(24, 8, false, Image.FORMAT_RGBA8)
+	walk.fill_rect(Rect2i(2, 3, 2, 2), Color.RED)
+	walk.fill_rect(Rect2i(16 + 5, 6, 1, 1), Color.BLUE)
+	var opaque := Image.create_empty(16, 8, false, Image.FORMAT_RGB8)
+	opaque.fill(Color.GREEN)
+	var repeat := Image.create_empty(16, 8, false, Image.FORMAT_RGBA8)
+	repeat.fill_rect(Rect2i(2, 3, 2, 2), Color.RED)
+	repeat.fill_rect(Rect2i(8 + 4, 1, 2, 2), Color.RED)
+	var shape := Image.create_empty(16, 8, false, Image.FORMAT_RGBA8)
+	shape.fill_rect(Rect2i(0, 0, 2, 8), Color.YELLOW)
+	shape.fill_rect(Rect2i(8, 0, 4, 4), Color.YELLOW)
+	return [
+		{"key": "walk", "image": walk},
+		{"key": "opaque", "image": opaque},
+		{"key": "repeat", "image": repeat},
+		{"key": "shape", "image": shape},
+	]
+
+
+func _test_trimmed_cells(cells: Dictionary) -> void:
+	var walk: Array[Dictionary] = cells["walk"]
+	var opaque: Array[Dictionary] = cells["opaque"]
 	_check.call(
 		(
-			results
-			== PackedStringArray(["wide+0:ok", "tall+0:ok", "wide+1:refused", "tall+1:refused"])
+			walk.size() == 3
+			and (walk[0]["region"] as Rect2i).size == Vector2i(2, 2)
+			and walk[0]["margin"] == Rect2i(2, 3, 6, 6)
+			and (walk[2]["region"] as Rect2i).size == Vector2i(1, 1)
+			and walk[2]["margin"] == Rect2i(5, 6, 7, 7)
+			and opaque.size() == 2
+			and (opaque[0]["region"] as Rect2i).size == Vector2i(8, 8)
+			and opaque[0]["margin"] == Rect2i()
 		),
+		"every frame is cut to its own pixels, and its margin gives the cell back",
+		"%s %s" % [walk, opaque]
+	)
+	var empty_region: Rect2i = walk[1]["region"]
+	_check.call(
+		empty_region.size == Vector2i(1, 1) and walk[1]["margin"] == Rect2i(0, 0, 7, 7),
+		"an empty frame is one transparent pixel with a margin, never a region of size 0",
+		str(walk[1])
+	)
+
+
+func _test_repeated_cells(cells: Dictionary, sheet: Image) -> void:
+	var walk: Array[Dictionary] = cells["walk"]
+	var opaque: Array[Dictionary] = cells["opaque"]
+	var repeat: Array[Dictionary] = cells["repeat"]
+	var shape: Array[Dictionary] = cells["shape"]
+	_check.call(
 		(
-			"a sheet of %d px is packed, one cell past it is refused on either axis"
-			% SheetPacker.MAX_TEXTURE_SIZE
+			repeat[0]["region"] == walk[0]["region"]
+			and repeat[1]["region"] == walk[0]["region"]
+			and repeat[1]["margin"] == Rect2i(4, 1, 6, 6)
+			and opaque[1]["region"] == opaque[0]["region"]
 		),
+		"repeated frames share a region, each with its own margin",
+		"%s %s %s" % [walk[0], repeat, opaque]
+	)
+	_check.call(
+		shape[0]["region"] != shape[1]["region"],
+		"frames with the same bytes but different sizes do not share a region",
+		str(shape)
+	)
+	var regions: Array[Rect2i] = []
+	for key: String in cells:
+		for entry: Dictionary in cells[key]:
+			var region: Rect2i = entry["region"]
+			if not regions.has(region):
+				regions.append(region)
+	var problems := PackedStringArray()
+	var sheet_rect := Rect2i(Vector2i.ZERO, sheet.get_size())
+	for index: int in regions.size():
+		if not sheet_rect.encloses(regions[index]):
+			problems.append("%s outside" % regions[index])
+		for other: int in range(index + 1, regions.size()):
+			if regions[index].intersects(regions[other]):
+				problems.append("%s over %s" % [regions[index], regions[other]])
+	_check.call(
+		regions.size() == 6 and problems.is_empty(),
+		"six distinct regions, none overlapping, all inside the sheet",
+		"%d regions %s" % [regions.size(), problems]
+	)
+
+
+## A frame may reach the texture limit on either axis, and not one pixel past it.
+func _test_sheet_packer_limit(packer: SheetPacker) -> void:
+	var results := PackedStringArray()
+	for past: int in [0, 1]:
+		var side := SheetPacker.MAX_TEXTURE_SIZE + past
+		for cell: Vector2i in [Vector2i(side, 1), Vector2i(1, side)]:
+			var image := Image.create_empty(cell.x, cell.y, false, Image.FORMAT_RGBA8)
+			image.fill(Color.WHITE)
+			var strips: Array[Dictionary] = [{"key": "big", "image": image}]
+			var packed := packer.pack(strips, cell)
+			var refused := not packer.errors.is_empty() and packed.is_empty()
+			results.append("%s:%s" % [cell, "refused" if refused else "ok"])
+	var limit := SheetPacker.MAX_TEXTURE_SIZE
+	var expected := PackedStringArray(
+		[
+			"(%d, 1):ok" % limit,
+			"(1, %d):ok" % limit,
+			"(%d, 1):refused" % (limit + 1),
+			"(1, %d):refused" % (limit + 1),
+		]
+	)
+	_check.call(
+		results == expected,
+		"a frame of %d px is packed, one pixel past it is refused on either axis" % limit,
 		str(results)
 	)
 
