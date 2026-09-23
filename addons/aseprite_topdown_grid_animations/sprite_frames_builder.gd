@@ -3,10 +3,14 @@ extends RefCounted
 ## Builds the SpriteFrames of an import from the strips Aseprite exported.
 ##
 ## Has no editor dependency, so headless tests can use it. Each strip holds its tag's frames left to
-## right in timeline order, one cell per frame. The strips become lossless textures embedded in the
-## SpriteFrames and every frame is an AtlasTexture region of its strip. Timing follows Aseprite:
+## right in timeline order, one cell per frame. SheetPacker packs the strips into one sheet, trimmed
+## per animation, which becomes one lossless texture embedded in the SpriteFrames: every frame is an
+## AtlasTexture region of it, with a margin that gives back the trimmed space, so frames keep the
+## cell size and every sprite using the file draws the same texture. Timing follows Aseprite:
 ## the animation speed is 1 / the shortest frame duration, and each frame keeps its duration
 ## relative to it. Reverse and ping-pong tags reorder the frames.
+
+const SheetPacker := preload("sheet_packer.gd")
 
 const DEFAULT_DURATION_MS := 100
 
@@ -22,10 +26,7 @@ static func load_strip_texture(path: String, keep_buffer := false) -> PortableCo
 	var image := Image.load_from_file(path)
 	if image == null:
 		return null
-	var texture := PortableCompressedTexture2D.new()
-	texture.keep_compressed_buffer = keep_buffer
-	texture.create_from_image(image, PortableCompressedTexture2D.COMPRESSION_MODE_LOSSLESS)
-	return texture
+	return _lossless_texture(image, keep_buffer)
 
 
 ## Timeline frames (0-based) that a tag spanning [param first] to [param last] plays, in order.
@@ -77,18 +78,41 @@ func build(
 	frames.remove_animation(&"default")
 	var durations: PackedInt32Array = contents.get("frame_durations", PackedInt32Array())
 	var ranges: Dictionary = contents.get("tag_ranges", {})
+	var strips: Array[Dictionary] = []
+	var built_jobs: Array[Dictionary] = []
 	for job: Dictionary in jobs:
 		var relative_path: String = job["relative_path"]
 		if not written.has(relative_path):
 			continue
-		var texture := load_strip_texture(strips_dir.path_join(relative_path))
-		if texture == null:
+		var image := Image.load_from_file(strips_dir.path_join(relative_path))
+		if image == null:
 			errors.append("Cannot read the exported strip '%s'." % relative_path)
 			continue
+		strips.append({"key": relative_path, "image": image})
+		built_jobs.append(job)
+	var packer := SheetPacker.new()
+	var packed := packer.pack(strips, cell_size)
+	errors.append_array(packer.errors)
+	if not errors.is_empty() or built_jobs.is_empty():
+		return frames
+	# One texture for the whole file, shared by every frame of every animation.
+	var texture := _lossless_texture(packed["sheet"], false)
+	var cells: Dictionary = packed["cells"]
+	for job: Dictionary in built_jobs:
 		var tag: String = job["tag"]
 		var whole_timeline := {"from": 0, "to": durations.size() - 1, "direction": "forward"}
 		var tag_range: Dictionary = ranges.get(tag, whole_timeline)
-		_add_animation(frames, job, texture, tag_range, durations, cell_size)
+		var strip_cells: Array[Dictionary] = cells[job["relative_path"]]
+		var cell_count: int = tag_range["to"] - tag_range["from"] + 1
+		if strip_cells.size() != cell_count:
+			errors.append(
+				(
+					"The strip '%s' has %d frames, but its tag spans %d."
+					% [job["relative_path"], strip_cells.size(), cell_count]
+				)
+			)
+			continue
+		_add_animation(frames, job, texture, strip_cells, tag_range, durations)
 	return frames
 
 
@@ -103,9 +127,9 @@ static func _add_animation(
 	frames: SpriteFrames,
 	job: Dictionary,
 	texture: Texture2D,
+	cells: Array[Dictionary],
 	tag_range: Dictionary,
-	durations: PackedInt32Array,
-	cell_size: Vector2i
+	durations: PackedInt32Array
 ) -> void:
 	var first: int = tag_range["from"]
 	var last: int = tag_range["to"]
@@ -129,9 +153,20 @@ static func _add_animation(
 	for index: int in sequence.size():
 		var frame := sequence[index]
 		if not regions.has(frame):
+			var cell: Dictionary = cells[frame - first]
 			var region := AtlasTexture.new()
 			region.atlas = texture
-			region.region = Rect2((frame - first) * cell_size.x, 0, cell_size.x, cell_size.y)
+			region.region = Rect2(cell["region"])
+			region.margin = Rect2(cell["margin"])
+			# Trimmed frames touch their neighbours in the sheet: a linear filter would bleed them.
+			region.filter_clip = true
 			regions[frame] = region
 		var atlas: AtlasTexture = regions[frame]
 		frames.add_frame(animation, atlas, relative[index])
+
+
+static func _lossless_texture(image: Image, keep_buffer: bool) -> PortableCompressedTexture2D:
+	var texture := PortableCompressedTexture2D.new()
+	texture.keep_compressed_buffer = keep_buffer
+	texture.create_from_image(image, PortableCompressedTexture2D.COMPRESSION_MODE_LOSSLESS)
+	return texture
