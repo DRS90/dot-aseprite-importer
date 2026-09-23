@@ -2,10 +2,8 @@ extends RefCounted
 ## SheetPacker checks of the headless test runner, on synthetic strips: they never call Aseprite.
 ## [param check] is the runner's own reporting function, so one run counts every failure.
 
-const SheetPacker := preload("res://addons/aseprite_topdown_grid_animations/sheet_packer.gd")
-const SpriteFramesBuilder := preload(
-	"res://addons/aseprite_topdown_grid_animations/sprite_frames_builder.gd"
-)
+const SheetPacker := preload("res://addons/dot_aseprite/sheet_packer.gd")
+const SpriteFramesBuilder := preload("res://addons/dot_aseprite/sprite_frames_builder.gd")
 
 ## Decoded sheets by texture, so comparing hundreds of frames decodes each sheet once.
 static var _decoded := {}
@@ -232,9 +230,7 @@ func _test_sheet_packer_limit(packer: SheetPacker) -> void:
 ## The only strip of a file holds no visible pixel: the import gives no animation and no error, as
 ## when Aseprite finds the cell empty, instead of failing the whole file.
 func _test_builder_skips_invisible(invisible: Image) -> void:
-	var strips_dir := OS.get_cache_dir().path_join(
-		"aseprite_topdown_grid_animations_tests/invisible"
-	)
+	var strips_dir := OS.get_cache_dir().path_join("dot_aseprite_tests/invisible")
 	DirAccess.make_dir_recursive_absolute(strips_dir)
 	invisible.save_png(strips_dir.path_join("invisible.png"))
 	var jobs: Array[Dictionary] = [

@@ -6,7 +6,7 @@
 
 O caminho é procurado nesta ordem:
 
-1. *Editor Settings > Aseprite Top-Down Grid Animations > General > Executable Path* (por máquina).
+1. *Editor Settings > Dot Aseprite > General > Executable Path* (por máquina).
 2. A variável de ambiente `ASEPRITE_PATH` (útil para CI e importações headless).
 3. O padrão do sistema operacional:
    - Windows: `C:\Program Files\Aseprite\Aseprite.exe`
@@ -27,16 +27,16 @@ O addon registra dois `EditorImportPlugin`, e todo `.aseprite` usa um deles:
 
 | Importador | Gera | Serve para |
 |---|---|---|
-| **Aseprite Top-Down Grid Animations** | `SpriteFrames` | animações, num AnimatedSprite2D |
-| **Aseprite Texture** | um `Texture2D` sem perdas | Sprite2D, TextureRect, uniform de shader, imagem-fonte de um TileSet |
+| **Dot Aseprite SpriteFrames** | `SpriteFrames` | animações, num AnimatedSprite2D |
+| **Dot Aseprite Texture** | um `Texture2D` sem perdas | Sprite2D, TextureRect, uniform de shader, imagem-fonte de um TileSet |
 
 Qual deles um arquivo quer depende de duas perguntas: ele é animado, e ele olha para algum lado?
 
 | O sprite | Import As | Gera |
 |---|---|---|
-| animado, uma célula por direção | **Aseprite Top-Down Grid Animations** (o padrão) | uma animação por direção e tag |
+| animado, uma célula por direção | **Dot Aseprite SpriteFrames** (o padrão) | uma animação por direção e tag |
 | animado, sem direção, como uma poeira de corrida ou uma faísca | o mesmo importador, com [`grid/directions`](#opções-de-importação) em `none` | uma animação por tag |
-| sem animação, como uma sombra, um prop ou uma página de tileset | **Aseprite Texture** | um `Texture2D` da tela |
+| sem animação, como uma sombra, um prop ou uma página de tileset | **Dot Aseprite Texture** | um `Texture2D` da tela |
 
 Os dois primeiros mantêm as durações de frame, os loops e o ping-pong do Aseprite, e conseguem
 dirigir um AnimationPlayer; o terceiro é uma imagem e não carrega nada disso. Um arquivo para o qual
@@ -57,17 +57,17 @@ janela do editor do Godot recupera o foco** (ou num *Reimport* manual).
   o arquivo desenham a mesma textura. Nada é gravado no projeto, e exportar uma cena que usa o
   arquivo exporta a textura junto.
 
-*Project > Tools > Aseprite Top-Down Grid Animations: Reimport all* força a reimportação de todos os
+*Project > Tools > Dot Aseprite Importer: Reimport all* força a reimportação de todos os
 arquivos que usam qualquer um dos dois importadores, por exemplo depois de mudar o caminho do
 executável ou uma configuração padrão do projeto, ou depois de atualizar o addon.
 
 ## Opções de importação
 
-As opções abaixo são do importador **Aseprite Top-Down Grid Animations**; o de textura tem as suas,
+As opções abaixo são do importador **Dot Aseprite SpriteFrames**; o de textura tem as suas,
 [mais adiante](#importando-como-textura). Todas podem ser alteradas por arquivo no dock Import. Os
 padrões de `layers/exclude_pattern`, `tags/exclude_pattern`, `sprite_frames/animation_name` e
 `sprite_frames/loop_suffix` vêm de
-*Project Settings > Aseprite Top-Down Grid Animations > Defaults*; o `layers/exclude_pattern`
+*Project Settings > Dot Aseprite > Defaults*; o `layers/exclude_pattern`
 alimenta os dois importadores.
 
 | Opção | Padrão | Descrição |
@@ -102,7 +102,7 @@ fora de `[all]` e ainda pode ser importada sozinha.
 
 ## Importando como textura
 
-Coloque **Import As** em *Aseprite Texture* para receber um `Texture2D` simples em vez de animações.
+Coloque **Import As** em *Dot Aseprite Texture* para receber um `Texture2D` simples em vez de animações.
 A tela inteira é exportada com todos os frames da timeline lado a lado, então um sprite de um frame
 gera exatamente a sua imagem, e um de vários gera o layout que `Sprite2D.hframes` e os tiles
 animados de um TileSet esperam. Arraste o arquivo em qualquer propriedade `Texture2D`.
@@ -125,7 +125,7 @@ arquivos `.aseprite`.
 
 Outros addons também registram importadores para `.aseprite`, e o Godot entrega um arquivo novo
 para o que declara a maior prioridade. Este addon declara **1.0** no importador de SpriteFrames, o
-padrão do Godot, e **0.9** no *Aseprite Texture*, então o de textura nunca é escolhido sozinho. Ele
+padrão do Godot, e **0.9** no *Dot Aseprite Texture*, então o de textura nunca é escolhido sozinho. Ele
 também não disputa com outros addons: com outro importador de Aseprite instalado, a escolha é sua,
 arquivo por arquivo.
 
@@ -137,7 +137,7 @@ aviso, o que parece um addon quebrado e não é.
 Para importar um arquivo desses com este addon:
 
 1. Selecione o arquivo no dock FileSystem; dá para selecionar vários de uma vez.
-2. No dock **Import**, coloque **Import As** em *Aseprite Top-Down Grid Animations*.
+2. No dock **Import**, coloque **Import As** em *Dot Aseprite SpriteFrames*.
 3. Clique em **Reimport**.
 
 A escolha fica gravada no `.import` de cada arquivo, então ela sobrevive a reimportações, ao

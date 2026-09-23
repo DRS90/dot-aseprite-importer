@@ -6,15 +6,11 @@ extends SceneTree
 const AnimationSyncTests := preload("res://tests/animation_sync_tests.gd")
 const AsepriteFileReaderTests := preload("res://tests/aseprite_file_reader_tests.gd")
 const SheetPackerTests := preload("res://tests/sheet_packer_tests.gd")
-const AsepriteCli := preload("res://addons/aseprite_topdown_grid_animations/aseprite_cli.gd")
-const AsepriteSource := preload("res://addons/aseprite_topdown_grid_animations/aseprite_source.gd")
-const ExportPlanner := preload("res://addons/aseprite_topdown_grid_animations/export_planner.gd")
-const SpriteFramesBuilder := preload(
-	"res://addons/aseprite_topdown_grid_animations/sprite_frames_builder.gd"
-)
-const TextureImporter := preload(
-	"res://addons/aseprite_topdown_grid_animations/texture_importer.gd"
-)
+const AsepriteCli := preload("res://addons/dot_aseprite/aseprite_cli.gd")
+const AsepriteSource := preload("res://addons/dot_aseprite/aseprite_source.gd")
+const ExportPlanner := preload("res://addons/dot_aseprite/export_planner.gd")
+const SpriteFramesBuilder := preload("res://addons/dot_aseprite/sprite_frames_builder.gd")
+const TextureImporter := preload("res://addons/dot_aseprite/texture_importer.gd")
 
 const SOURCE := "res://examples/retro-top-down-character.aseprite"
 ## A second sprite, only used to prove the listing cache notices a file changing under it.
@@ -58,7 +54,7 @@ const ASSET_HELP := (
 )
 
 var _failures := 0
-var _tmp_dir := OS.get_cache_dir().path_join("aseprite_topdown_grid_animations_tests")
+var _tmp_dir := OS.get_cache_dir().path_join("dot_aseprite_tests")
 
 
 func _initialize() -> void:

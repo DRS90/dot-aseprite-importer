@@ -11,7 +11,7 @@ const Importer := preload("importer.gd")
 const Settings := preload("settings.gd")
 const TextureImporter := preload("texture_importer.gd")
 
-const REIMPORT_ALL_MENU := "Aseprite Top-Down Grid Animations: Reimport all"
+const REIMPORT_ALL_MENU := "Dot Aseprite Importer: Reimport all"
 const SOURCE_EXTENSIONS: Array[String] = ["aseprite", "ase"]
 
 var _settings: Settings

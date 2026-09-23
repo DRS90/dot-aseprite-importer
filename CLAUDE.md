@@ -1,4 +1,4 @@
-# Aseprite Top-Down Grid Animations — notes for Claude
+# Dot Aseprite Importer — notes for Claude
 
 Godot 4 addon with two `EditorImportPlugin`s for `.aseprite`/`.ase`. The main one (priority 1.0)
 imports animations; `texture_importer.gd` (0.9, picked with *Import As*) imports any file as a
@@ -27,7 +27,7 @@ changed, and can be forced with a button. The library goes to its own file when
 (`{scene_dir}/{scene}_animations.tres`); off keeps it inside the scene. The resolved path is part of
 the sync key, so a skipped sync never touches the disk.
 
-- Code: `addons/aseprite_topdown_grid_animations/`: `plugin.gd`, `importer.gd`, `settings.gd`,
+- Code: `addons/dot_aseprite/`: `plugin.gd`, `importer.gd`, `settings.gd`,
   `aseprite_cli.gd`, `aseprite_source.gd`, `aseprite_file_reader.gd` + `export_planner.gd` (pure),
   `sheet_packer.gd` +
   `sprite_frames_builder.gd` (no editor),
@@ -124,7 +124,7 @@ the sync key, so a skipped sync never touches the disk.
 - Metadata names starting with `_` are **saved** — verified headless for a node in a `.tscn` and a
   resource in both `.tres` and binary `.res`. The `_` only hides the entry from the inspector's
   Metadata list, which is what the docs mean by "editor-only". The sprite's link and sync key use
-  `_aseprite_topdown_grid_animations_*` for that reason.
+  `_dot_aseprite_*` for that reason.
 - A resource built into a scene still has a `resource_path`
   (`res://scene.tscn::AnimationLibrary_abcd`), so `resource_path != ""` does **not** mean external:
   use `is_built_in()`. Getting this wrong passes headless (where nodes have no scene path, so the

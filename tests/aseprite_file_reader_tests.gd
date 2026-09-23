@@ -5,11 +5,9 @@ extends RefCounted
 ## cache the listing and find the executable without starting it. [param check] is the runner's own
 ## reporting function, so one run counts every failure.
 
-const AsepriteCli := preload("res://addons/aseprite_topdown_grid_animations/aseprite_cli.gd")
-const AsepriteSource := preload("res://addons/aseprite_topdown_grid_animations/aseprite_source.gd")
-const AsepriteFileReader := preload(
-	"res://addons/aseprite_topdown_grid_animations/aseprite_file_reader.gd"
-)
+const AsepriteCli := preload("res://addons/dot_aseprite/aseprite_cli.gd")
+const AsepriteSource := preload("res://addons/dot_aseprite/aseprite_source.gd")
+const AsepriteFileReader := preload("res://addons/dot_aseprite/aseprite_file_reader.gd")
 
 const EXAMPLES: Array[String] = [
 	"res://examples/retro-top-down-character.aseprite",

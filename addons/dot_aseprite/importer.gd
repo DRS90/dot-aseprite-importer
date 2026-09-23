@@ -17,13 +17,13 @@ const ExportPlanner := preload("export_planner.gd")
 const Settings := preload("settings.gd")
 const SpriteFramesBuilder := preload("sprite_frames_builder.gd")
 
-const IMPORTER_NAME := "aseprite_topdown_grid_animations.importer"
-const VISIBLE_NAME := "Aseprite Top-Down Grid Animations"
+const IMPORTER_NAME := "dot_aseprite.importer"
+const VISIBLE_NAME := "Dot Aseprite SpriteFrames"
 const LOG_PREFIX := AsepriteSource.LOG_PREFIX
 const SAVE_EXTENSION := "res"
 ## Bumped when the imported resource changes, so Godot reimports every file using this importer.
 const FORMAT_VERSION := 3
-const CACHE_FOLDER := "aseprite_topdown_grid_animations"
+const CACHE_FOLDER := AsepriteSource.CACHE_FOLDER
 
 const OPTION_DIRECTIONS := "grid/directions"
 const OPTION_CELL_SIZE := "grid/cell_size"

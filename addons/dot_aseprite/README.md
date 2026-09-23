@@ -1,4 +1,4 @@
-# Aseprite Top-Down Grid Animations
+# Dot Aseprite Importer
 
 **English** | [Português (Brasil)](../../README.pt-BR.md)
 
@@ -45,10 +45,10 @@ The same file in Godot: the animations of its SpriteFrames in the bottom panel, 
 
 ## Installation
 
-1. Copy `addons/aseprite_topdown_grid_animations` into your project's `addons/` folder.
-2. Enable **Aseprite Top-Down Grid Animations** in *Project > Project Settings > Plugins*.
+1. Copy `addons/dot_aseprite` into your project's `addons/` folder.
+2. Enable **Dot Aseprite Importer** in *Project > Project Settings > Plugins*.
 3. If Aseprite is not in its default location (a Steam install, for example), set
-   *Editor Settings > Aseprite Top-Down Grid Animations > General > Executable Path* or the
+   *Editor Settings > Dot Aseprite > General > Executable Path* or the
    `ASEPRITE_PATH` environment variable. See
    [Aseprite executable](../../docs/importing.md#aseprite-executable).
 4. For crisp pixel art, set *Project Settings > Rendering > Textures > Canvas Textures >

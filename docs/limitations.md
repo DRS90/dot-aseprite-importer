@@ -16,7 +16,7 @@
 - Nothing happens when a `.aseprite` file is added to the project: another importer may declare a
   higher priority and be taking the file. Check **Import As** in the Import dock, described in
   [Importing](importing.md#coexistence-with-other-aseprite-importers).
-- *Aseprite Texture* produces the image only. It is not a `TileSet` resource with the tiles already
+- *Dot Aseprite Texture* produces the image only. It is not a `TileSet` resource with the tiles already
   configured, and it has no mipmap, filter or compression options: texture filtering is a property
   of the node or of the project, not of the resource.
 - A strip wider than 16384 pixels is refused, because the graphics drivers would not render it. That

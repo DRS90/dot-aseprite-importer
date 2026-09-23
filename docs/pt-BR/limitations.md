@@ -16,7 +16,7 @@
 - Nada acontece ao adicionar um `.aseprite` ao projeto: outro importador pode estar declarando uma
   prioridade maior e ficando com o arquivo. Confira o **Import As** no dock Import, descrito em
   [Importação](importing.md#convivência-com-outros-importadores-de-aseprite).
-- O *Aseprite Texture* gera só a imagem. Ele não é um recurso `TileSet` com os tiles já
+- O *Dot Aseprite Texture* gera só a imagem. Ele não é um recurso `TileSet` com os tiles já
   configurados, e não tem opções de mipmap, filtro ou compressão: o filtro de textura é propriedade
   do nó ou do projeto, não do recurso.
 - Uma tira com mais de 16384 pixels de largura é recusada, porque os drivers gráficos não a

@@ -6,7 +6,7 @@
 
 The path is resolved in this order:
 
-1. *Editor Settings > Aseprite Top-Down Grid Animations > General > Executable Path* (per machine).
+1. *Editor Settings > Dot Aseprite > General > Executable Path* (per machine).
 2. The `ASEPRITE_PATH` environment variable (handy for CI and headless imports).
 3. The OS default:
    - Windows: `C:\Program Files\Aseprite\Aseprite.exe`
@@ -26,16 +26,16 @@ The addon registers two `EditorImportPlugin`s, and every `.aseprite` uses one of
 
 | Importer | Produces | Used for |
 |---|---|---|
-| **Aseprite Top-Down Grid Animations** | `SpriteFrames` | animations, on an AnimatedSprite2D |
-| **Aseprite Texture** | a lossless `Texture2D` | Sprite2D, TextureRect, a shader uniform, the source image of a TileSet |
+| **Dot Aseprite SpriteFrames** | `SpriteFrames` | animations, on an AnimatedSprite2D |
+| **Dot Aseprite Texture** | a lossless `Texture2D` | Sprite2D, TextureRect, a shader uniform, the source image of a TileSet |
 
 Which one a file wants comes down to two questions: is it animated, and does it face anywhere?
 
 | The sprite | Import As | Gives |
 |---|---|---|
-| animated, one cell per facing direction | **Aseprite Top-Down Grid Animations** (the default) | one animation per direction and tag |
+| animated, one cell per facing direction | **Dot Aseprite SpriteFrames** (the default) | one animation per direction and tag |
 | animated, no direction, like a dust puff or a hit spark | the same importer, with [`grid/directions`](#import-options) set to `none` | one animation per tag |
-| not animated, like a shadow, a prop or a tileset page | **Aseprite Texture** | a `Texture2D` of the canvas |
+| not animated, like a shadow, a prop or a tileset page | **Dot Aseprite Texture** | a `Texture2D` of the canvas |
 
 The first two keep Aseprite's frame durations, loops and ping-pong and can drive an
 AnimationPlayer; the third is an image and carries none of that. A file nobody chose for lands on
@@ -55,17 +55,17 @@ window regains focus** (or on a manual *Reimport*).
   every sprite using the file draws the same texture. Nothing is written to the project, and
   exporting a scene that uses the file exports the texture with it.
 
-*Project > Tools > Aseprite Top-Down Grid Animations: Reimport all* forces a reimport of every file
+*Project > Tools > Dot Aseprite Importer: Reimport all* forces a reimport of every file
 that uses either importer, e.g. after changing the executable path or a project default, or after
 updating the addon.
 
 ## Import options
 
-The options below belong to the **Aseprite Top-Down Grid Animations** importer; the texture importer
+The options below belong to the **Dot Aseprite SpriteFrames** importer; the texture importer
 has its own, [further down](#importing-as-a-texture). All of them can be changed per file in the
 Import dock. The defaults of `layers/exclude_pattern`, `tags/exclude_pattern`,
 `sprite_frames/animation_name` and `sprite_frames/loop_suffix` come from
-*Project Settings > Aseprite Top-Down Grid Animations > Defaults*; `layers/exclude_pattern` feeds
+*Project Settings > Dot Aseprite > Defaults*; `layers/exclude_pattern` feeds
 both importers.
 
 | Option | Default | Description |
@@ -98,7 +98,7 @@ an error and keeps the previous animations. The choice may be a layer matched by
 
 ## Importing as a texture
 
-Set **Import As** to *Aseprite Texture* to get a plain `Texture2D` instead of animations. The whole
+Set **Import As** to *Dot Aseprite Texture* to get a plain `Texture2D` instead of animations. The whole
 canvas is exported with every frame of the timeline side by side, so a single-frame sprite gives
 exactly its image, and a multi-frame one gives the layout `Sprite2D.hframes` and animated TileSet
 tiles expect. Drag the file onto any `Texture2D` property.
@@ -121,7 +121,7 @@ two `.aseprite` files.
 
 Other addons also register importers for `.aseprite`, and Godot hands a new file to the one that
 declares the highest priority. This addon declares **1.0** for its SpriteFrames importer, Godot's
-default, and **0.9** for *Aseprite Texture*, so the texture one is never picked on its own. It does
+default, and **0.9** for *Dot Aseprite Texture*, so the texture one is never picked on its own. It does
 not compete with other addons either: with another Aseprite importer installed, the choice is yours
 to make per file.
 
@@ -133,7 +133,7 @@ no warning, which looks like a broken addon and is not.
 To import such a file with this addon:
 
 1. Select it in the FileSystem dock; several files at once works too.
-2. In the **Import** dock, set **Import As** to *Aseprite Top-Down Grid Animations*.
+2. In the **Import** dock, set **Import As** to *Dot Aseprite SpriteFrames*.
 3. Click **Reimport**.
 
 The choice is stored per file in its `.import` file, so it survives reimports, *Reimport all* and

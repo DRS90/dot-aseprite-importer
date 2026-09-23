@@ -22,8 +22,8 @@ and looping like the SpriteFrames animation. Play them with `$AnimationPlayer.pl
   built-in nodes and resources, so the game does not need the addon to run.
 - Nodes inside an instanced scene are synced when that scene is opened. **Clear** unlinks the player
   and keeps the animations already written.
-- The animations are written to a resource file of their own. Under *Project Settings > Aseprite
-  Top-Down Grid Animations > Animation Player*, **External Library** (on) decides, and **Library
+- The animations are written to a resource file of their own. Under *Project Settings > Dot
+  Aseprite > Animation Player*, **External Library** (on) decides, and **Library
   Path** says where: `{scene_dir}` and `{scene}` come from the scene holding the player, so the
   default is `main.tscn` → `main_animations.tres` beside it. The scene then keeps one
   `ext_resource` line instead of the animations: the demo in `examples/` is 17 lines instead of

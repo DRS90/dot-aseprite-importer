@@ -28,7 +28,7 @@ All notable changes to this project are documented here. The format follows
   instead of `[all]`. The layers are read from the file, so the dropdown works before Aseprite is
   configured.
 - Layer and tag exclusion patterns and `only_visible`.
-- A second importer, *Aseprite Texture*, picked per file with **Import As**: it exports the whole
+- A second importer, *Dot Aseprite Texture*, picked per file with **Import As**: it exports the whole
   canvas with every frame side by side and saves a lossless `Texture2D`, so an `.aseprite` can be
   used in a Sprite2D, a TextureRect, a shader uniform or as the source image of a TileSet. Tags and
   the grid are ignored by it, and it stays at a lower priority so a new file still lands on the
@@ -46,7 +46,7 @@ All notable changes to this project are documented here. The format follows
   keep the animations in the scene.
 - Executable path from Editor Settings, the `ASEPRITE_PATH` variable or the OS default.
 - Project-wide defaults in Project Settings.
-- *Project > Tools > Aseprite Top-Down Grid Animations: Reimport all*.
+- *Project > Tools > Dot Aseprite Importer: Reimport all*.
 - Headless test runner, demo project, `tests/tools/build_grid.lua` (turns a sprite drawn with one
   layer per direction into the grid format) and `tests/tools/build_cases.lua` (sprites for manual
   tests).

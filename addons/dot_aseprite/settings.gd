@@ -7,12 +7,12 @@ extends RefCounted
 
 const AnimationLibraryStore := preload("animation_library_store.gd")
 
-const EXECUTABLE_KEY := "aseprite_topdown_grid_animations/general/executable_path"
+const EXECUTABLE_KEY := "dot_aseprite/general/executable_path"
 const EXECUTABLE_ENV := "ASEPRITE_PATH"
-const DEFAULT_LAYER_EXCLUDE_KEY := "aseprite_topdown_grid_animations/defaults/layer_exclude_pattern"
-const DEFAULT_TAG_EXCLUDE_KEY := "aseprite_topdown_grid_animations/defaults/tag_exclude_pattern"
-const DEFAULT_ANIMATION_NAME_KEY := "aseprite_topdown_grid_animations/defaults/animation_name"
-const DEFAULT_LOOP_SUFFIX_KEY := "aseprite_topdown_grid_animations/defaults/loop_suffix"
+const DEFAULT_LAYER_EXCLUDE_KEY := "dot_aseprite/defaults/layer_exclude_pattern"
+const DEFAULT_TAG_EXCLUDE_KEY := "dot_aseprite/defaults/tag_exclude_pattern"
+const DEFAULT_ANIMATION_NAME_KEY := "dot_aseprite/defaults/animation_name"
+const DEFAULT_LOOP_SUFFIX_KEY := "dot_aseprite/defaults/loop_suffix"
 const PROJECT_DEFAULTS := {
 	DEFAULT_LAYER_EXCLUDE_KEY: "^_",
 	DEFAULT_TAG_EXCLUDE_KEY: "^_",
