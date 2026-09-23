@@ -82,7 +82,9 @@ the sync key, so a skipped sync never touches the disk.
   error: Aseprite exits 127 on a script error, which `OS.execute()` reports as -1 on Windows, like a
   process that never started. The output tells them apart (`AsepriteCli.did_not_run()`): on Windows
   a failed start prints nothing, while elsewhere `OS.execute()` goes through `sh`, which prints
-  `sh: ...` and exits 126/127 for a missing or non-executable file.
+  `sh: ...` and exits 126/127 for a missing or non-executable file. A missing `--script` file also
+  exits 127 with no output (e.g. the addon folder moved with the editor open), so `_run_batch`
+  checks that `aseprite_batch.lua` exists before starting Aseprite.
 - The nameless cell of `grid/directions` = `none` and `left_up` are both at (0, 0), so checking
   that a direction exists is not enough: `aseprite_batch.lua` requires `cells_per_axis == 1` to
   match an empty direction exactly, or a 3x3 job with no direction would export the `left_up` cell

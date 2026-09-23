@@ -18,6 +18,9 @@ do empacotamento da folha em `tests/sheet_packer_tests.gd` e as da listagem em
 de um arquivo com o que o próprio Aseprite lista, nos exemplos e em sprites que
 `tests/tools/build_reader_cases.lua` gera a cada execução (grupos aninhados, camadas ocultas, todas
 as direções de tag, um nome de tag repetido, um nome de camada com acento).
+Sem o Aseprite, as verificações que não precisam dele rodam mesmo assim (o leitor com arquivos
+danificados, o cache da listagem, o empacotamento da folha, a sincronização com o AnimationPlayer),
+mas a execução falha pelo executável ausente: a suíte só passa com `ASEPRITE_PATH` definido.
 
 `tests/tools/build_grid.lua` converte para o formato de grade um sprite desenhado com uma camada de
 nível superior por direção (camadas com os nomes das células da grade):

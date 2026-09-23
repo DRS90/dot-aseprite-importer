@@ -16,6 +16,10 @@ The path is resolved in this order:
 Steam installs live elsewhere, e.g. `C:\Program Files (x86)\Steam\steamapps\common\Aseprite\Aseprite.exe`
 or `~/.steam/steam/steamapps/common/Aseprite/aseprite`.
 
+The path has to name the executable itself: a `.bat` or `.cmd` wrapper cannot be started. A bare
+name such as `aseprite` is looked up in the `PATH`. A path that leads nowhere is reported when the
+file is imported, without starting anything.
+
 ## How the automatic import works
 
 The addon registers two `EditorImportPlugin`s, and every `.aseprite` uses one of them:

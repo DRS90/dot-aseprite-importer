@@ -17,6 +17,10 @@ Instalações pela Steam ficam em outro lugar, por exemplo
 `C:\Program Files (x86)\Steam\steamapps\common\Aseprite\Aseprite.exe` ou
 `~/.steam/steam/steamapps/common/Aseprite/aseprite`.
 
+O caminho tem de apontar para o próprio executável: um wrapper `.bat` ou `.cmd` não pode ser
+iniciado. Um nome solto como `aseprite` é procurado no `PATH`. Um caminho que não leva a nada é
+avisado na importação do arquivo, sem iniciar nada.
+
 ## Como funciona a importação automática
 
 O addon registra dois `EditorImportPlugin`, e todo `.aseprite` usa um deles:
