@@ -2,15 +2,15 @@
 
 [English](../limitations.md) | **Português (Brasil)**
 
-- A grade é 3x3, com nomes de direção fixos e a célula central ignorada, ou a célula única de
-  `grid/directions` em `none`. Outras grades, como 1x4 ou 4x4, não têm suporte.
+- Um frame é uma célula única (`grid/directions` em `none`, o padrão) ou uma grade 3x3, com nomes
+  de direção fixos e a célula central ignorada. Outras grades, como 1x4 ou 4x4, não têm suporte.
 - Só camadas e grupos de nível superior podem ser escolhidos. Um grupo é importado como a combinação
   dos seus filhos; filhos ocultos dentro de um grupo podem ser incluídos, porque as camadas ocultas
   ficam visíveis para a exportação.
 - A contagem de repetições da tag definida no Aseprite é ignorada: só o sufixo de loop decide se uma
   animação fica em loop.
-- Um arquivo sem tags gera uma animação por direção com a timeline inteira, com o nome da direção
-  (`down`), ou uma única animação chamada `default` quando também não tem direções. Ela não fica em
+- Um arquivo sem tags gera uma única animação chamada `default` com a timeline inteira, ou, com
+  `grid/directions` em `3x3`, uma por direção, com o nome da direção (`down`). Ela não fica em
   loop.
 - Nomes de camada com `,` ou `:` não aparecem na lista de `layers/layer`.
 - Nada acontece ao adicionar um `.aseprite` ao projeto: outro importador pode estar declarando uma

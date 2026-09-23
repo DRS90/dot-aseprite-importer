@@ -4,10 +4,11 @@ Godot 4 addon with two `EditorImportPlugin`s for `.aseprite`/`.ase`. The main on
 imports animations; `texture_importer.gd` (0.9, picked with *Import As*) imports any file as a
 lossless `Texture2D` of the whole canvas with every frame side by side, reusing the planner with an
 empty tag list. Both share `aseprite_source.gd` (executable lookup + listing cache).
-For the animations importer: every frame of the source is a 3x3 grid of
-facing directions (`left_up`, `up`, `right_up`, `left`, `right`, `left_down`, `down`, `right_down`;
-center ignored), or a single nameless cell with `grid/directions` set to `none`, for sprites that
-have no direction. The file imports as a **SpriteFrames** with one animation per direction × tag
+For the animations importer: every frame of the source is a single nameless cell
+(`grid/directions` = `none`, the default, `ExportPlanner.DEFAULT_DIRECTIONS`), or with `3x3` a grid
+of facing directions (`left_up`, `up`, `right_up`, `left`, `right`, `left_down`, `down`,
+`right_down`; center ignored), which top-down projects set in *Project Settings > Import Defaults*.
+The file imports as a **SpriteFrames** with one animation per direction × tag
 (`sprite_frames/animation_name`, default `{tag}_{direction}`), timed like in Aseprite (speed = 1 /
 shortest frame, relative durations, reverse/ping-pong), looping when the tag ends with
 `sprite_frames/loop_suffix` (default `_loop`, removed from the name). Cells with no pixels in a tag
@@ -37,16 +38,19 @@ the sync key, so a skipped sync never touches the disk.
   only the tests use as the reference for the file reader).
 - Tests: `tests/test_runner.gd`, plus `tests/animation_sync_tests.gd` (the AnimationPlayer sync
   checks, which build their nodes by hand and never call Aseprite), `tests/sheet_packer_tests.gd`
-  (synthetic strips) and `tests/aseprite_file_reader_tests.gd` (reader vs Aseprite's listing, on
+  (synthetic strips), `tests/importer_options_tests.gd` (the `none` default; an `EditorImportPlugin`
+  cannot be instantiated headless, so it reads the importer's static `directions_option()` and
+  `planner_options()`) and `tests/aseprite_file_reader_tests.gd` (reader vs Aseprite's listing, on
   sprites built by `tests/tools/build_reader_cases.lua`, plus the source). Demo: `examples/`.
   `tests/tools/build_grid.lua` turns a layer-per-direction sprite into the grid format;
   `tests/tools/build_cases.lua` builds sprites for manual tests into the folder passed as `out=`.
 - Docs: `README.md` keeps only the overview, install, quick start and links; the details live in
-  `docs/` (getting started, drawing, importing, AnimatedSprite2D, AnimationPlayer, limitations,
-  development). English is the source of truth; `README.pt-BR.md` and `docs/pt-BR/` (same file
-  names) mirror it, and every docs change updates both languages in the same commit. Menu, panel and
-  option names stay in English in the translation. The addon folder's `README.md` is the English
-  one with its links pointed back at the repository root; regenerate it after any edit with
+  `docs/` (getting started, top-down characters, drawing, importing, AnimatedSprite2D,
+  AnimationPlayer, limitations, development). English is the source of truth; `README.pt-BR.md` and
+  `docs/pt-BR/` (same file names) mirror it, and every docs change updates both languages in the
+  same commit. Menu, panel and option names stay in English in the translation. The addon folder's
+  `README.md` is the English one with its links pointed back at the repository root; regenerate it
+  after any edit with
   `sed -e 's#](docs/#](../../docs/#g' -e 's#](screenshots/#](../../screenshots/#g'
   -e 's#](README.pt-BR.md)#](../../README.pt-BR.md)#g' README.md`.
 - Pending work: `ROADMAP.md`. Read it before proposing anything.

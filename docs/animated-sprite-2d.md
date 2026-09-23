@@ -3,15 +3,16 @@
 **English** | [Português (Brasil)](pt-BR/animated-sprite-2d.md)
 
 Drag the `.aseprite` file from the FileSystem dock onto the **Sprite Frames** property of an
-AnimatedSprite2D, then play its animations as usual: `$AnimatedSprite2D.play("walk_down")`.
+AnimatedSprite2D, then play its animations as usual: `$AnimatedSprite2D.play("run")`.
 
-- Animations are named `{tag}_{direction}` without the loop suffix: the tag `idle_loop` gives
-  `idle_down`, `idle_left_up`, and so on. A file imported with `grid/directions` at `none` has no
-  direction to add, so `idle_loop` gives `idle`.
+- Animations are named after the tag without the loop suffix: the tag `idle_loop` gives `idle`. A
+  file imported with `grid/directions` at `3x3` adds the direction, so `idle_loop` gives
+  `idle_down`, `idle_left_up`, and so on (`sprite_frames/animation_name`, default
+  `{tag}_{direction}`).
 - The animation speed is 1 / the shortest frame of the tag, and every frame keeps its duration
   relative to it, so a `speed_scale` of 1 plays at the Aseprite speed.
 - A looping animation never emits `animation_finished`. Code can tell loops apart with
-  `sprite_frames.get_animation_loop("idle_down")`.
+  `sprite_frames.get_animation_loop("idle")`.
 - Saving the file in Aseprite updates the animations when Godot regains focus.
 - The SpriteFrames is an imported resource: changes made in the SpriteFrames editor are lost on the
   next import. *Make Unique* gives an editable copy that no longer updates.

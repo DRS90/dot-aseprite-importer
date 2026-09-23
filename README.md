@@ -2,11 +2,22 @@
 
 **English** | [Português (Brasil)](README.pt-BR.md)
 
-A Godot 4.7 editor addon that imports `.aseprite` / `.ase` sprites drawn as a **3x3 grid of facing
-directions** as a **SpriteFrames** resource: one animation per direction and tag, timed like in
-Aseprite. Assign the file to an AnimatedSprite2D, and optionally link an AnimationPlayer that gets
-the same animations. Any `.aseprite` can also be imported as a plain **Texture2D**, for the sprites
-that are not animated at all.
+A Godot 4.7 editor addon that imports `.aseprite` / `.ase` files as they are: each file becomes a
+**SpriteFrames** resource with one animation per tag, timed like in Aseprite, its frames packed into
+one sheet, and nothing exported into the project. Assign the file to an AnimatedSprite2D, and
+optionally link an AnimationPlayer that gets the same animations. Any `.aseprite` can also be
+imported as a plain **Texture2D**, for the sprites that are not animated at all.
+
+```
+hero.aseprite (48x48)                      SpriteFrames (48x48 frames)
+  tags: idle_loop, run_loop, jump    ->      idle (loops), run (loops), jump
+```
+
+## Top-down characters: a 3x3 grid of facing directions
+
+A character that faces up, down and sideways can be drawn in one file, every frame a 3x3 grid of
+directions. With `grid/directions` set to `3x3`, per file or for the whole project in
+*Project Settings > Import Defaults*, each tag gives one animation per direction:
 
 ```
 character.aseprite (144x192)              SpriteFrames (48x64 frames)
@@ -19,16 +30,14 @@ character.aseprite (144x192)              SpriteFrames (48x64 frames)
 ```
 
 A cell with no pixels in any frame of a tag produces no animation: a character drawn in six
-directions (without plain `left` and `right`) just leaves those cells empty.
-
-The sprites of a top-down game that face nowhere — a run dust puff, a hit spark, an item shine — are
-imported by the same addon with `grid/directions` set to `none`: the frame becomes a single cell and
-the animations are named after the tag alone.
+directions (without plain `left` and `right`) just leaves those cells empty. See
+[Top-down characters](docs/top-down.md).
 
 ## Screenshots
 
-The example character in Aseprite: every frame is a 3x3 grid of directions (guides in blue), with
-the diagonal cells left empty, one tag per animation in the timeline and two layers.
+The example character, a top-down one, in Aseprite: every frame is a 3x3 grid of directions
+(guides in blue), with the diagonal cells left empty, one tag per animation in the timeline and two
+layers.
 
 ![The example character in Aseprite, drawn as a 3x3 grid of facing directions](screenshots/aseprite-character.png)
 
@@ -56,22 +65,26 @@ The same file in Godot: the animations of its SpriteFrames in the bottom panel, 
 
 ## Quick start
 
-1. In Aseprite, make the canvas three cells wide and three tall, draw each direction in its cell and
-   tag each animation. A tag ending with `_loop` (`walk_loop`) loops.
+1. In Aseprite, draw the frames of the character and tag each animation. A tag ending with `_loop`
+   (`run_loop`) loops.
 2. Save the file inside the Godot project. When the Godot editor regains focus, the file is imported
    as SpriteFrames.
 3. Drag the file onto the **Sprite Frames** property of an AnimatedSprite2D and play an animation:
-   `$AnimatedSprite2D.play("walk_down")`.
+   `$AnimatedSprite2D.play("run")`. Draw the character facing right and turn on `flip_h` to face
+   left.
 4. Optionally, link an AnimationPlayer in the **AnimationPlayer** section of the sprite's inspector
    to get the same animations there and add your own tracks.
 
-[Getting started](docs/getting-started.md) walks through these steps with a movement script.
+[Getting started](docs/getting-started.md) walks through these steps with a movement script, and
+[Top-down characters](docs/top-down.md) does the same for a character that faces eight ways.
 
 ## Documentation
 
-- [Getting started](docs/getting-started.md): from an empty Aseprite file to a walking character,
-  and the demo project.
-- [Drawing the sprite](docs/drawing-the-sprite.md): grid, layers, tags and loops.
+- [Getting started](docs/getting-started.md): from an empty Aseprite file to a character that runs
+  and jumps, and the demo project.
+- [Top-down characters](docs/top-down.md): the 3x3 grid of facing directions, turning it on for a
+  project, and playing the direction a character faces.
+- [Drawing the sprite](docs/drawing-the-sprite.md): layers, tags and loops.
 - [Importing](docs/importing.md): the Aseprite executable, when files are imported, the Import dock
   options and other Aseprite importers.
 - [AnimatedSprite2D](docs/animated-sprite-2d.md): animation names, speed and loops.

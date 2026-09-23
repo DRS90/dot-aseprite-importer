@@ -1,8 +1,9 @@
 @tool
 extends EditorPlugin
-## Registers the addon's two importers (a SpriteFrames of the 3x3 grid of directions, and a plain
-## texture), its settings, the AnimationPlayer section of the AnimatedSprite2D inspector and the
-## Project > Tools item, and keeps linked AnimationPlayers in sync with their sprites.
+## Registers the addon's two importers (a SpriteFrames, optionally split by a 3x3 grid of
+## directions, and a plain texture), its settings, the AnimationPlayer section of the
+## AnimatedSprite2D inspector and the Project > Tools item, and keeps linked AnimationPlayers in
+## sync with their sprites.
 
 const AnimatedSpriteInspector := preload("animated_sprite_inspector.gd")
 const AnimationSync := preload("animation_sync.gd")

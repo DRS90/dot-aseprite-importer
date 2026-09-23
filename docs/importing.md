@@ -29,12 +29,13 @@ The addon registers two `EditorImportPlugin`s, and every `.aseprite` uses one of
 | **Dot Aseprite SpriteFrames** | `SpriteFrames` | animations, on an AnimatedSprite2D |
 | **Dot Aseprite Texture** | a lossless `Texture2D` | Sprite2D, TextureRect, a shader uniform, the source image of a TileSet |
 
-Which one a file wants comes down to two questions: is it animated, and does it face anywhere?
+Which one a file wants comes down to two questions: is it animated, and is every frame a grid of
+facing directions?
 
 | The sprite | Import As | Gives |
 |---|---|---|
-| animated, one cell per facing direction | **Dot Aseprite SpriteFrames** (the default) | one animation per direction and tag |
-| animated, no direction, like a dust puff or a hit spark | the same importer, with [`grid/directions`](#import-options) set to `none` | one animation per tag |
+| animated, like a character, an effect or a pickup | **Dot Aseprite SpriteFrames** (the default) | one animation per tag |
+| animated, every frame a 3x3 grid of facing directions | the same importer, with [`grid/directions`](#import-options) set to `3x3` | one animation per direction and tag |
 | not animated, like a shadow, a prop or a tileset page | **Dot Aseprite Texture** | a `Texture2D` of the canvas |
 
 The first two keep Aseprite's frame durations, loops and ping-pong and can drive an
@@ -70,7 +71,7 @@ both importers.
 
 | Option | Default | Description |
 |---|---|---|
-| `grid/directions` | `3x3` | `3x3`: every frame is a 3x3 grid of facing directions. `none`: the frame is a single cell and the sprite has no direction, for the companions of a top-down character (a run dust puff, a hit spark, an item shine). |
+| `grid/directions` | `none` | `none`: the frame is a single cell and the sprite has no direction. `3x3`: every frame is a 3x3 grid of facing directions, see [Top-down characters](top-down.md). |
 | `grid/cell_size` | `(0, 0)` | Size of one cell in pixels. `0` on an axis means the sprite divided by the cells of the grid on that axis: a third with `grid/directions` at `3x3`, which the sprite must then be a multiple of, and the whole sprite at `none`. A smaller cell crops the top left corner and ignores the pixels left over at the right or bottom. |
 | `layers/layer` | `[all]` | Dropdown with `[all]` and the file's top-level layers and groups. `[all]` composes every layer not matched by `layers/exclude_pattern`; any other choice imports only that layer or group. Put layers in a group to import them together. |
 | `layers/exclude_pattern` | `^_` | Regular expression; matching layers are left out when `layers/layer` is `[all]`. |
@@ -90,6 +91,23 @@ them. When two tags give the same name — `idle` and `idle_loop`, or two tags n
 the second animation would replace the ones that still worked with an incomplete resource, while a
 failed import keeps the previous animations until the names are fixed.
 
+### Defaults for a whole project
+
+Two places set what a newly imported file gets:
+
+- *Project Settings > Dot Aseprite > Defaults* holds the patterns, the animation name and the loop
+  suffix listed above.
+- *Project Settings > Import Defaults* holds any option of the importer, `grid/directions` included:
+  pick *Dot Aseprite SpriteFrames* in its importer list, change the options and click **Save**. The
+  **Preset** menu of the Import dock does the same from a file already set up:
+  *Set as Default for 'Dot Aseprite SpriteFrames'*. A top-down project sets `grid/directions` to
+  `3x3` there.
+
+Both apply to files imported for the first time. A file already in the project keeps the options
+stored in its `.import` file; change those in the Import dock, where several files can be selected
+at once. With `grid/directions` at `none`, `{direction}` has nothing to hold, so the default
+`{tag}_{direction}` gives the tag alone.
+
 The `layers/layer` dropdown is filled with the file's layers, read from the file itself when the
 Import dock shows it, so it works before Aseprite is even configured. A chosen layer that no longer
 exists (renamed or removed) fails the import with
@@ -98,10 +116,10 @@ an error and keeps the previous animations. The choice may be a layer matched by
 
 ## Importing as a texture
 
-Set **Import As** to *Dot Aseprite Texture* to get a plain `Texture2D` instead of animations. The whole
-canvas is exported with every frame of the timeline side by side, so a single-frame sprite gives
-exactly its image, and a multi-frame one gives the layout `Sprite2D.hframes` and animated TileSet
-tiles expect. Drag the file onto any `Texture2D` property.
+Set **Import As** to *Dot Aseprite Texture* to get a plain `Texture2D` instead of animations. The
+whole canvas is exported with every frame of the timeline side by side, so a single-frame sprite
+gives exactly its image, and a multi-frame one gives the layout `Sprite2D.hframes` and animated
+TileSet tiles expect. Drag the file onto any `Texture2D` property.
 
 Tags, frame durations and the grid of directions are **ignored** here: they describe animations, and
 this importer produces an image. Its options are the layer ones alone:
@@ -121,9 +139,9 @@ two `.aseprite` files.
 
 Other addons also register importers for `.aseprite`, and Godot hands a new file to the one that
 declares the highest priority. This addon declares **1.0** for its SpriteFrames importer, Godot's
-default, and **0.9** for *Dot Aseprite Texture*, so the texture one is never picked on its own. It does
-not compete with other addons either: with another Aseprite importer installed, the choice is yours
-to make per file.
+default, and **0.9** for *Dot Aseprite Texture*, so the texture one is never picked on its own. It
+does not compete with other addons either: with another Aseprite importer installed, the choice is
+yours to make per file.
 
 Aseprite Wizard declares **2.0** for whichever of its importers is set as its default, and out of
 the box that default is **Aseprite (No Import)**. In a project with both addons, a newly added

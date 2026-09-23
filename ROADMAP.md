@@ -20,9 +20,11 @@
       and *Library Path* in Project Settings, `{scene_dir}/{scene}_animations.tres`), keeping the
       generated animations out of the scene; turn it off to keep them inside
 - [x] `grid/directions` = `3x3` | `none`: sprites with no direction (run dust, hit sparks) import
-      with the frame as a single cell, so a top-down project needs no second Aseprite importer
-- [x] Second importer *Dot Aseprite Texture* (*Import As*, priority 0.9): any `.aseprite` as a lossless
-      `Texture2D` of the whole canvas, for Sprite2D, TextureRect, shaders and TileSet source images
+      with the frame as a single cell, so a top-down project needs no second Aseprite importer;
+      `none` became the default with the rename to Dot Aseprite Importer
+- [x] Second importer *Dot Aseprite Texture* (*Import As*, priority 0.9): any `.aseprite` as a
+      lossless `Texture2D` of the whole canvas, for Sprite2D, TextureRect, shaders and TileSet
+      source images
 - [x] One sheet per file instead of one texture per strip: one animation per row, trimmed to the
       pixels the animation uses, with `AtlasTexture` margins keeping the frame size and the pivot,
       so every sprite using the file draws the same texture (the example's sheet is 132x535, 82%
@@ -74,8 +76,17 @@
       format bump to 3, the character does not move against its shadow, `flip_h` does not shift
       it, every frame shows 48x48 in the SpriteFrames panel, *Draw Calls* as before, and the layer
       dropdown lists the layers with the executable path cleared
+- [ ] Manual test in the editor of the rename and of `grid/directions` = `none` by default: the
+      plugin, the importers in *Import As*, the settings sections and the Tools item carry the new
+      names; a new `.aseprite` imports with `none`; *Project Settings > Import Defaults* lists
+      *Dot Aseprite SpriteFrames*, and `3x3` saved there makes the next new file a grid; the
+      example opens without a sync and animates as before. Retake `screenshots/godot-editor.png`,
+      which shows the old names
+- [ ] Rename the GitHub repository to `dot-aseprite-importer` and the local folder to match
+- [ ] Icon: the Aseprite face with an element of its own, like the other Aseprite addons do
 - [ ] Make the repository public and tag `v0.1.0`
 - [ ] Submit to the Godot Asset Library (category Addon, Godot 4.7, MIT, commit hash of the tag)
+      and to the Godot Asset Store
 
 ## Next (v0.2.x)
 
@@ -89,8 +100,8 @@
 
 - Companion Aseprite Lua extension to export on save, without waiting for Godot to regain focus
 - Grids other than 3x3 (e.g. 4 or 16 directions), or directions from named slices. `grid/directions`
-  = `none` does not commit to this: it exists because every top-down game has directionless
-  companion sprites, not as the first step of a configurable grid. The code shape (a divisor plus a
-  cell list per mode) would make 1x4 a small step, but nothing has been decided
+  = `none` does not commit to this: it is the whole frame, the default for any sprite, not the first
+  step of a configurable grid. The code shape (a divisor plus a cell list per mode) would make 1x4 a
+  small step, but nothing has been decided
 - Honor the tag repeat count (play N times, then stop)
 - Import without Aseprite for teammates, e.g. from a committed bake of the SpriteFrames

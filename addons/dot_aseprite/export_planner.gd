@@ -2,9 +2,9 @@
 extends RefCounted
 ## Turns the size, layer and tag names of one .aseprite file into export jobs.
 ##
-## In the [constant MODE_3X3] grid, every frame is 3x3 cells named after the direction they face
-## and the center cell is not exported; in [constant MODE_NONE] the frame is one nameless cell, for
-## the sprites of a top-down game that have no direction. Pure: no filesystem, no CLI, no editor.
+## In [constant MODE_NONE], the default, the frame is one nameless cell: a sprite with no
+## direction. In the [constant MODE_3X3] grid, every frame is 3x3 cells named after the direction
+## they face and the center cell is not exported. Pure: no filesystem, no CLI, no editor.
 ## One job is one animation, exported as one strip: {"direction": String, "tag": String,
 ## "animation": String, "loop": bool, "relative_path": String}, where relative_path names the strip
 ## file inside the export folder. Problems are collected in [member errors] instead of being
@@ -18,6 +18,9 @@ const DEFAULT_ANIMATION := "default"
 const MODE_3X3 := "3x3"
 ## Grid of one cell: the whole frame, with no direction.
 const MODE_NONE := "none"
+## Grid of a file whose import options do not name one. Top-down projects that draw every sprite
+## as a grid set 3x3 in Project Settings > Import Defaults instead of changing this.
+const DEFAULT_DIRECTIONS := MODE_NONE
 ## Grid cells in reading order, center excluded. aseprite_batch.lua maps each name to its cell.
 const DIRECTIONS: Array[String] = [
 	"left_up", "up", "right_up", "left", "right", "left_down", "down", "right_down"
@@ -64,7 +67,7 @@ func build_jobs(
 	var jobs: Array[Dictionary] = []
 
 	# Nothing else can be validated without knowing how many cells a frame holds.
-	var directions := _directions_for(str(options.get("directions", MODE_3X3)))
+	var directions := _directions_for(str(options.get("directions", DEFAULT_DIRECTIONS)))
 	if directions.is_empty():
 		failed = true
 		return jobs
@@ -212,9 +215,10 @@ func _resolve_cell_size(requested: Vector2i, sprite_size: Vector2i) -> Vector2i:
 	return Vector2i.ZERO
 
 
-## Why a 0 axis cannot be resolved, naming both ways out: a cell size, or no grid at all. Since
-## this feature landed, a sprite that is not a multiple of 3 is most often one without directions,
-## so a message about grid/cell_size alone sends the user to the wrong fix.
+## Why a 0 axis cannot be resolved, naming both ways out: a cell size, or no grid at all. A project
+## that sets 3x3 in Import Defaults still has sprites without directions (a run dust puff, a hit
+## spark), and one of those is the usual reason a sprite is not a multiple of 3, so a message about
+## grid/cell_size alone would send the user to the wrong fix.
 func _split_problem() -> String:
 	var fix := "set grid/cell_size, or grid/directions to '%s' if it has no directions" % MODE_NONE
 	return "cannot be split in %d equal cells: %s" % [cells_per_axis, fix]
