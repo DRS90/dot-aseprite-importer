@@ -25,8 +25,8 @@
       `Texture2D` of the whole canvas, for Sprite2D, TextureRect, shaders and TileSet source images
 - [x] One sheet per file instead of one texture per strip: one animation per row, trimmed to the
       pixels the animation uses, with `AtlasTexture` margins keeping the frame size and the pivot,
-      so every sprite using the file draws the same texture (spec: amendment E20 in the plan; the
-      example's sheet is 132x535, 82% fewer pixels, and ~62 ms → ~19 ms)
+      so every sprite using the file draws the same texture (the example's sheet is 132x535, 82%
+      fewer pixels, and ~62 ms → ~19 ms)
 
 ## Before publishing
 
