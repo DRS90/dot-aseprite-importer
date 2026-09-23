@@ -19,8 +19,9 @@ func _process(delta: float) -> void:
 			_facing = "down" if input.y > 0.0 else "up"
 	var animation_name := "walk_" + _facing
 	if input == Vector2.ZERO:
-		animation_player.play(animation_name)
-		animation_player.seek(0.0, true)
-		animation_player.pause()
+		if animation_player.is_playing():
+			animation_player.play(animation_name)
+			animation_player.seek(0.0, true)
+			animation_player.pause()
 	elif animation_player.current_animation != animation_name or not animation_player.is_playing():
 		animation_player.play(animation_name)
