@@ -11,7 +11,8 @@ ASEPRITE_PATH=<aseprite> godot --headless --path . --import
 ```
 
 `tests/test_runner.gd` runs every check and prints one `PASS`/`FAIL` line each; the AnimationPlayer
-sync checks live in `tests/animation_sync_tests.gd`, which it calls.
+sync checks live in `tests/animation_sync_tests.gd` and the sheet packing checks in
+`tests/sheet_packer_tests.gd`, both called by it.
 
 `tests/tools/build_grid.lua` turns a sprite drawn with one top-level layer per direction (layers
 named like the grid cells) into the grid format:

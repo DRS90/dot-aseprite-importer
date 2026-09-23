@@ -4,6 +4,7 @@
 [ext_resource type="Texture2D" uid="uid://th28mo82irwl" path="res://examples/shadow.aseprite" id="1_oe2cu"]
 [ext_resource type="Texture2D" uid="uid://b5vuatxmqb2oj" path="res://examples/tileset.aseprite" id="1_pw243"]
 [ext_resource type="AnimationLibrary" uid="uid://b3hhqqqwhrk7o" path="res://examples/main_animations.tres" id="2_aqi44"]
+[ext_resource type="Script" uid="uid://dm8ihf3b3cpkc" path="res://examples/character_movement.gd" id="3_move"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_w7hkg"]
 texture = ExtResource("1_pw243")
@@ -23,14 +24,31 @@ zoom = Vector2(3, 3)
 tile_map_data = PackedByteArray("AAD+/wAAAAAAAAAAAAD//wAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAABAAAAAAABAAEAAAAAAAAAAAAAAAEAAAAAAAAAAAD//wEAAAABAAAAAAD+/wEAAAAAAAAAAAD+////AAABAAAAAAD/////AAAAAAAAAAAAAP//AAAAAAAAAAABAP//AAAAAAAAAAABAAIAAAACAAAAAAAAAAIAAAACAAAAAAD//wIAAAACAAAAAAD+/wIAAAACAAAAAAD9/wIAAAACAAAAAAD9/wEAAAACAAAAAAD9/wAAAAACAAAAAAD9////AAACAAAAAAD9//7/AAACAAAAAAD+//7/AAACAAAAAAD///7/AAACAAAAAAAAAP7/AAACAAAAAAABAP7/AAACAAAAAAACAP7/AAACAAAAAAACAP//AAACAAAAAAACAAAAAAACAAAAAAACAAEAAAACAAAAAAACAAIAAAACAAAAAAA=")
 tile_set = SubResource("TileSet_tkm6i")
 
-[node name="Shadow" type="Sprite2D" parent="." unique_id=1275635387]
-texture = ExtResource("1_oe2cu")
-
-[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1244402466]
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1244402466 node_paths=PackedStringArray("animation_player")]
+z_index = 1
 sprite_frames = ExtResource("1_d2j2t")
 animation = &"walk_down"
+script = ExtResource("3_move")
+animation_player = NodePath("../AnimationPlayer")
 metadata/_aseprite_topdown_grid_animations_player = NodePath("../AnimationPlayer")
 metadata/_aseprite_topdown_grid_animations_sync_key = "1d9879a1532ebfa00ebf342123cc0721"
+
+[node name="Shadow" type="Sprite2D" parent="AnimatedSprite2D" unique_id=1275635387]
+show_behind_parent = true
+z_index = -1
+texture = ExtResource("1_oe2cu")
+
+[node name="SecondCharacter" type="AnimatedSprite2D" parent="." unique_id=1873402518]
+z_index = 1
+position = Vector2(32, 0)
+sprite_frames = ExtResource("1_d2j2t")
+animation = &"walk_down"
+autoplay = "walk_down"
+
+[node name="Shadow" type="Sprite2D" parent="SecondCharacter" unique_id=1648205731]
+show_behind_parent = true
+z_index = -1
+texture = ExtResource("1_oe2cu")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=141086055]
 root_node = NodePath("../AnimatedSprite2D")

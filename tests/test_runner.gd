@@ -4,6 +4,7 @@ extends SceneTree
 ## Prints one PASS/FAIL line per check and exits with 1 when any check fails.
 
 const AnimationSyncTests := preload("res://tests/animation_sync_tests.gd")
+const SheetPackerTests := preload("res://tests/sheet_packer_tests.gd")
 const AsepriteCli := preload("res://addons/aseprite_topdown_grid_animations/aseprite_cli.gd")
 const AsepriteSource := preload("res://addons/aseprite_topdown_grid_animations/aseprite_source.gd")
 const ExportPlanner := preload("res://addons/aseprite_topdown_grid_animations/export_planner.gd")
@@ -69,6 +70,7 @@ func _initialize() -> void:
 	_test_example_scene_files()
 	_test_planner_edge_cases()
 	_test_builder()
+	SheetPackerTests.new(_check).run()
 	AnimationSyncTests.new(_check, get_root()).run()
 	print("%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(0 if _failures == 0 else 1)
@@ -195,8 +197,7 @@ func _test_texture(cli: AsepriteCli, contents: Dictionary, grid_frames: SpriteFr
 	# The same source through both importers has to agree on the pixels it shares.
 	var whole := texture.get_image()
 	whole.convert(Image.FORMAT_RGBA8)
-	var down := grid_frames.get_frame_texture(&"walk_down", 0).get_image()
-	down.convert(Image.FORMAT_RGBA8)
+	var down := SheetPackerTests.frame_image(grid_frames.get_frame_texture(&"walk_down", 0))
 	var cell := Rect2i(CELL_SIZE.x, CELL_SIZE.y * 2, CELL_SIZE.x, CELL_SIZE.y)
 	_check(
 		whole.get_region(cell).get_data() == down.get_data(),
@@ -403,8 +404,34 @@ func _test_sprite_frames(
 		),
 		"walk_down loops with 4 frames at 10 fps, use_left has 8, slash_right does not loop"
 	)
+	_test_shared_sheet(frames)
 	_test_frames_match_sheets(frames, jobs, contents)
 	return frames
+
+
+## Every frame of every animation draws the same texture, so every sprite using the file does too,
+## and it keeps the cell size.
+func _test_shared_sheet(frames: SpriteFrames) -> void:
+	var sheet: Texture2D = null
+	var shared := true
+	var clipped := true
+	var cell_sized := true
+	for animation: StringName in frames.get_animation_names():
+		for index: int in frames.get_frame_count(animation):
+			var atlas := frames.get_frame_texture(animation, index) as AtlasTexture
+			if atlas == null:
+				shared = false
+				continue
+			if sheet == null:
+				sheet = atlas.atlas
+			shared = shared and is_same(atlas.atlas, sheet)
+			clipped = clipped and atlas.filter_clip
+			cell_sized = cell_sized and atlas.get_size() == Vector2(CELL_SIZE)
+	_check(
+		sheet != null and shared and clipped and cell_sized,
+		"every frame is a clipped, cell-sized region of one shared sheet",
+		"shared %s, clipped %s, cell sized %s" % [shared, clipped, cell_sized]
+	)
 
 
 ## The same file imported without directions: one animation per tag, made of whole frames. The down
@@ -418,17 +445,17 @@ func _test_directionless_export(
 		return
 	var names := whole.get_animation_names()
 	var texture := whole.get_frame_texture(&"walk", 0) as AtlasTexture
-	var atlas_size := texture.atlas.get_size() if texture != null else Vector2.ZERO
+	var frame_size := texture.get_size() if texture != null else Vector2.ZERO
 	_check(
 		(
 			names.size() == 10
 			and whole.has_animation(&"walk")
 			and whole.get_frame_count(&"walk") == 4
 			and whole.get_animation_loop(&"walk")
-			and atlas_size == Vector2(SPRITE_SIZE.x * 4, SPRITE_SIZE.y)
+			and frame_size == Vector2(SPRITE_SIZE)
 		),
 		"10 animations of whole 144x144 frames, walk_loop still loops as walk",
-		"%s %s" % [names, atlas_size]
+		"%s %s" % [names, frame_size]
 	)
 	_check_down_cell_matches(whole, grid_frames, "the whole frame")
 
@@ -481,10 +508,10 @@ func _check_down_cell_matches(
 	var matching := 0
 	var count := whole.get_frame_count(&"walk")
 	for index: int in count:
-		var frame := whole.get_frame_texture(&"walk", index).get_image()
-		var expected := grid_frames.get_frame_texture(&"walk_down", index).get_image()
-		frame.convert(Image.FORMAT_RGBA8)
-		expected.convert(Image.FORMAT_RGBA8)
+		var frame := SheetPackerTests.frame_image(whole.get_frame_texture(&"walk", index))
+		var expected := SheetPackerTests.frame_image(
+			grid_frames.get_frame_texture(&"walk_down", index)
+		)
 		if frame.get_region(down).get_data() == expected.get_data():
 			matching += 1
 	_check(
@@ -513,8 +540,7 @@ func _test_frames_match_sheets(
 		var first: int = tag_range["from"]
 		var row: int = SHEET_ROWS[direction]
 		for index: int in frames.get_frame_count(animation):
-			var frame := frames.get_frame_texture(animation, index).get_image()
-			frame.convert(Image.FORMAT_RGBA8)
+			var frame := SheetPackerTests.frame_image(frames.get_frame_texture(animation, index))
 			checked += 1
 			if frame.get_data() == _expected_frame(sheet, attack, first + index, row).get_data():
 				matching += 1
@@ -931,6 +957,7 @@ func _test_builder_ping_pong() -> void:
 		(
 			builder.errors.is_empty()
 			and regions == [0.0, 4.0, 8.0, 4.0]
+			and frames.get_frame_texture(&"bounce_up", 0).get_size() == Vector2(4, 4)
 			and durations == [1.0, 1.0, 2.0, 1.0]
 			and frames.get_animation_loop(&"bounce_up")
 			and is_equal_approx(frames.get_animation_speed(&"bounce_up"), 10.0)
