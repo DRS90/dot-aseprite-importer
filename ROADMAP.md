@@ -93,6 +93,9 @@
 - [ ] Custom direction name per grid cell
 - [ ] Warn when the ignored center cell has pixels
 - [ ] Undo/redo for AnimationPlayer syncs
+- [ ] Save a library shared by several sprites once per sync pass: `plugin.gd` calls
+      `sync_linked()` per sprite, and each call saves the same `.tres` (only extra writes; the
+      key must stay tied to a successful save)
 - [ ] Test on Godot 4.4–4.6 and lower the declared minimum version
 - [ ] CI: gdformat/gdlint and headless tests on GitHub Actions
 

@@ -298,6 +298,13 @@ func _test_sync_linked_writes_the_file() -> void:
 	frames.add_frame(&"idle_down", PlaceholderTexture2D.new(), 1.0)
 	sprite.sprite_frames = frames
 	AnimationSync.link(sprite, player)
+	# A second sprite on the same player, with the same animation name (a body and its weapon).
+	var weapon := AnimatedSprite2D.new()
+	weapon.name = "Weapon"
+	root.add_child(weapon)
+	weapon.owner = root
+	weapon.sprite_frames = frames.duplicate() as SpriteFrames
+	AnimationSync.link(weapon, player)
 
 	var path := LIBRARY_DIR + "/scene_animations.tres"
 	var sync := AnimationSync.new()
@@ -306,13 +313,86 @@ func _test_sync_linked_writes_the_file() -> void:
 		"sync_linked writes the library named by the setting",
 		str(sync.errors)
 	)
+	_check.call(sync.sync_linked(weapon, false), "a second sprite syncs into the same library")
+	var tracks := _saved_idle_tracks(path)
+	_check.call(
+		tracks.has("Body:frame") and tracks.has("Weapon:frame"),
+		"the synced animations are saved to the library file, not only held in memory",
+		str(tracks)
+	)
+	_test_empty_library_file_is_resynced(sync, sprite, weapon, player, path)
+	_test_rejected_name_is_not_resynced(sync, sprite)
 	DirAccess.remove_absolute(path)
 	_check.call(
 		not sync.sync_linked(sprite, false) and not FileAccess.file_exists(path),
 		"a sync that is skipped never touches the file system"
 	)
+	player.root_node = NodePath("Missing")
+	sprite.remove_meta(AnimationSync.META_SYNC_KEY)
+	_check.call(
+		(
+			not sync.sync_linked(sprite, true)
+			and not sync.errors.is_empty()
+			and not sprite.has_meta(AnimationSync.META_SYNC_KEY)
+			and not FileAccess.file_exists(path)
+		),
+		"a player without a valid root node reports it and writes neither the file nor the key",
+		str(sync.errors)
+	)
 	ProjectSettings.set_setting(AnimationLibraryStore.LIBRARY_PATH_KEY, previous)
 	root.queue_free()
+
+
+## 0.1.0 saved the library file empty and stored the sync key anyway, so reopening the scene
+## loaded an empty library under a key that still matched. The sync must notice the missing
+## tracks instead of trusting the key, for each sprite: once the body wrote "idle_down" again, the
+## weapon's tracks are still missing from it.
+func _test_empty_library_file_is_resynced(
+	sync: AnimationSync,
+	sprite: AnimatedSprite2D,
+	weapon: AnimatedSprite2D,
+	player: AnimationPlayer,
+	path: String
+) -> void:
+	# What reopening the scene gave: the player holds the file's library, and the file is empty.
+	var library := player.get_animation_library(&"")
+	for animation_name: StringName in library.get_animation_list():
+		library.remove_animation(animation_name)
+	ResourceSaver.save(library, path)
+	var synced := sync.sync_linked(sprite, false)
+	var weapon_synced := sync.sync_linked(weapon, false)
+	var tracks := _saved_idle_tracks(path)
+	_check.call(
+		synced and weapon_synced and tracks.has("Body:frame") and tracks.has("Weapon:frame"),
+		"a library that lost a sprite's tracks is synced again although the key matches",
+		"%s %s %s" % [synced, weapon_synced, tracks]
+	)
+
+
+## A name AnimationPlayer rejects is never written, so it must not count as missing: otherwise
+## every scene change would sync and write the library file again.
+func _test_rejected_name_is_not_resynced(sync: AnimationSync, sprite: AnimatedSprite2D) -> void:
+	sprite.sprite_frames.add_animation(&"bad/name")
+	sprite.sprite_frames.add_frame(&"bad/name", PlaceholderTexture2D.new(), 1.0)
+	var synced := sync.sync_linked(sprite, false)
+	_check.call(
+		synced and not sync.errors.is_empty() and not sync.sync_linked(sprite, false),
+		"an animation name AnimationPlayer rejects does not make every sync run again",
+		str(sync.errors)
+	)
+
+
+## The track paths of "idle_down" in the library file, read from disk and not from the player:
+## a run of the game only sees what the file holds.
+func _saved_idle_tracks(path: String) -> PackedStringArray:
+	var tracks := PackedStringArray()
+	var saved := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE) as AnimationLibrary
+	if saved == null or not saved.has_animation(&"idle_down"):
+		return tracks
+	var idle := saved.get_animation(&"idle_down")
+	for track: int in idle.get_track_count():
+		tracks.append(str(idle.track_get_path(track)))
+	return tracks
 
 
 func _library_with(animation_name: StringName, track_path: String) -> AnimationLibrary:

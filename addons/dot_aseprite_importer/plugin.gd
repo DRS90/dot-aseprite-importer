@@ -83,8 +83,9 @@ func _sync_edited_scene() -> void:
 			continue
 		if _sync.sync_linked(sprite, false):
 			changed = true
-			for message: String in _sync.errors:
-				push_warning(AsepriteSource.LOG_PREFIX + message)
+		# Also when nothing was written: a player without a valid root node is reported.
+		for message: String in _sync.errors:
+			push_warning(AsepriteSource.LOG_PREFIX + message)
 	if changed:
 		EditorInterface.mark_scene_as_unsaved()
 

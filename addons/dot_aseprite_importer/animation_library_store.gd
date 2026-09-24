@@ -112,15 +112,25 @@ func _merge_into(library: AnimationLibrary, built_in: AnimationLibrary) -> Anima
 	if not moved:
 		return library
 	# Saved right away: otherwise they would live only in memory until something saves the file.
-	var error := ResourceSaver.save(library, library.resource_path)
-	if error != OK:
-		errors.append(
-			(
-				"Animations of the built-in library were kept in memory only: '%s' failed (%s)."
-				% [library.resource_path, error_string(error)]
-			)
-		)
+	var failure := save_external(library)
+	if failure != "":
+		errors.append(failure)
 	return library
+
+
+## Writes [param library] to its file when it has one, and returns why that failed, or "". Saving a
+## scene only writes what is built into it: whoever changes an external library in code saves it,
+## or the change stays in the editor's memory and a run of the game loads the file as it was.
+static func save_external(library: AnimationLibrary) -> String:
+	if library.is_built_in():
+		return ""
+	var error := ResourceSaver.save(library, library.resource_path)
+	if error == OK:
+		return ""
+	return (
+		"Saving '%s' failed (%s): its animations are only in the editor's memory."
+		% [library.resource_path, error_string(error)]
+	)
 
 
 static func _assign(player: AnimationPlayer, library: AnimationLibrary) -> void:

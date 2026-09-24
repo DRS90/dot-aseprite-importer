@@ -13,7 +13,9 @@ and looping like the SpriteFrames animation. Play them with `$AnimationPlayer.pl
   scene as modified: save it.
 - A sync replaces only the sprite's `animation` and `frame` tracks. Tracks you add to the same
   animations (sounds, hitboxes, method calls) are kept. When a tag or direction disappears, its
-  animation loses the sprite's tracks and is deleted only if nothing else is left in it.
+  animation loses the sprite's tracks and is deleted only if nothing else is left in it. Those two
+  tracks belong to the sync: deleted by hand, they (and their animation) come back the next time
+  the scene is opened.
 - Several sprites can share one AnimationPlayer (e.g. a body and a weapon from different files):
   each sprite has its own tracks.
 - While an AnimationPlayer drives the sprite, don't also play the AnimatedSprite2D (`play()` or
@@ -28,7 +30,8 @@ and looping like the SpriteFrames animation. Play them with `$AnimationPlayer.pl
   → `main_animations.tres` beside it. The scene then keeps one `ext_resource` line instead of the
   animations: the demo in `examples/` is 17 lines instead of
   1107. **Turn External Library off** to keep the animations inside the scene, which is what Godot
-  does on its own. The file is written when the scene is saved.
+  does on its own. Every sync writes the file itself; saving the scene only stores the reference to
+  it.
 - A library that is already a file is never moved, even when the setting names another path, and
   turning External Library off does not bring it back into the scene (clear its `resource_path` for
   that).
