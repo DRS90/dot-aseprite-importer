@@ -25,8 +25,9 @@ func _init(sprite: AnimatedSprite2D) -> void:
 	var row := HBoxContainer.new()
 	_player_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_player_button.clip_text = true
-	_player_button.tooltip_text = "Choose the AnimationPlayer."
+	_player_button.tooltip_text = "Choose the AnimationPlayer, or drop one from the Scene dock."
 	_player_button.pressed.connect(_on_player_pressed)
+	_player_button.set_drag_forwarding(Callable(), _can_drop_player, _drop_player)
 	row.add_child(_player_button)
 	_clear_button.text = "Clear"
 	_clear_button.tooltip_text = "Unlink the AnimationPlayer. Its animations are kept."
@@ -62,13 +63,25 @@ func _on_player_pressed() -> void:
 func _on_player_selected(path: NodePath) -> void:
 	if path.is_empty():
 		return
-	var root := EditorInterface.get_edited_scene_root()
-	var player: AnimationPlayer = null
-	if root != null:
-		player = root.get_node_or_null(path) as AnimationPlayer
+	var player := AnimationSync.scene_player(EditorInterface.get_edited_scene_root(), path)
 	if player == null:
 		_status.text = "Cannot find the AnimationPlayer at %s." % path
 		return
+	_link_player(player)
+
+
+## A refused drop never reaches [method _drop_player]: the editor shows the "forbidden" cursor.
+func _can_drop_player(_at: Vector2, data: Variant) -> bool:
+	return AnimationSync.dropped_player(EditorInterface.get_edited_scene_root(), data) != null
+
+
+func _drop_player(_at: Vector2, data: Variant) -> void:
+	var player := AnimationSync.dropped_player(EditorInterface.get_edited_scene_root(), data)
+	if player != null:
+		_link_player(player)
+
+
+func _link_player(player: AnimationPlayer) -> void:
 	AnimationSync.link(_sprite, player)
 	_sync_now()
 

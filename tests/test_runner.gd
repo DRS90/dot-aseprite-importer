@@ -74,6 +74,9 @@ func _initialize() -> void:
 	SheetPackerTests.new(_check).run()
 	ImporterOptionsTests.new(_check).run()
 	AsepriteFileReaderTests.new(_check, _tmp_dir.path_join("reader")).run_without_aseprite()
+	# The root enters the tree only after _initialize() starts: the Scene dock's absolute paths
+	# need it there.
+	await process_frame
 	AnimationSyncTests.new(_check, get_root()).run()
 	print("%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(0 if _failures == 0 else 1)

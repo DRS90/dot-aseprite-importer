@@ -39,6 +39,28 @@ static func linked_player(sprite: AnimatedSprite2D) -> AnimationPlayer:
 	return sprite.get_node_or_null(path as NodePath) as AnimationPlayer
 
 
+## The AnimationPlayer at [param path] in the scene whose root is [param root], or null. The path is
+## relative to [param root] (the node picker) or absolute (the Scene dock's drag data).
+static func scene_player(root: Node, path: NodePath) -> AnimationPlayer:
+	if root == null or path.is_empty():
+		return null
+	var player := root.get_node_or_null(path) as AnimationPlayer
+	if player == null or not (player == root or root.is_ancestor_of(player)):
+		return null
+	return player
+
+
+## The AnimationPlayer dragged from the Scene dock into the scene whose root is [param root], or
+## null for anything else. The dock sends `{"type": "nodes", "nodes": [absolute paths]}`.
+static func dropped_player(root: Node, data: Variant) -> AnimationPlayer:
+	if not data is Dictionary or (data as Dictionary).get("type") != "nodes":
+		return null
+	var nodes: Variant = (data as Dictionary).get("nodes")
+	if not nodes is Array or (nodes as Array).size() != 1 or not (nodes as Array)[0] is NodePath:
+		return null
+	return scene_player(root, (nodes as Array)[0] as NodePath)
+
+
 ## Links [param player] to [param sprite], or unlinks it when [param player] is null.
 static func link(sprite: AnimatedSprite2D, player: AnimationPlayer) -> void:
 	if player == null:
