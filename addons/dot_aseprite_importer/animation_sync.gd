@@ -75,15 +75,52 @@ func sync_linked(sprite: AnimatedSprite2D, force: bool) -> bool:
 		AnimationLibraryStore.configured_template(), AnimationLibraryStore.scene_path(sprite)
 	)
 	var key := sync_key(sprite, player, path)
-	if not force and str(sprite.get_meta(META_SYNC_KEY, "")) == key:
+	if (
+		not force
+		and str(sprite.get_meta(META_SYNC_KEY, "")) == key
+		and _has_every_animation(sprite, player)
+	):
 		return false
 	var store := AnimationLibraryStore.new()
-	store.library_for(player, path)
+	var library := store.library_for(player, path)
 	sync(sprite, player)
 	# After sync(), which clears the errors of the previous run.
 	errors.append_array(store.errors)
+	_save_external(library)
 	sprite.set_meta(META_SYNC_KEY, key)
 	return true
+
+
+## False when the player's library lacks an animation the SpriteFrames would write: the key alone
+## cannot tell, because it describes the last sync and not what the library holds now (0.1.0 left
+## library files empty under a matching key).
+static func _has_every_animation(sprite: AnimatedSprite2D, player: AnimationPlayer) -> bool:
+	if not player.has_animation_library(GLOBAL_LIBRARY):
+		return false
+	var library := player.get_animation_library(GLOBAL_LIBRARY)
+	for animation_name: StringName in sprite.sprite_frames.get_animation_names():
+		# Names sync() rejects are never written, so they cannot be missing.
+		if ExportPlanner.sanitize_animation_name(animation_name) != String(animation_name):
+			continue
+		if not library.has_animation(animation_name):
+			return false
+	return true
+
+
+## Writes a library that lives in its own file. Saving the scene only writes what is built into it,
+## so without this the synced animations would stay in the editor's memory and a run of the game
+## would load the file as it was before the sync.
+func _save_external(library: AnimationLibrary) -> void:
+	if library.is_built_in():
+		return
+	var error := ResourceSaver.save(library, library.resource_path)
+	if error != OK:
+		errors.append(
+			(
+				"The synced animations were kept in memory only: saving '%s' failed (%s)."
+				% [library.resource_path, error_string(error)]
+			)
+		)
 
 
 ## Writes every animation of [param sprite]'s SpriteFrames into [param player]'s global library and

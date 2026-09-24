@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- An AnimationPlayer library kept in its own file (the default) was saved empty: the sync wrote the
+  animations only in the editor's memory, and saving the scene does not write external resources,
+  so running the game failed to find them. The library file is now saved after every sync.
+- Projects already synced by 0.1.0 recover on their own: a sync no longer trusts a matching key
+  when the library lacks one of the SpriteFrames animations.
+
 ## [0.1.0] - 2026-09-24
 
 ### Added

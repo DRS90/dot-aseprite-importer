@@ -29,7 +29,8 @@ loop como a animação do SpriteFrames. Reproduza-as com `$AnimationPlayer.play(
   então o padrão é `main.tscn` → `main_animations.tres` ao lado dela. A cena passa a ter uma linha
   `ext_resource` no lugar das animações: a demo em `examples/` tem 17 linhas em vez de 1107.
   **Desative External Library** para manter as animações dentro da cena, que é o que o Godot faz
-  por conta própria. O arquivo é gravado quando a cena é salva.
+  por conta própria. Cada sincronização grava o próprio arquivo; salvar a cena só guarda a referência
+  a ele.
 - Uma biblioteca que já é um arquivo nunca é movida, mesmo que a configuração indique outro
   caminho, e desativar External Library não a traz de volta para dentro da cena (para isso, limpe o
   `resource_path` dela).

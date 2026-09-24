@@ -306,6 +306,14 @@ func _test_sync_linked_writes_the_file() -> void:
 		"sync_linked writes the library named by the setting",
 		str(sync.errors)
 	)
+	# Read from disk, not from the player: a run of the game only sees what the file holds.
+	var saved := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE) as AnimationLibrary
+	_check.call(
+		saved != null and saved.has_animation(&"idle_down"),
+		"the synced animations are saved to the library file, not only held in memory",
+		"" if saved == null else str(saved.get_animation_list())
+	)
+	_test_empty_library_file_is_resynced(sync, sprite, player, path)
 	DirAccess.remove_absolute(path)
 	_check.call(
 		not sync.sync_linked(sprite, false) and not FileAccess.file_exists(path),
@@ -313,6 +321,26 @@ func _test_sync_linked_writes_the_file() -> void:
 	)
 	ProjectSettings.set_setting(AnimationLibraryStore.LIBRARY_PATH_KEY, previous)
 	root.queue_free()
+
+
+## 0.1.0 saved the library file empty and stored the sync key anyway, so reopening the scene
+## loaded an empty library under a key that still matched. The sync must notice the missing
+## animations instead of trusting the key.
+func _test_empty_library_file_is_resynced(
+	sync: AnimationSync, sprite: AnimatedSprite2D, player: AnimationPlayer, path: String
+) -> void:
+	# What reopening the scene gave: the player holds the file's library, and the file is empty.
+	var library := player.get_animation_library(&"")
+	for animation_name: StringName in library.get_animation_list():
+		library.remove_animation(animation_name)
+	ResourceSaver.save(library, path)
+	var synced := sync.sync_linked(sprite, false)
+	var saved := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE) as AnimationLibrary
+	_check.call(
+		synced and saved != null and saved.has_animation(&"idle_down"),
+		"a library that lost its animations is synced again although the key matches",
+		"" if saved == null else str(saved.get_animation_list())
+	)
 
 
 func _library_with(animation_name: StringName, track_path: String) -> AnimationLibrary:

@@ -133,6 +133,12 @@ the sync key, so a skipped sync never touches the disk.
   (`res://scene.tscn::AnimationLibrary_abcd`), so `resource_path != ""` does **not** mean external:
   use `is_built_in()`. Getting this wrong passes headless (where nodes have no scene path, so the
   path is empty) and fails in the editor, where every saved scene looks external.
+- Saving a scene does not write the external resources it references when code changed them
+  (`mark_scene_as_unsaved()` only covers what is built into the scene). Whoever writes into an
+  external `.tres` saves it: `sync_linked()` calls `ResourceSaver.save` after every sync. 0.1.0
+  missed this and left the library file empty while the editor showed the animations, so tests of
+  anything saved to disk must reload the file (`CACHE_MODE_IGNORE`) and check its content, not
+  only that it exists.
 - A setting registered with `ProjectSettings.add_property_info()` only shows with *Advanced
   Settings* on, which is where nobody looks for an addon. `ProjectSettings.set_as_basic(key, true)`
   fixes it and is not persisted, so `register()` calls it on every run.
