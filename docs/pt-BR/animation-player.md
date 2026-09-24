@@ -6,7 +6,7 @@ No inspetor do AnimatedSprite2D, em **AnimatedSprite2D**, a seção **AnimationP
 player: clique em **Assign...** e escolha um AnimationPlayer da cena. Cada animação do SpriteFrames
 do sprite vira uma animação de mesmo nome na biblioteca global do player, com duas trilhas no
 sprite, `animation` e `frame`, cujas chaves ficam nos tempos dos frames do Aseprite e que ficam em
-loop como a animação do SpriteFrames. Reproduza-as com `$AnimationPlayer.play("walk_down")`.
+loop como a animação do SpriteFrames. Reproduza-as com `$AnimationPlayer.play("run")`.
 
 - As animações são sincronizadas de novo quando o arquivo `.aseprite` é reimportado (na cena aberta)
   e quando uma cena é aberta, se algo mudou. **Sync animations** força uma sincronização. Uma
@@ -23,9 +23,9 @@ loop como a animação do SpriteFrames. Reproduza-as com `$AnimationPlayer.play(
   nativos do Godot, então o jogo não precisa do addon para rodar.
 - Nós dentro de uma cena instanciada são sincronizados quando essa cena é aberta. **Clear** desfaz o
   vínculo com o player e mantém as animações já gravadas.
-- As animações são gravadas num arquivo de recurso próprio. Em *Project Settings > Aseprite
-  Top-Down Grid Animations > Animation Player*, **External Library** (ativado) decide se isso
-  acontece, e **Library Path** diz onde: `{scene_dir}` e `{scene}` vêm da cena que contém o player,
+- As animações são gravadas num arquivo de recurso próprio. Em *Project Settings > Dot
+  Aseprite Importer > Animation Player*, **External Library** (ativado) decide se isso acontece, e
+  **Library Path** diz onde: `{scene_dir}` e `{scene}` vêm da cena que contém o player,
   então o padrão é `main.tscn` → `main_animations.tres` ao lado dela. A cena passa a ter uma linha
   `ext_resource` no lugar das animações: a demo em `examples/` tem 17 linhas em vez de 1107.
   **Desative External Library** para manter as animações dentro da cena, que é o que o Godot faz

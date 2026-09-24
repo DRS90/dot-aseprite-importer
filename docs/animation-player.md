@@ -6,7 +6,7 @@ In the inspector of the AnimatedSprite2D, under **AnimatedSprite2D**, the **Anim
 section links a player: click **Assign...** and pick an AnimationPlayer of the scene. Every
 animation of the sprite's SpriteFrames becomes an animation of the same name in the player's global
 library, with two tracks on the sprite, `animation` and `frame`, keyed at the Aseprite frame times
-and looping like the SpriteFrames animation. Play them with `$AnimationPlayer.play("walk_down")`.
+and looping like the SpriteFrames animation. Play them with `$AnimationPlayer.play("run")`.
 
 - The animations are synced again when the `.aseprite` file is reimported (in the open scene) and
   when a scene is opened, if anything changed. **Sync animations** forces a sync. A sync marks the
@@ -22,11 +22,11 @@ and looping like the SpriteFrames animation. Play them with `$AnimationPlayer.pl
   built-in nodes and resources, so the game does not need the addon to run.
 - Nodes inside an instanced scene are synced when that scene is opened. **Clear** unlinks the player
   and keeps the animations already written.
-- The animations are written to a resource file of their own. Under *Project Settings > Aseprite
-  Top-Down Grid Animations > Animation Player*, **External Library** (on) decides, and **Library
-  Path** says where: `{scene_dir}` and `{scene}` come from the scene holding the player, so the
-  default is `main.tscn` → `main_animations.tres` beside it. The scene then keeps one
-  `ext_resource` line instead of the animations: the demo in `examples/` is 17 lines instead of
+- The animations are written to a resource file of their own. Under *Project Settings > Dot Aseprite
+  Importer > Animation Player*, **External Library** (on) decides, and **Library Path** says where:
+  `{scene_dir}` and `{scene}` come from the scene holding the player, so the default is `main.tscn`
+  → `main_animations.tres` beside it. The scene then keeps one `ext_resource` line instead of the
+  animations: the demo in `examples/` is 17 lines instead of
   1107. **Turn External Library off** to keep the animations inside the scene, which is what Godot
   does on its own. The file is written when the scene is saved.
 - A library that is already a file is never moved, even when the setting names another path, and

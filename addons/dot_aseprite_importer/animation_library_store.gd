@@ -10,9 +10,9 @@ extends RefCounted
 
 ## Whether the library is written to a file of its own instead of into the scene. Named to sort
 ## before the path in the settings dialog: the switch belongs above the field it governs.
-const LIBRARY_ENABLED_KEY := "aseprite_topdown_grid_animations/animation_player/external_library"
+const LIBRARY_ENABLED_KEY := "dot_aseprite_importer/animation_player/external_library"
 ## Where that file goes. Empty keeps the library built in even with the switch on.
-const LIBRARY_PATH_KEY := "aseprite_topdown_grid_animations/animation_player/library_path"
+const LIBRARY_PATH_KEY := "dot_aseprite_importer/animation_player/library_path"
 const DEFAULT_LIBRARY_ENABLED := true
 const DEFAULT_LIBRARY_PATH := "{scene_dir}/{scene}_animations.tres"
 const GLOBAL_LIBRARY := &""

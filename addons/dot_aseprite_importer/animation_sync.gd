@@ -15,9 +15,9 @@ const AnimationLibraryStore := preload("animation_library_store.gd")
 const ExportPlanner := preload("export_planner.gd")
 
 ## NodePath from the sprite to its AnimationPlayer.
-const META_PLAYER := &"_aseprite_topdown_grid_animations_player"
+const META_PLAYER := &"_dot_aseprite_importer_player"
 ## What the last sync wrote, see [method sync_key].
-const META_SYNC_KEY := &"_aseprite_topdown_grid_animations_sync_key"
+const META_SYNC_KEY := &"_dot_aseprite_importer_sync_key"
 const ANIMATION_PROPERTY := "animation"
 const FRAME_PROPERTY := "frame"
 const GLOBAL_LIBRARY := &""

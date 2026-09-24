@@ -29,9 +29,9 @@ named like the grid cells) into the grid format:
 
 `tests/tools/build_cases.lua` builds sprites for manual tests from a grid sprite: several layers and
 groups (hidden, excluded, names the dropdown cannot offer), eight directions with an empty cell in
-one tag, a canvas that is not a multiple of 3, a file without tags, and a 16x16 sprite with no grid
-at all for `grid/directions` at `none`. The comment at the top of
-the script lists what each one covers:
+one tag, a canvas that is not a multiple of 3 and a file without tags, all to be imported with
+`grid/directions` at `3x3`, plus a 16x16 sprite with no grid at all for the default `none`. The
+comment at the top of the script lists what each one covers:
 
 ```
 <aseprite> -b --script-param src=<grid.aseprite> --script-param out=<folder> --script tests/tools/build_cases.lua

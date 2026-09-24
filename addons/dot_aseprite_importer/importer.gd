@@ -1,8 +1,8 @@
 @tool
 extends EditorImportPlugin
 ## Imports .aseprite/.ase files as a SpriteFrames resource, with one animation per tag, timed like
-## in Aseprite. Frames drawn as a 3x3 grid of directions give one animation per direction and tag;
-## with grid/directions set to none the frame is one cell and the sprite has no direction.
+## in Aseprite. With grid/directions set to 3x3, frames drawn as a 3x3 grid of facing directions
+## give one animation per direction and tag; at none, the default, the frame is a single cell.
 ##
 ## Layers, tags and frame durations are read from the file itself, so Aseprite runs once per
 ## import, to export one strip per animation to a cache folder. The strips are packed into one
@@ -17,13 +17,13 @@ const ExportPlanner := preload("export_planner.gd")
 const Settings := preload("settings.gd")
 const SpriteFramesBuilder := preload("sprite_frames_builder.gd")
 
-const IMPORTER_NAME := "aseprite_topdown_grid_animations.importer"
-const VISIBLE_NAME := "Aseprite Top-Down Grid Animations"
+const IMPORTER_NAME := "dot_aseprite_importer.sprite_frames"
+const VISIBLE_NAME := "Dot Aseprite SpriteFrames"
 const LOG_PREFIX := AsepriteSource.LOG_PREFIX
 const SAVE_EXTENSION := "res"
 ## Bumped when the imported resource changes, so Godot reimports every file using this importer.
 const FORMAT_VERSION := 3
-const CACHE_FOLDER := "aseprite_topdown_grid_animations"
+const CACHE_FOLDER := AsepriteSource.CACHE_FOLDER
 
 const OPTION_DIRECTIONS := "grid/directions"
 const OPTION_CELL_SIZE := "grid/cell_size"
@@ -95,12 +95,7 @@ func _get_option_visibility(_path: String, _option_name: StringName, _options: D
 
 func _get_import_options(path: String, _preset_index: int) -> Array[Dictionary]:
 	return [
-		{
-			"name": OPTION_DIRECTIONS,
-			"default_value": ExportPlanner.MODE_3X3,
-			"property_hint": PROPERTY_HINT_ENUM,
-			"hint_string": "%s,%s" % [ExportPlanner.MODE_3X3, ExportPlanner.MODE_NONE],
-		},
+		directions_option(),
 		{"name": OPTION_CELL_SIZE, "default_value": Vector2i.ZERO},
 		{
 			"name": OPTION_LAYER,
@@ -128,6 +123,17 @@ func _get_import_options(path: String, _preset_index: int) -> Array[Dictionary]:
 	]
 
 
+## The grid/directions option, apart so headless tests can read its default: an
+## EditorImportPlugin can only be instantiated by the editor.
+static func directions_option() -> Dictionary:
+	return {
+		"name": OPTION_DIRECTIONS,
+		"default_value": ExportPlanner.DEFAULT_DIRECTIONS,
+		"property_hint": PROPERTY_HINT_ENUM,
+		"hint_string": "%s,%s" % [ExportPlanner.MODE_NONE, ExportPlanner.MODE_3X3],
+	}
+
+
 func _import(
 	source_file: String,
 	save_path: String,
@@ -148,7 +154,7 @@ func _import(
 	var sprite_size: Vector2i = contents["size"]
 	var layers: PackedStringArray = contents["visible_layers" if only_visible else "layers"]
 	var tags: PackedStringArray = contents["tags"]
-	var jobs := _planner.build_jobs(sprite_size, layers, tags, _planner_options(options))
+	var jobs := _planner.build_jobs(sprite_size, layers, tags, planner_options(options))
 	for message: String in _planner.errors:
 		push_error(LOG_PREFIX + "%s: %s" % [source_file, message])
 	if _planner.failed:
@@ -186,9 +192,11 @@ func _project_default(key: String) -> String:
 	return _settings.get_project_default(key, fallback)
 
 
-func _planner_options(options: Dictionary) -> Dictionary:
+## The import options as the planner takes them, with the defaults of any option the .import file
+## does not have.
+static func planner_options(options: Dictionary) -> Dictionary:
 	return {
-		"directions": str(options.get(OPTION_DIRECTIONS, ExportPlanner.MODE_3X3)),
+		"directions": str(options.get(OPTION_DIRECTIONS, ExportPlanner.DEFAULT_DIRECTIONS)),
 		"cell_size": options.get(OPTION_CELL_SIZE, Vector2i.ZERO),
 		"layer": str(options.get(OPTION_LAYER, ExportPlanner.ALL_LAYERS)),
 		"layer_exclude_pattern": str(options.get(OPTION_LAYER_EXCLUDE, "")),

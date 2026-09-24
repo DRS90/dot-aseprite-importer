@@ -1,5 +1,6 @@
 -- Builds sprites for manual tests of the importer from a 3x3 grid sprite (e.g. the output of
--- build_grid.lua). Each one covers cases the plain example does not:
+-- build_grid.lua). Each one covers cases the plain example does not. All but the last are grids:
+-- import them with grid/directions = 3x3 (the default is none).
 --   layers.aseprite            "body" plus "shadow" (below it), "_guide" (cell borders, excluded by
 --                              default), group "armor" with "plate" and a hidden "helmet", hidden
 --                              "hidden_fx" (also fills left and right), and "weapon, left" and
@@ -9,9 +10,8 @@
 --   padded.aseprite            3x3 cells plus a 6 px column and an 8 px row: the default cell size
 --                              fails, grid/cell_size = cell size works and ignores the leftover
 --   untagged.aseprite          no tags: one strip per direction with the whole timeline
---   no_directions.aseprite     16x16 with no grid at all, one "run_loop" tag: the directionless
---                              companion of a top-down character, imported with
---                              grid/directions = none
+--   no_directions.aseprite     16x16 with no grid at all, one "run_loop" tag: a sprite with no
+--                              direction, imported with the default grid/directions = none
 --
 -- aseprite -b --script-param src=<grid.aseprite> --script-param out=<folder>
 --          --script tests/tools/build_cases.lua
@@ -167,7 +167,7 @@ local function build_untagged()
   save(sprite, "untagged.aseprite")
 end
 
--- A run dust puff: no grid, no direction, the case grid/directions = none exists for. Built from
+-- A run dust puff: no grid, no direction, the default grid/directions = none. Built from
 -- scratch rather than from the source, which is a 3x3 grid by definition.
 local function build_no_directions()
   local source = open_source()

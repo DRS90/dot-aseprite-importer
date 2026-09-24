@@ -5,16 +5,13 @@ extends SceneTree
 
 const AnimationSyncTests := preload("res://tests/animation_sync_tests.gd")
 const AsepriteFileReaderTests := preload("res://tests/aseprite_file_reader_tests.gd")
+const ImporterOptionsTests := preload("res://tests/importer_options_tests.gd")
 const SheetPackerTests := preload("res://tests/sheet_packer_tests.gd")
-const AsepriteCli := preload("res://addons/aseprite_topdown_grid_animations/aseprite_cli.gd")
-const AsepriteSource := preload("res://addons/aseprite_topdown_grid_animations/aseprite_source.gd")
-const ExportPlanner := preload("res://addons/aseprite_topdown_grid_animations/export_planner.gd")
-const SpriteFramesBuilder := preload(
-	"res://addons/aseprite_topdown_grid_animations/sprite_frames_builder.gd"
-)
-const TextureImporter := preload(
-	"res://addons/aseprite_topdown_grid_animations/texture_importer.gd"
-)
+const AsepriteCli := preload("res://addons/dot_aseprite_importer/aseprite_cli.gd")
+const AsepriteSource := preload("res://addons/dot_aseprite_importer/aseprite_source.gd")
+const ExportPlanner := preload("res://addons/dot_aseprite_importer/export_planner.gd")
+const SpriteFramesBuilder := preload("res://addons/dot_aseprite_importer/sprite_frames_builder.gd")
+const TextureImporter := preload("res://addons/dot_aseprite_importer/texture_importer.gd")
 
 const SOURCE := "res://examples/retro-top-down-character.aseprite"
 ## A second sprite, only used to prove the listing cache notices a file changing under it.
@@ -44,7 +41,10 @@ const EXPECTED_TAGS: Array[String] = [
 ]
 ## Sheet row of every direction drawn in the example; its diagonal cells are empty.
 const SHEET_ROWS := {"down": 0, "up": 1, "left": 2, "right": 3}
+## Options of the example, a 3x3 grid. The planner's own default, none, is checked by
+## importer_options_tests.gd.
 const DEFAULT_OPTIONS := {
+	"directions": ExportPlanner.MODE_3X3,
 	"cell_size": Vector2i.ZERO,
 	"layer": "[all]",
 	"layer_exclude_pattern": "^_",
@@ -58,7 +58,7 @@ const ASSET_HELP := (
 )
 
 var _failures := 0
-var _tmp_dir := OS.get_cache_dir().path_join("aseprite_topdown_grid_animations_tests")
+var _tmp_dir := OS.get_cache_dir().path_join("dot_aseprite_importer_tests")
 
 
 func _initialize() -> void:
@@ -72,6 +72,7 @@ func _initialize() -> void:
 	_test_planner_edge_cases()
 	_test_builder()
 	SheetPackerTests.new(_check).run()
+	ImporterOptionsTests.new(_check).run()
 	AsepriteFileReaderTests.new(_check, _tmp_dir.path_join("reader")).run_without_aseprite()
 	AnimationSyncTests.new(_check, get_root()).run()
 	print("%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
@@ -744,7 +745,7 @@ func _test_directionless_planner(
 			and planner.errors.size() == 1
 			and planner.errors[0].contains("'4x4'")
 		),
-		"an unknown grid fails instead of falling back to 3x3",
+		"an unknown grid fails instead of falling back to the default",
 		str(planner.errors)
 	)
 
