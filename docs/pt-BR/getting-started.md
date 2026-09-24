@@ -93,7 +93,8 @@ animação.
 
 1. Adicione um **AnimationPlayer** como filho do `Player`.
 2. Selecione o AnimatedSprite2D. No Inspector, em **AnimatedSprite2D**, clique em **Assign...** na
-   seção **AnimationPlayer** e escolha o AnimationPlayer. A seção informa quantas animações
+   seção **AnimationPlayer** e escolha o AnimationPlayer (ou arraste-o do dock Scene para o botão). A
+   seção informa quantas animações
    sincronizou, e o AnimationPlayer agora tem `idle`, `jump` e `run`.
 3. Salve a cena. As animações ficam em `level_animations.tres`, ao lado de `level.tscn`.
 4. No script, adicione `@onready var _player: AnimationPlayer = $AnimationPlayer` e troque

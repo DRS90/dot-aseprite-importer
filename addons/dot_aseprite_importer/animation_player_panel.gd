@@ -25,8 +25,9 @@ func _init(sprite: AnimatedSprite2D) -> void:
 	var row := HBoxContainer.new()
 	_player_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_player_button.clip_text = true
-	_player_button.tooltip_text = "Choose the AnimationPlayer."
+	_player_button.tooltip_text = "Choose the AnimationPlayer, or drop one from the Scene dock."
 	_player_button.pressed.connect(_on_player_pressed)
+	_player_button.set_drag_forwarding(Callable(), _can_drop_player, _drop_player)
 	row.add_child(_player_button)
 	_clear_button.text = "Clear"
 	_clear_button.tooltip_text = "Unlink the AnimationPlayer. Its animations are kept."
@@ -69,6 +70,35 @@ func _on_player_selected(path: NodePath) -> void:
 	if player == null:
 		_status.text = "Cannot find the AnimationPlayer at %s." % path
 		return
+	_link_player(player)
+
+
+func _can_drop_player(_at: Vector2, data: Variant) -> bool:
+	return _dropped_player(data) != null
+
+
+func _drop_player(_at: Vector2, data: Variant) -> void:
+	var player := _dropped_player(data)
+	if player != null:
+		_link_player(player)
+
+
+## The AnimationPlayer dragged from the Scene dock, which sends
+## `{"type": "nodes", "nodes": [absolute paths]}`, or null for anything else.
+func _dropped_player(data: Variant) -> AnimationPlayer:
+	if not data is Dictionary or data.get("type") != "nodes":
+		return null
+	var nodes: Variant = data.get("nodes")
+	if not nodes is Array or nodes.size() != 1 or not nodes[0] is NodePath:
+		return null
+	var root := EditorInterface.get_edited_scene_root()
+	var player := get_node_or_null(nodes[0]) as AnimationPlayer
+	if root == null or player == null or not (player == root or root.is_ancestor_of(player)):
+		return null
+	return player
+
+
+func _link_player(player: AnimationPlayer) -> void:
 	AnimationSync.link(_sprite, player)
 	_sync_now()
 

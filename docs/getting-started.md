@@ -89,7 +89,8 @@ foot lands, a hitbox during an attack, a method call at the end of an animation.
 
 1. Add an **AnimationPlayer** as a child of `Player`.
 2. Select the AnimatedSprite2D. In the Inspector, under **AnimatedSprite2D**, click **Assign...** in
-   the **AnimationPlayer** section and pick the AnimationPlayer. The section reports how many
+   the **AnimationPlayer** section and pick the AnimationPlayer (or drag it from the Scene dock onto
+   the button). The section reports how many
    animations it synced, and the AnimationPlayer now has `idle`, `jump` and `run`.
 3. Save the scene. The animations are stored in `level_animations.tres`, next to `level.tscn`.
 4. In the script, add `@onready var _player: AnimationPlayer = $AnimationPlayer` and replace

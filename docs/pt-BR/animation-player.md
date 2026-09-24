@@ -3,7 +3,8 @@
 [English](../animation-player.md) | **Português (Brasil)**
 
 No inspetor do AnimatedSprite2D, em **AnimatedSprite2D**, a seção **AnimationPlayer** vincula um
-player: clique em **Assign...** e escolha um AnimationPlayer da cena. Cada animação do SpriteFrames
+player: clique em **Assign...** e escolha um AnimationPlayer da cena, ou arraste um do dock Scene
+para o botão. Cada animação do SpriteFrames
 do sprite vira uma animação de mesmo nome na biblioteca global do player, com duas trilhas no
 sprite, `animation` e `frame`, cujas chaves ficam nos tempos dos frames do Aseprite e que ficam em
 loop como a animação do SpriteFrames. Reproduza-as com `$AnimationPlayer.play("run")`.
