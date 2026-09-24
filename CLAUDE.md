@@ -24,10 +24,11 @@ An inspector section on AnimatedSprite2D links an AnimationPlayer: each SpriteFr
 becomes an animation in the player's global library with discrete `animation` and `frame` tracks.
 Syncs keep user tracks, run on reimport and scene change when a key stored in the sprite's metadata
 changed (it includes `SYNC_KEY_VERSION`) or the library lacks the sprite's tracks, save an external
-library right away (the key is stored only when that save worked), and can be forced with a button. The library goes to its own file when
-`animation_player/external_library` is on (the default), named by `animation_player/library_path`
-(`{scene_dir}/{scene}_animations.tres`); off keeps it inside the scene. The resolved path is part of
-the sync key, so a skipped sync never touches the disk.
+library right away (the key is stored only when that save worked), and can be forced with a button.
+The library goes to its own file when `animation_player/external_library` is on (the default),
+named by `animation_player/library_path` (`{scene_dir}/{scene}_animations.tres`); off keeps it
+inside the scene. The resolved path is part of the sync key, so a skipped sync never touches the
+disk.
 
 - Code: `addons/dot_aseprite_importer/`: `plugin.gd`, `importer.gd`, `settings.gd`,
   `aseprite_cli.gd`, `aseprite_source.gd`, `aseprite_file_reader.gd` + `export_planner.gd` (pure),
@@ -136,10 +137,10 @@ the sync key, so a skipped sync never touches the disk.
   path is empty) and fails in the editor, where every saved scene looks external.
 - Saving a scene does not write the external resources it references when code changed them
   (`mark_scene_as_unsaved()` only covers what is built into the scene). Whoever writes into an
-  external `.tres` saves it: `sync_linked()` calls `AnimationLibraryStore.save_external()` after every sync. 0.1.0
-  missed this and left the library file empty while the editor showed the animations, so tests of
-  anything saved to disk must reload the file (`CACHE_MODE_IGNORE`) and check its content, not
-  only that it exists.
+  external `.tres` saves it: `sync_linked()` calls `AnimationLibraryStore.save_external()` after
+  every sync. 0.1.0 missed this and left the library file empty while the editor showed the
+  animations, so tests of anything saved to disk must reload the file (`CACHE_MODE_IGNORE`) and
+  check its content, not only that it exists.
 - A setting registered with `ProjectSettings.add_property_info()` only shows with *Advanced
   Settings* on, which is where nobody looks for an addon. `ProjectSettings.set_as_basic(key, true)`
   fixes it and is not persisted, so `register()` calls it on every run.
