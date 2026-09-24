@@ -63,39 +63,22 @@ func _on_player_pressed() -> void:
 func _on_player_selected(path: NodePath) -> void:
 	if path.is_empty():
 		return
-	var root := EditorInterface.get_edited_scene_root()
-	var player: AnimationPlayer = null
-	if root != null:
-		player = root.get_node_or_null(path) as AnimationPlayer
+	var player := AnimationSync.scene_player(EditorInterface.get_edited_scene_root(), path)
 	if player == null:
 		_status.text = "Cannot find the AnimationPlayer at %s." % path
 		return
 	_link_player(player)
 
 
+## A refused drop never reaches [method _drop_player]: the editor shows the "forbidden" cursor.
 func _can_drop_player(_at: Vector2, data: Variant) -> bool:
-	return _dropped_player(data) != null
+	return AnimationSync.dropped_player(EditorInterface.get_edited_scene_root(), data) != null
 
 
 func _drop_player(_at: Vector2, data: Variant) -> void:
-	var player := _dropped_player(data)
+	var player := AnimationSync.dropped_player(EditorInterface.get_edited_scene_root(), data)
 	if player != null:
 		_link_player(player)
-
-
-## The AnimationPlayer dragged from the Scene dock, which sends
-## `{"type": "nodes", "nodes": [absolute paths]}`, or null for anything else.
-func _dropped_player(data: Variant) -> AnimationPlayer:
-	if not data is Dictionary or data.get("type") != "nodes":
-		return null
-	var nodes: Variant = data.get("nodes")
-	if not nodes is Array or nodes.size() != 1 or not nodes[0] is NodePath:
-		return null
-	var root := EditorInterface.get_edited_scene_root()
-	var player := get_node_or_null(nodes[0]) as AnimationPlayer
-	if root == null or player == null or not (player == root or root.is_ancestor_of(player)):
-		return null
-	return player
 
 
 func _link_player(player: AnimationPlayer) -> void:

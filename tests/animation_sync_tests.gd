@@ -95,6 +95,7 @@ func _test_animation_sync() -> void:
 	)
 	player.stop()
 	_test_sync_linked(sync, sprite, player, library)
+	_test_scene_player(root, sprite, player)
 	root.queue_free()
 
 
@@ -152,6 +153,52 @@ func _test_sync_linked(
 		str(library.get_animation(&"idle_down").get_track_count())
 	)
 	_check.call(sync.sync_linked(sprite, true), "force syncs even when nothing changed")
+
+
+## The node picker's relative paths and the Scene dock's drag data resolve through the same rule:
+## one AnimationPlayer inside the edited scene.
+func _test_scene_player(root: Node, sprite: AnimatedSprite2D, player: AnimationPlayer) -> void:
+	_check.call(
+		(
+			AnimationSync.scene_player(root, root.get_path_to(player)) == player
+			and AnimationSync.scene_player(root, player.get_path()) == player
+		),
+		"a player in the scene is found by a relative or an absolute path"
+	)
+	var outside := AnimationPlayer.new()
+	_scene_root.add_child(outside)
+	_check.call(
+		(
+			AnimationSync.scene_player(root, outside.get_path()) == null
+			and AnimationSync.scene_player(root, root.get_path_to(sprite)) == null
+			and AnimationSync.scene_player(null, player.get_path()) == null
+			and AnimationSync.scene_player(root, NodePath()) == null
+		),
+		"a player outside the scene, another node type, no scene and an empty path give no player"
+	)
+	_check.call(
+		AnimationSync.dropped_player(root, _drag_data([player.get_path()])) == player,
+		"an AnimationPlayer dragged from the Scene dock is accepted"
+	)
+	var refused := {
+		"two nodes": _drag_data([player.get_path(), sprite.get_path()]),
+		"a sprite": _drag_data([sprite.get_path()]),
+		"a player outside the scene": _drag_data([outside.get_path()]),
+		"no node": _drag_data([]),
+		"a string path": {"type": "nodes", "nodes": [str(player.get_path())]},
+		"files": {"type": "files", "files": ["res://examples/main.tscn"]},
+		"not a dictionary": "AnimationPlayer",
+	}
+	for label: String in refused:
+		_check.call(
+			AnimationSync.dropped_player(root, refused[label]) == null,
+			"a drop of %s is refused" % label
+		)
+	outside.free()
+
+
+func _drag_data(paths: Array) -> Dictionary:
+	return {"type": "nodes", "nodes": paths}
 
 
 func _test_animation_library_store() -> void:
