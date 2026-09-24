@@ -84,7 +84,7 @@
       local folder to match
 - [x] Icon: the Aseprite face with an element of its own, like the other Aseprite addons do: a
       small copy of the face as the dot of ".ase", on Godot's blue
-- [ ] Make the repository public and tag `v0.1.0`
+- [x] Make the repository public and tag `v0.1.0`
 - [ ] Submit to the Godot Asset Library (category Addon, Godot 4.7, MIT, commit hash of the tag)
       and to the Godot Asset Store
 
