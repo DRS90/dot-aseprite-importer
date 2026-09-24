@@ -45,8 +45,6 @@
       `.tres`
 - [x] Rename the addon to Dot Aseprite Importer (`addons/dot_aseprite_importer/`): it imports any
       `.aseprite`, and the 3x3 grid of directions is one of its features
-- [x] Rename the repository folder to `godot-aseprite-topdown-grid-animations` (the GitHub
-      repository takes the same name when it is created)
 - [x] Screenshots in `screenshots/`: the Aseprite frame as a 3x3 grid with guide lines and the tags
       in the timeline, and the editor with the imported animations and the AnimationPlayer section,
       linked from both READMEs
@@ -57,7 +55,7 @@
       `tests/tools/build_retro_example.lua` builds `examples/retro-top-down-character.aseprite` from
       its sheets, both are tracked in git, and the tests compare the imported frames with the sheets
 - [x] Create the GitHub repository, private for now
-      (<https://github.com/DRS90/godot-aseprite-topdown-grid-animations>), and push `main`
+      (<https://github.com/DRS90/dot-aseprite-importer>), and push `main`
 - [x] Manual test in the editor of `grid/directions` = `none`: a sprite with no directions and a
       `_loop` tag imports as one looping animation with the suffix dropped from its name; a size
       that is not a multiple of 3 fails with a message naming both ways out; a method track added
@@ -82,7 +80,8 @@
       *Dot Aseprite SpriteFrames*, and `3x3` saved there makes the next new file a grid; the
       example opens without a sync and animates as before; `screenshots/godot-editor.png` retaken
       with the new names
-- [ ] Rename the GitHub repository to `dot-aseprite-importer` and the local folder to match
+- [x] Rename the GitHub repository to `dot-aseprite-importer` (the old URL redirects), and the
+      local folder to match
 - [ ] Icon: the Aseprite face with an element of its own, like the other Aseprite addons do
 - [ ] Make the repository public and tag `v0.1.0`
 - [ ] Submit to the Godot Asset Library (category Addon, Godot 4.7, MIT, commit hash of the tag)
