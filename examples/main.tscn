@@ -31,7 +31,7 @@ animation = &"walk_down"
 script = ExtResource("3_move")
 animation_player = NodePath("../AnimationPlayer")
 metadata/_dot_aseprite_importer_player = NodePath("../AnimationPlayer")
-metadata/_dot_aseprite_importer_sync_key = "1d9879a1532ebfa00ebf342123cc0721"
+metadata/_dot_aseprite_importer_sync_key = "56503e923b7389bdad5b6d7ec921943b"
 
 [node name="Shadow" type="Sprite2D" parent="AnimatedSprite2D" unique_id=1275635387]
 show_behind_parent = true
