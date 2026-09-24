@@ -191,8 +191,8 @@ func _directions_for(mode: String) -> Array[String]:
 			cells_per_axis = 1
 			directions = NO_DIRECTIONS
 		_:
-			var problem := "grid/directions: unknown value '%s'; use '%s' or '%s'."
-			errors.append(problem % [mode, MODE_3X3, MODE_NONE])
+			var problem := "grid/directions: unknown value '%s'; use '%s' (the default) or '%s'."
+			errors.append(problem % [mode, MODE_NONE, MODE_3X3])
 	return directions
 
 
