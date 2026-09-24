@@ -17,7 +17,7 @@ const ExportPlanner := preload("export_planner.gd")
 const Settings := preload("settings.gd")
 const SpriteFramesBuilder := preload("sprite_frames_builder.gd")
 
-const IMPORTER_NAME := "dot_aseprite.importer"
+const IMPORTER_NAME := "dot_aseprite_importer.sprite_frames"
 const VISIBLE_NAME := "Dot Aseprite SpriteFrames"
 const LOG_PREFIX := AsepriteSource.LOG_PREFIX
 const SAVE_EXTENSION := "res"

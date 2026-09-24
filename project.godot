@@ -25,7 +25,7 @@ gdscript/warnings/unsafe_call_argument=1
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/dot_aseprite/plugin.cfg")
+enabled=PackedStringArray("res://addons/dot_aseprite_importer/plugin.cfg")
 
 [rendering]
 

@@ -24,7 +24,7 @@ loop como a animação do SpriteFrames. Reproduza-as com `$AnimationPlayer.play(
 - Nós dentro de uma cena instanciada são sincronizados quando essa cena é aberta. **Clear** desfaz o
   vínculo com o player e mantém as animações já gravadas.
 - As animações são gravadas num arquivo de recurso próprio. Em *Project Settings > Dot
-  Aseprite > Animation Player*, **External Library** (ativado) decide se isso acontece, e
+  Aseprite Importer > Animation Player*, **External Library** (ativado) decide se isso acontece, e
   **Library Path** diz onde: `{scene_dir}` e `{scene}` vêm da cena que contém o player,
   então o padrão é `main.tscn` → `main_animations.tres` ao lado dela. A cena passa a ter uma linha
   `ext_resource` no lugar das animações: a demo em `examples/` tem 17 linhas em vez de 1107.

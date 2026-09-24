@@ -6,7 +6,7 @@
 
 O caminho é procurado nesta ordem:
 
-1. *Editor Settings > Dot Aseprite > General > Executable Path* (por máquina).
+1. *Editor Settings > Dot Aseprite Importer > General > Executable Path* (por máquina).
 2. A variável de ambiente `ASEPRITE_PATH` (útil para CI e importações headless).
 3. O padrão do sistema operacional:
    - Windows: `C:\Program Files\Aseprite\Aseprite.exe`
@@ -68,7 +68,7 @@ As opções abaixo são do importador **Dot Aseprite SpriteFrames**; o de textur
 [mais adiante](#importando-como-textura). Todas podem ser alteradas por arquivo no dock Import. Os
 padrões de `layers/exclude_pattern`, `tags/exclude_pattern`, `sprite_frames/animation_name` e
 `sprite_frames/loop_suffix` vêm de
-*Project Settings > Dot Aseprite > Defaults*; o `layers/exclude_pattern`
+*Project Settings > Dot Aseprite Importer > Defaults*; o `layers/exclude_pattern`
 alimenta os dois importadores.
 
 | Opção | Padrão | Descrição |
@@ -98,8 +98,8 @@ corrigidos.
 
 Dois lugares definem o que um arquivo importado pela primeira vez recebe:
 
-- *Project Settings > Dot Aseprite > Defaults* guarda os padrões de exclusão, o nome da animação e o
-  sufixo de loop listados acima.
+- *Project Settings > Dot Aseprite Importer > Defaults* guarda os padrões de exclusão, o nome da
+  animação e o sufixo de loop listados acima.
 - *Project Settings > Import Defaults* guarda qualquer opção do importador, inclusive
   `grid/directions`: escolha *Dot Aseprite SpriteFrames* na lista de importadores, mude as opções e
   clique em **Save**. O menu **Preset** do dock Import faz o mesmo a partir de um arquivo já

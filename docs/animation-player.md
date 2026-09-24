@@ -22,11 +22,11 @@ and looping like the SpriteFrames animation. Play them with `$AnimationPlayer.pl
   built-in nodes and resources, so the game does not need the addon to run.
 - Nodes inside an instanced scene are synced when that scene is opened. **Clear** unlinks the player
   and keeps the animations already written.
-- The animations are written to a resource file of their own. Under *Project Settings > Dot
-  Aseprite > Animation Player*, **External Library** (on) decides, and **Library Path** says where:
-  `{scene_dir}` and `{scene}` come from the scene holding the player, so the default is
-  `main.tscn` → `main_animations.tres` beside it. The scene then keeps one
-  `ext_resource` line instead of the animations: the demo in `examples/` is 17 lines instead of
+- The animations are written to a resource file of their own. Under *Project Settings > Dot Aseprite
+  Importer > Animation Player*, **External Library** (on) decides, and **Library Path** says where:
+  `{scene_dir}` and `{scene}` come from the scene holding the player, so the default is `main.tscn`
+  → `main_animations.tres` beside it. The scene then keeps one `ext_resource` line instead of the
+  animations: the demo in `examples/` is 17 lines instead of
   1107. **Turn External Library off** to keep the animations inside the scene, which is what Godot
   does on its own. The file is written when the scene is saved.
 - A library that is already a file is never moved, even when the setting names another path, and

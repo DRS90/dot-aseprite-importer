@@ -43,7 +43,7 @@
 - [x] Manual test in the editor of the animation library settings: they show without *Advanced
       Settings*, the library file is created and adopted, and a tag removed in Aseprite reaches the
       `.tres`
-- [x] Rename the addon to Dot Aseprite Importer (`addons/dot_aseprite/`): it imports any
+- [x] Rename the addon to Dot Aseprite Importer (`addons/dot_aseprite_importer/`): it imports any
       `.aseprite`, and the 3x3 grid of directions is one of its features
 - [x] Rename the repository folder to `godot-aseprite-topdown-grid-animations` (the GitHub
       repository takes the same name when it is created)

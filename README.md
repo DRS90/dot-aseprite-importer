@@ -54,10 +54,10 @@ The same file in Godot: the animations of its SpriteFrames in the bottom panel, 
 
 ## Installation
 
-1. Copy `addons/dot_aseprite` into your project's `addons/` folder.
+1. Copy `addons/dot_aseprite_importer` into your project's `addons/` folder.
 2. Enable **Dot Aseprite Importer** in *Project > Project Settings > Plugins*.
 3. If Aseprite is not in its default location (a Steam install, for example), set
-   *Editor Settings > Dot Aseprite > General > Executable Path* or the
+   *Editor Settings > Dot Aseprite Importer > General > Executable Path* or the
    `ASEPRITE_PATH` environment variable. See
    [Aseprite executable](docs/importing.md#aseprite-executable).
 4. For crisp pixel art, set *Project Settings > Rendering > Textures > Canvas Textures >

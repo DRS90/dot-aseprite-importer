@@ -1,6 +1,6 @@
 [remap]
 
-importer="dot_aseprite.texture_importer"
+importer="dot_aseprite_importer.texture"
 importer_version=1
 type="PortableCompressedTexture2D"
 uid="uid://th28mo82irwl"

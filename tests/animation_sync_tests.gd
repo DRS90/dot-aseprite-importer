@@ -4,12 +4,14 @@ extends RefCounted
 ## They build their nodes by hand and never touch Aseprite, so they live apart from the import
 ## checks. [param check] is the runner's own reporting function, so one run counts every failure.
 
-const AnimationLibraryStore := preload("res://addons/dot_aseprite/animation_library_store.gd")
-const AnimationSync := preload("res://addons/dot_aseprite/animation_sync.gd")
-const ExportPlanner := preload("res://addons/dot_aseprite/export_planner.gd")
+const AnimationLibraryStore := preload(
+	"res://addons/dot_aseprite_importer/animation_library_store.gd"
+)
+const AnimationSync := preload("res://addons/dot_aseprite_importer/animation_sync.gd")
+const ExportPlanner := preload("res://addons/dot_aseprite_importer/export_planner.gd")
 
 ## Resources are written here: ResourceSaver needs a Godot path, not the native cache directory.
-const LIBRARY_DIR := "user://dot_aseprite_tests"
+const LIBRARY_DIR := "user://dot_aseprite_importer_tests"
 const LIBRARY_TEMPLATE := "{scene_dir}/{scene}_animations.tres"
 
 var _check: Callable

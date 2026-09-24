@@ -17,7 +17,7 @@ const ExportPlanner := preload("export_planner.gd")
 ## Prefix of every message this addon prints, so its errors are searchable in the Output panel.
 const LOG_PREFIX := "[Dot Aseprite Importer] "
 ## Folder of the OS cache where Aseprite writes the strips of both importers.
-const CACHE_FOLDER := "dot_aseprite"
+const CACHE_FOLDER := "dot_aseprite_importer"
 
 ## Why the last [method verified_cli] or [method list] call failed.
 var last_error := ""

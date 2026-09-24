@@ -3,8 +3,8 @@ extends RefCounted
 ## imported with no directions, the case of a side view character that needs no grid.
 ## [param check] is the runner's own reporting function, so one run counts every failure.
 
-const ExportPlanner := preload("res://addons/dot_aseprite/export_planner.gd")
-const Importer := preload("res://addons/dot_aseprite/importer.gd")
+const ExportPlanner := preload("res://addons/dot_aseprite_importer/export_planner.gd")
+const Importer := preload("res://addons/dot_aseprite_importer/importer.gd")
 
 var _check: Callable
 

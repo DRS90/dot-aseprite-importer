@@ -6,7 +6,7 @@
 
 The path is resolved in this order:
 
-1. *Editor Settings > Dot Aseprite > General > Executable Path* (per machine).
+1. *Editor Settings > Dot Aseprite Importer > General > Executable Path* (per machine).
 2. The `ASEPRITE_PATH` environment variable (handy for CI and headless imports).
 3. The OS default:
    - Windows: `C:\Program Files\Aseprite\Aseprite.exe`
@@ -66,7 +66,7 @@ The options below belong to the **Dot Aseprite SpriteFrames** importer; the text
 has its own, [further down](#importing-as-a-texture). All of them can be changed per file in the
 Import dock. The defaults of `layers/exclude_pattern`, `tags/exclude_pattern`,
 `sprite_frames/animation_name` and `sprite_frames/loop_suffix` come from
-*Project Settings > Dot Aseprite > Defaults*; `layers/exclude_pattern` feeds
+*Project Settings > Dot Aseprite Importer > Defaults*; `layers/exclude_pattern` feeds
 both importers.
 
 | Option | Default | Description |
@@ -95,8 +95,8 @@ failed import keeps the previous animations until the names are fixed.
 
 Two places set what a newly imported file gets:
 
-- *Project Settings > Dot Aseprite > Defaults* holds the patterns, the animation name and the loop
-  suffix listed above.
+- *Project Settings > Dot Aseprite Importer > Defaults* holds the patterns, the animation name and
+  the loop suffix listed above.
 - *Project Settings > Import Defaults* holds any option of the importer, `grid/directions` included:
   pick *Dot Aseprite SpriteFrames* in its importer list, change the options and click **Save**. The
   **Preset** menu of the Import dock does the same from a file already set up:
