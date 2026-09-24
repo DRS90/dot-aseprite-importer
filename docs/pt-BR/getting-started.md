@@ -64,7 +64,9 @@ lados.
    	if input != 0.0:
    		_sprite.flip_h = input < 0.0
    	if not is_on_floor():
-   		_sprite.play("jump")
+   		# play() restarts a one-shot animation that has finished, so start the jump only once.
+   		if _sprite.animation != &"jump":
+   			_sprite.play("jump")
    	elif input != 0.0:
    		_sprite.play("run")
    	else:
@@ -72,8 +74,9 @@ lados.
    ```
 
 5. Rode a cena. As setas correm para a esquerda e para a direita, com o sprite espelhado pelo
-   `flip_h`, e *Enter* ou *Espaço* pulam. `jump` não fica em loop, então para no último frame até o
-   personagem tocar o chão.
+   `flip_h`, e *Enter* ou *Espaço* pulam. `jump` não fica em loop e é iniciado uma vez por pulo,
+   então para no último frame até o personagem tocar o chão: chamar `play()` a cada frame com o
+   nome de uma animação sem loop que já terminou a faria recomeçar.
 
 ## 4. Altere a arte
 
@@ -94,7 +97,8 @@ animação.
    sincronizou, e o AnimationPlayer agora tem `idle`, `jump` e `run`.
 3. Salve a cena. As animações ficam em `level_animations.tres`, ao lado de `level.tscn`.
 4. No script, adicione `@onready var _player: AnimationPlayer = $AnimationPlayer` e troque
-   `_sprite.play(...)` por `_player.play(...)`: os nomes são os mesmos. Continue definindo
+   `_sprite.play(...)` por `_player.play(...)`: os nomes são os mesmos. Mantenha a checagem de
+   `_sprite.animation`, que as trilhas do player também definem, e continue definindo
    `_sprite.flip_h`, que não faz parte das animações. Se você ativou *Autoplay on Load* no painel
    SpriteFrames, desative.
 5. Selecione o AnimationPlayer, abra uma animação no painel **Animation** e adicione suas próprias

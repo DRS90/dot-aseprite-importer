@@ -61,7 +61,9 @@ From an empty Aseprite file to a character that runs and jumps. The steps assume
    	if input != 0.0:
    		_sprite.flip_h = input < 0.0
    	if not is_on_floor():
-   		_sprite.play("jump")
+   		# play() restarts a one-shot animation that has finished, so start the jump only once.
+   		if _sprite.animation != &"jump":
+   			_sprite.play("jump")
    	elif input != 0.0:
    		_sprite.play("run")
    	else:
@@ -69,8 +71,9 @@ From an empty Aseprite file to a character that runs and jumps. The steps assume
    ```
 
 5. Run the scene. The arrow keys run left and right, with the sprite mirrored by `flip_h`, and
-   *Enter* or *Space* jumps. `jump` does not loop, so it stops on its last frame until the character
-   lands.
+   *Enter* or *Space* jumps. `jump` does not loop and is started once per jump, so it stops on its
+   last frame until the character lands: calling `play()` every frame with the name of a finished
+   one-shot animation would start it over.
 
 ## 4. Change the art
 
@@ -90,8 +93,9 @@ foot lands, a hitbox during an attack, a method call at the end of an animation.
    animations it synced, and the AnimationPlayer now has `idle`, `jump` and `run`.
 3. Save the scene. The animations are stored in `level_animations.tres`, next to `level.tscn`.
 4. In the script, add `@onready var _player: AnimationPlayer = $AnimationPlayer` and replace
-   `_sprite.play(...)` with `_player.play(...)`: the names are the same. Keep setting
-   `_sprite.flip_h`, which is not part of the animations. If you turned on *Autoplay on Load* in
+   `_sprite.play(...)` with `_player.play(...)`: the names are the same. Keep the check on
+   `_sprite.animation`, which the player's tracks set too, and keep setting `_sprite.flip_h`, which
+   is not part of the animations. If you turned on *Autoplay on Load* in
    the SpriteFrames panel, turn it off.
 5. Select the AnimationPlayer, open an animation in the **Animation** panel and add your own tracks
    (audio, method calls, properties of other nodes). They are kept when the animations are synced
