@@ -327,6 +327,18 @@ func _test_sync_linked_writes_the_file() -> void:
 		not sync.sync_linked(sprite, false) and not FileAccess.file_exists(path),
 		"a sync that is skipped never touches the file system"
 	)
+	player.root_node = NodePath("Missing")
+	sprite.remove_meta(AnimationSync.META_SYNC_KEY)
+	_check.call(
+		(
+			not sync.sync_linked(sprite, true)
+			and not sync.errors.is_empty()
+			and not sprite.has_meta(AnimationSync.META_SYNC_KEY)
+			and not FileAccess.file_exists(path)
+		),
+		"a player without a valid root node reports it and writes neither the file nor the key",
+		str(sync.errors)
+	)
 	ProjectSettings.set_setting(AnimationLibraryStore.LIBRARY_PATH_KEY, previous)
 	root.queue_free()
 

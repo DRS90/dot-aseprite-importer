@@ -14,7 +14,8 @@ loop como a animação do SpriteFrames. Reproduza-as com `$AnimationPlayer.play(
 - Uma sincronização substitui só as trilhas `animation` e `frame` do sprite. Trilhas que você
   adiciona às mesmas animações (sons, hitboxes, chamadas de método) são mantidas. Quando uma tag ou
   direção some, a animação dela perde as trilhas do sprite e só é apagada se não sobrar mais nada
-  nela.
+  nela. Essas duas trilhas pertencem à sincronização: apagadas à mão, elas (e a animação delas)
+  voltam na próxima vez que a cena for aberta.
 - Vários sprites podem compartilhar um AnimationPlayer (por exemplo, um corpo e uma arma de arquivos
   diferentes): cada sprite tem suas próprias trilhas.
 - Enquanto um AnimationPlayer controla o sprite, não reproduza também o AnimatedSprite2D (`play()`

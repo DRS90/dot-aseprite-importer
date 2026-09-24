@@ -21,6 +21,11 @@ const META_SYNC_KEY := &"_dot_aseprite_importer_sync_key"
 const ANIMATION_PROPERTY := "animation"
 const FRAME_PROPERTY := "frame"
 const GLOBAL_LIBRARY := &""
+## Part of every sync key. Raised when a sync writes something an earlier version did not, so that
+## every linked sprite syncs once again when its scene is opened: 2 rewrites the library files
+## 0.1.0 left empty or stale.
+const SYNC_KEY_VERSION := 2
+const NO_ROOT_ERROR := "%s needs SpriteFrames and a valid AnimationPlayer root node."
 
 ## Problems found by the last [method sync] or [method sync_linked] call.
 var errors := PackedStringArray()
@@ -49,7 +54,9 @@ static func link(sprite: AnimatedSprite2D, player: AnimationPlayer) -> void:
 static func sync_key(
 	sprite: AnimatedSprite2D, player: AnimationPlayer, library_path: String
 ) -> String:
-	var parts := PackedStringArray([str(player.get_path_to(sprite)), library_path])
+	var parts := PackedStringArray(
+		[str(SYNC_KEY_VERSION), str(player.get_path_to(sprite)), library_path]
+	)
 	var frames := sprite.sprite_frames
 	if frames != null:
 		for animation: StringName in frames.get_animation_names():
@@ -69,6 +76,11 @@ func sync_linked(sprite: AnimatedSprite2D, force: bool) -> bool:
 	var player := linked_player(sprite)
 	if player == null or sprite.sprite_frames == null:
 		return false
+	var root := player.get_node_or_null(player.root_node)
+	if root == null:
+		# Nothing can be written: no key and no save, so it syncs once the root is fixed.
+		errors.append(NO_ROOT_ERROR % sprite.name)
+		return false
 	# Resolved first because it is part of the key, and it writes nothing: a sync that is skipped
 	# must not create the library file nor touch the scene.
 	var path := AnimationLibraryStore.resolve_path(
@@ -78,7 +90,7 @@ func sync_linked(sprite: AnimatedSprite2D, force: bool) -> bool:
 	if (
 		not force
 		and str(sprite.get_meta(META_SYNC_KEY, "")) == key
-		and _has_every_animation(sprite, player)
+		and _has_every_animation(sprite, player, root)
 	):
 		return false
 	var store := AnimationLibraryStore.new()
@@ -86,7 +98,11 @@ func sync_linked(sprite: AnimatedSprite2D, force: bool) -> bool:
 	sync(sprite, player)
 	# After sync(), which clears the errors of the previous run.
 	errors.append_array(store.errors)
-	_save_external(library)
+	var failure := AnimationLibraryStore.save_external(library)
+	if failure != "":
+		# No key: the next sync tries to save again instead of trusting a file that was not written.
+		errors.append(failure)
+		return true
 	sprite.set_meta(META_SYNC_KEY, key)
 	return true
 
@@ -96,11 +112,9 @@ func sync_linked(sprite: AnimatedSprite2D, force: bool) -> bool:
 ## (0.1.0 left library files empty under a matching key). Tracks are checked, not only names,
 ## because sprites sharing a player share animation names: once one of them wrote "idle_down",
 ## the name alone would hide that the other's tracks are still missing.
-static func _has_every_animation(sprite: AnimatedSprite2D, player: AnimationPlayer) -> bool:
-	var root := player.get_node_or_null(player.root_node)
-	if root == null:
-		# sync() cannot write anything without a root, so syncing again would recover nothing.
-		return true
+static func _has_every_animation(
+	sprite: AnimatedSprite2D, player: AnimationPlayer, root: Node
+) -> bool:
 	if not player.has_animation_library(GLOBAL_LIBRARY):
 		return false
 	var library := player.get_animation_library(GLOBAL_LIBRARY)
@@ -118,22 +132,6 @@ static func _has_every_animation(sprite: AnimatedSprite2D, player: AnimationPlay
 	return true
 
 
-## Writes a library that lives in its own file. Saving the scene only writes what is built into it,
-## so without this the synced animations would stay in the editor's memory and a run of the game
-## would load the file as it was before the sync.
-func _save_external(library: AnimationLibrary) -> void:
-	if library.is_built_in():
-		return
-	var error := ResourceSaver.save(library, library.resource_path)
-	if error != OK:
-		errors.append(
-			(
-				"The synced animations were kept in memory only: saving '%s' failed (%s)."
-				% [library.resource_path, error_string(error)]
-			)
-		)
-
-
 ## Writes every animation of [param sprite]'s SpriteFrames into [param player]'s global library and
 ## removes this sprite's tracks from the animations the SpriteFrames no longer has (an animation
 ## left without tracks is removed). Returns the names of the animations written.
@@ -143,7 +141,7 @@ func sync(sprite: AnimatedSprite2D, player: AnimationPlayer) -> PackedStringArra
 	var frames := sprite.sprite_frames
 	var root := player.get_node_or_null(player.root_node)
 	if frames == null or root == null:
-		errors.append("%s needs SpriteFrames and a valid AnimationPlayer root node." % sprite.name)
+		errors.append(NO_ROOT_ERROR % sprite.name)
 		return written
 	var own_paths := _own_paths(root, sprite)
 	if not player.has_animation_library(GLOBAL_LIBRARY):

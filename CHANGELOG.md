@@ -11,9 +11,14 @@ All notable changes to this project are documented here. The format follows
 - An AnimationPlayer library kept in its own file (the default) was saved empty: the sync wrote the
   animations only in the editor's memory, and saving the scene does not write external resources,
   so running the game failed to find them. The library file is now saved after every sync.
-- Projects already synced by 0.1.0 recover on their own when the scene is opened: a sync no longer
-  trusts a matching key when the library lacks the sprite's tracks in one of its animations, which
-  also covers sprites sharing a player and an animation name.
+- Projects already synced by 0.1.0 recover on their own: every linked sprite syncs once more when
+  its scene is opened, which rewrites library files left empty or stale. After that, a sync no
+  longer trusts a matching key when the library lacks the sprite's tracks in one of its
+  animations, which also covers sprites sharing a player and an animation name.
+- A library file that fails to save no longer counts as synced: the next sync tries again and
+  reports the error.
+- A player whose root node does not resolve is reported on every sync, and the sync writes
+  neither the library file nor the sync key.
 
 ## [0.1.0] - 2026-09-24
 

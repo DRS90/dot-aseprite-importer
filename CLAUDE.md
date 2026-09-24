@@ -23,7 +23,8 @@ from them (`[all]` = every layer but `^_`), cached by the file's MD5 and shared 
 An inspector section on AnimatedSprite2D links an AnimationPlayer: each SpriteFrames animation
 becomes an animation in the player's global library with discrete `animation` and `frame` tracks.
 Syncs keep user tracks, run on reimport and scene change when a key stored in the sprite's metadata
-changed, and can be forced with a button. The library goes to its own file when
+changed (it includes `SYNC_KEY_VERSION`) or the library lacks the sprite's tracks, save an external
+library right away (the key is stored only when that save worked), and can be forced with a button. The library goes to its own file when
 `animation_player/external_library` is on (the default), named by `animation_player/library_path`
 (`{scene_dir}/{scene}_animations.tres`); off keeps it inside the scene. The resolved path is part of
 the sync key, so a skipped sync never touches the disk.
@@ -135,7 +136,7 @@ the sync key, so a skipped sync never touches the disk.
   path is empty) and fails in the editor, where every saved scene looks external.
 - Saving a scene does not write the external resources it references when code changed them
   (`mark_scene_as_unsaved()` only covers what is built into the scene). Whoever writes into an
-  external `.tres` saves it: `sync_linked()` calls `ResourceSaver.save` after every sync. 0.1.0
+  external `.tres` saves it: `sync_linked()` calls `AnimationLibraryStore.save_external()` after every sync. 0.1.0
   missed this and left the library file empty while the editor showed the animations, so tests of
   anything saved to disk must reload the file (`CACHE_MODE_IGNORE`) and check its content, not
   only that it exists.

@@ -13,7 +13,9 @@ and looping like the SpriteFrames animation. Play them with `$AnimationPlayer.pl
   scene as modified: save it.
 - A sync replaces only the sprite's `animation` and `frame` tracks. Tracks you add to the same
   animations (sounds, hitboxes, method calls) are kept. When a tag or direction disappears, its
-  animation loses the sprite's tracks and is deleted only if nothing else is left in it.
+  animation loses the sprite's tracks and is deleted only if nothing else is left in it. Those two
+  tracks belong to the sync: deleted by hand, they (and their animation) come back the next time
+  the scene is opened.
 - Several sprites can share one AnimationPlayer (e.g. a body and a weapon from different files):
   each sprite has its own tracks.
 - While an AnimationPlayer drives the sprite, don't also play the AnimatedSprite2D (`play()` or
