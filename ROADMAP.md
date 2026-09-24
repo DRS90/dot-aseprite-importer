@@ -76,12 +76,12 @@
       format bump to 3, the character does not move against its shadow, `flip_h` does not shift
       it, every frame shows 48x48 in the SpriteFrames panel, *Draw Calls* as before, and the layer
       dropdown lists the layers with the executable path cleared
-- [ ] Manual test in the editor of the rename and of `grid/directions` = `none` by default: the
+- [x] Manual test in the editor of the rename and of `grid/directions` = `none` by default: the
       plugin, the importers in *Import As*, the settings sections and the Tools item carry the new
       names; a new `.aseprite` imports with `none`; *Project Settings > Import Defaults* lists
       *Dot Aseprite SpriteFrames*, and `3x3` saved there makes the next new file a grid; the
-      example opens without a sync and animates as before. Retake `screenshots/godot-editor.png`,
-      which shows the old names
+      example opens without a sync and animates as before; `screenshots/godot-editor.png` retaken
+      with the new names
 - [ ] Rename the GitHub repository to `dot-aseprite-importer` and the local folder to match
 - [ ] Icon: the Aseprite face with an element of its own, like the other Aseprite addons do
 - [ ] Make the repository public and tag `v0.1.0`
