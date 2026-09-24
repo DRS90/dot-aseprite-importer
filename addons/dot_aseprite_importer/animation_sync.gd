@@ -91,19 +91,30 @@ func sync_linked(sprite: AnimatedSprite2D, force: bool) -> bool:
 	return true
 
 
-## False when the player's library lacks an animation the SpriteFrames would write: the key alone
-## cannot tell, because it describes the last sync and not what the library holds now (0.1.0 left
-## library files empty under a matching key).
+## False when the player's library lacks one of this sprite's animations or its tracks in it: the
+## key alone cannot tell, because it describes the last sync and not what the library holds now
+## (0.1.0 left library files empty under a matching key). Tracks are checked, not only names,
+## because sprites sharing a player share animation names: once one of them wrote "idle_down",
+## the name alone would hide that the other's tracks are still missing.
 static func _has_every_animation(sprite: AnimatedSprite2D, player: AnimationPlayer) -> bool:
+	var root := player.get_node_or_null(player.root_node)
+	if root == null:
+		# sync() cannot write anything without a root, so syncing again would recover nothing.
+		return true
 	if not player.has_animation_library(GLOBAL_LIBRARY):
 		return false
 	var library := player.get_animation_library(GLOBAL_LIBRARY)
+	var own_paths := _own_paths(root, sprite)
 	for animation_name: StringName in sprite.sprite_frames.get_animation_names():
 		# Names sync() rejects are never written, so they cannot be missing.
 		if ExportPlanner.sanitize_animation_name(animation_name) != String(animation_name):
 			continue
 		if not library.has_animation(animation_name):
 			return false
+		var animation := library.get_animation(animation_name)
+		for path: NodePath in own_paths:
+			if animation.find_track(path, Animation.TYPE_VALUE) == -1:
+				return false
 	return true
 
 
@@ -134,11 +145,7 @@ func sync(sprite: AnimatedSprite2D, player: AnimationPlayer) -> PackedStringArra
 	if frames == null or root == null:
 		errors.append("%s needs SpriteFrames and a valid AnimationPlayer root node." % sprite.name)
 		return written
-	var sprite_path := str(root.get_path_to(sprite))
-	var own_paths: Array[NodePath] = [
-		NodePath("%s:%s" % [sprite_path, ANIMATION_PROPERTY]),
-		NodePath("%s:%s" % [sprite_path, FRAME_PROPERTY]),
-	]
+	var own_paths := _own_paths(root, sprite)
 	if not player.has_animation_library(GLOBAL_LIBRARY):
 		player.add_animation_library(GLOBAL_LIBRARY, AnimationLibrary.new())
 	var library := player.get_animation_library(GLOBAL_LIBRARY)
@@ -161,6 +168,16 @@ func sync(sprite: AnimatedSprite2D, player: AnimationPlayer) -> PackedStringArra
 		if _remove_tracks(animation, own_paths) and animation.get_track_count() == 0:
 			library.remove_animation(animation_name)
 	return written
+
+
+## The paths of the two tracks a sync writes for [param sprite], relative to the player's
+## [param root]: "animation" first, then "frame".
+static func _own_paths(root: Node, sprite: AnimatedSprite2D) -> Array[NodePath]:
+	var sprite_path := str(root.get_path_to(sprite))
+	return [
+		NodePath("%s:%s" % [sprite_path, ANIMATION_PROPERTY]),
+		NodePath("%s:%s" % [sprite_path, FRAME_PROPERTY]),
+	]
 
 
 ## Removes the tracks animating one of [param paths]; true when any was removed.
