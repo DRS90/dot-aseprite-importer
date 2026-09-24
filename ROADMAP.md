@@ -48,7 +48,7 @@
 - [x] Screenshots in `screenshots/`: the Aseprite frame as a 3x3 grid with guide lines and the tags
       in the timeline, and the editor with the imported animations and the AnimationPlayer section,
       linked from both READMEs
-- [x] Square PNG icon (≥128 px) for the Asset Library listing: `icon.png`, 320 px pixel art (160 px drawn, doubled without smoothing)
+- [x] Square PNG icon (≥128 px) for the Asset Library listing: `icon.png`, 256 px pixel art (32 px drawn, scaled 8x without smoothing)
 - [x] Confirm the license holder in `LICENSE` (MIT, Douglas Rodrigo dos Santos)
 - [x] Replace the example asset with 5yvalia's CC0
       [RPG Type Retro Top-Down Playable Character Template](https://5yvalia.itch.io/rpg-type-retro-top-down-playable-character-template):
@@ -82,7 +82,8 @@
       with the new names
 - [x] Rename the GitHub repository to `dot-aseprite-importer` (the old URL redirects), and the
       local folder to match
-- [ ] Icon: the Aseprite face with an element of its own, like the other Aseprite addons do
+- [x] Icon: the Aseprite face with an element of its own, like the other Aseprite addons do: a
+      small copy of the face as the dot of ".ase", on Godot's blue
 - [ ] Make the repository public and tag `v0.1.0`
 - [ ] Submit to the Godot Asset Library (category Addon, Godot 4.7, MIT, commit hash of the tag)
       and to the Godot Asset Store
